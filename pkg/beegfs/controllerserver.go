@@ -17,35 +17,33 @@ limitations under the License.
 package beegfs
 
 import (
-//	"fmt"
-//	"math"
-//	"os"
-//	"path/filepath"
-//	"sort"
-//	"strconv"
-//
-//	"github.com/golang/protobuf/ptypes"
-//
+	"fmt"
+	"path"
+	"strings"
+
+	//	"fmt"
+	//	"math"
+	//	"os"
+	//	"path/filepath"
+	//	"sort"
+	//	"strconv"
+	//
+	//	"github.com/golang/protobuf/ptypes"
+	//
 	"github.com/golang/glog"
-//	"github.com/pborman/uuid"
+	//	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-//	utilexec "k8s.io/utils/exec"
+	//	utilexec "k8s.io/utils/exec"
 )
 
 const (
-	deviceID           = "deviceID"
-//	maxStorageCapacity = tib
-)
-
-type accessType int
-
-const (
-	mountAccess accessType = iota
-	blockAccess
+	volDirBasePathKey = "volDirBasePath"
+	beegfsConfPrefix  = "beegfsConf/"
+	sysMgmtdHostKey   = "sysMgmtdHost"
 )
 
 type controllerServer struct {
@@ -67,7 +65,38 @@ func NewControllerServer(ephemeral bool, nodeID string) *controllerServer {
 }
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	// Get or generate necessary parameters to generate URL
+	reqParams := req.GetParameters()
+	sysMgmtdHost, ok := getBeegfsConfValueFromParams(sysMgmtdHostKey, reqParams)
+	if !ok {
+		return nil, fmt.Errorf("%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
+	}
+	parentDirPath, ok := reqParams[volDirBasePathKey]
+	if !ok {
+		return nil, fmt.Errorf("%s not in CreateVolumeRequest parameters", volDirBasePathKey)
+	}
+	dirPath := path.Join(parentDirPath, req.GetName())
+	cfgFilePath := path.Join(dataRoot, strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs-client.conf")
+
+	// Check if volume already exists
+	_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--getentryinfo", dirPath})
+	if err != nil {
+		// TODO(webere) More in-depth error check
+		// We couldn't find the volume so we need to create one
+		_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dirPath})
+		if err != nil {
+			// We couldn't create the volume
+			return nil, fmt.Errorf("could not create volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
+		}
+	}
+
+	volumeID := newBeegfsUrl(sysMgmtdHost, dirPath)
+
+	return &csi.CreateVolumeResponse{
+		Volume: &csi.Volume{
+			VolumeId: volumeID,
+		},
+	}, nil
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
@@ -134,4 +163,3 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 
 	return csc
 }
-
