@@ -24,7 +24,8 @@ The following examples assume that the CSI hostpath driver has been deployed and
 If you want to build the driver yourself, you can do so with the following command from the root directory:
 
 ```shell
-make hostpath
+env CMDS=hostpathplugin make
+env CMDS=beegfsplugin make
 ```
 
 ## Community, discussion, contribution, and support
