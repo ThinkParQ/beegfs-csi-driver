@@ -46,6 +46,23 @@ const (
 	sysMgmtdHostKey   = "sysMgmtdHost"
 )
 
+
+var (
+	// controllerCaps represents the capability of controller service
+	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
+		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+	}
+
+        volumeCaps = []csi.VolumeCapability_AccessMode{
+                {
+                        Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+                },
+                {
+                        Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+                },
+        }
+)
+
 type controllerServer struct {
 	caps   []*csi.ControllerServiceCapability
 	nodeID string
@@ -65,6 +82,15 @@ func NewControllerServer(ephemeral bool, nodeID string) *controllerServer {
 }
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+	volCaps := req.GetVolumeCapabilities()
+	if len(volCaps) == 0 {
+		return nil, fmt.Errorf("Volume capabilities not provided")
+	}
+
+	if !cs.isValidVolumeCapabilities(volCaps) {
+		return nil, fmt.Errorf("Volume capabilities not supported")
+	}
+
 	// Get or generate necessary parameters to generate URL
 	reqParams := req.GetParameters()
 	sysMgmtdHost, ok := getBeegfsConfValueFromParams(sysMgmtdHostKey, reqParams)
@@ -104,11 +130,71 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 }
 
 func (cs *controllerServer) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	var caps []*csi.ControllerServiceCapability
+	for _, cap := range controllerCaps {
+		c := &csi.ControllerServiceCapability{
+			Type: &csi.ControllerServiceCapability_Rpc{
+				Rpc: &csi.ControllerServiceCapability_RPC{
+					Type: cap,
+				},
+			},
+		}
+		caps = append(caps, c)
+	}
+	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+
+	volCaps := req.GetVolumeCapabilities()
+	if len(volCaps) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
+	}
+
+	//TODO jparnell need to get path
+	//if _, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--getentryinfo", dirPath})
+	//	if err == nil {
+	//		return nil, status.Error(codes.NotFound, "Volume not found with ID %q", volumeID)
+	//	}
+	//}
+
+	confirmed := cs.isValidVolumeCapabilities(volCaps)
+	if confirmed {
+		return &csi.ValidateVolumeCapabilitiesResponse{
+			Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+				// TODO if volume context is provided, should validate it too
+				// VolumeContext:      req.GetVolumeContext(),
+				VolumeCapabilities: volCaps,
+				// TODO if parameters are provided, should validate them too
+				// Parameters:      req.GetParameters(),
+			},
+		}, nil
+	} else {
+		return &csi.ValidateVolumeCapabilitiesResponse{}, nil
+	}
+}
+
+func (cs *controllerServer) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
+	hasSupport := func(cap *csi.VolumeCapability) bool {
+		for _, c := range volumeCaps {
+			if c.GetMode() == cap.AccessMode.GetMode() {
+				return true
+			}
+		}
+		return false
+	}
+
+	foundAll := true
+	for _, c := range volCaps {
+		if !hasSupport(c) {
+			foundAll = false
+		}
+	}
+	return foundAll
 }
 
 func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
