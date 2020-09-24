@@ -8,14 +8,17 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
 )
 
-const beegfsNewConfPath = "/etc/beegfs/"                 // Default where conf files for each BeeGFS instance will be created/updated (may be overridden).
-const beegfsDefaultClientConfPath = "/etc/beegfs/"       // A path where a BeeGFS conf file used to create new conf files exists.
-const beegfsDefaultClientConfFile = "beegfs-client.conf" // The name of the file in the above path copied to create conf files for each BeeGFS instance.
+const beegfsDefaultMountPath = "/mnt/"                        // Default path where BeeGFS instances will be mounted under (may be overridden).
+const beegfsMountsConfFile = "/etc/beegfs/beegfs-mounts.conf" // Location of beegfs-mounts.conf.
+const beegfsNewConfPath = "/etc/beegfs/"                      // Default where conf files for each BeeGFS instance will be created/updated (may be overridden).
+const beegfsDefaultClientConfPath = "/etc/beegfs/"            // A path where a BeeGFS conf file used to create new conf files exists.
+const beegfsDefaultClientConfFile = "beegfs-client.conf"      // The name of the file in the above path copied to create conf files for each BeeGFS instance.
 
 const beegfsUrlScheme = "beegfs"
 
@@ -78,14 +81,14 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 }
 
 // generateBeeGFSClientConf generates <beegfsConf/sysMgmtdHost>_beegfs-client.conf files.
-// Requires a map including at minimum a beegfsConf/sysMgmtdHost entry.
-// Optionally the map can include additional beegfsConf/* entries corresponding to keys in beegfs-client.conf.
+// Requires a params map including at minimum a beegfsConf/sysMgmtdHost entry.
+// 	Optionally the map can include additional beegfsConf/* entries corresponding to keys in beegfs-client.conf.
 // 	Entries that do not correspond to keys in beegfs-client.conf are ignored.
 //	Entries not prefixed with beegfsConf/ are ignored.
 // Requires a confPath string corresponding with the location to generate new beegfs-client.conf files.
 // 	If this is set to "" the default specified by beegfsNewConfPath will be used.
 // Requires a boolean indicating whether or not an existing configuration file should be overwritten if found.
-// Returns the path the the configuration file (if created/updated), a boolean indicating if changes were made, and an error or nil.
+// Returns the path to the new/existing/updated configuration file, a boolean indicating if changes were made, and an error or nil.
 //  generateBeeGFSClientConf does NOT generate an error if an existing file is found and allowOverwrite is false.
 func generateBeeGFSClientConf(params map[string]string, confPath string, allowOverwrite bool) (string, bool, error) {
 
@@ -100,6 +103,18 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 	}
 
 	params = getParsedClientParams(params)
+
+	// (jmccormi) TODO: This is intended to be a temporary workaround for the fact we need a unique connClientPortUDP value for each instance.
+	// This is poor implementation as we're picking a port out of the ephemeral port range (49152-65535) without verifying if its already in use.
+	// This also won't work if we are provided a hostname or IPv6 instead of an IPv4 address and assumes all possible mgmt IPs are in the same subnet.
+	if _, ok := params["connClientPortUDP"]; !ok {
+		lastOctet := strings.Split(params["sysMgmtdHost"], ".")[3]
+		if len(lastOctet) == 2 {
+			params["connClientPortUDP"] = "500" + lastOctet
+		} else {
+			params["connClientPortUDP"] = "50" + lastOctet
+		}
+	}
 
 	requestedConfPath := confPath + strings.Replace(params["sysMgmtdHost"], ".", "_", 3) + "_" + beegfsDefaultClientConfFile
 	defaultConfPath := beegfsDefaultClientConfPath + beegfsDefaultClientConfFile
@@ -201,4 +216,54 @@ func getParsedClientParams(params map[string]string) map[string]string {
 	}
 
 	return clientParams
+}
+
+// updateBeegfsMountsFile manages entries in the beegfs-mounts.conf file but does not handle actually mounting BeeGFS.
+// Requires a requestedMountPath string with the requested path to mount BeeGFS.
+// 	If this is set to "" it will default to "beegfsDefaultMountPath/<sysMgmtdHost>_beegfs" (ex. /mnt/10.113.123.124_beegfs).
+// Requires a requestedConfPath string with the full path to an existing BeeGFS client configuration file for the file system you wish to add to beegfs-mounts.conf.
+// Returns the path where this BeeGFS file system would be mounted, a boolean indicating if changes were made, and an error or nil.
+func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string) (string, bool, error) {
+
+	changed := false
+
+	if requestedMountPath == "" {
+		// (jmccormi) Generate a default mount location using the format beegfsDefaultMountPath/<sysMgmtdHost>_beegfs
+		requestedMountPath = strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
+		requestedMountPath = fmt.Sprintf("%s%s_beegfs", beegfsDefaultMountPath, requestedMountPath)
+	}
+
+	beegfsMount := fmt.Sprintf("%s %s", strings.TrimSpace(requestedMountPath), strings.TrimSpace(requestedConfPath))
+
+	glog.Infof("updateBeegfsMountsFile: Attempting to read configuration file at %s.", beegfsMountsConfFile)
+	fileContents, err := ioutil.ReadFile(beegfsMountsConfFile)
+	if err != nil {
+		return "", changed, fmt.Errorf("unknown error reading %s file to check for required updates", beegfsMountsConfFile)
+	}
+
+	changeRequired := true // (jmccormi) we'll presume a change is required and toggle this to false if we find the beegfsMount in the beegfsMountsConfFile.
+	fileLines := strings.Split(string(fileContents), "\n")
+	for _, line := range fileLines {
+		if line == beegfsMount {
+			changeRequired = false
+		}
+	}
+
+	if changeRequired == true {
+		fileLines = append(fileLines, beegfsMount)
+
+		glog.Infof("updateBeegfsMountsFile: Attempting to write updates to %s.", beegfsMountsConfFile)
+		output := strings.Join(fileLines, "\n")
+		err = ioutil.WriteFile(beegfsMountsConfFile, []byte(output), 0644)
+		changed = true
+		if err != nil {
+			// (jmccormi) Technically at this point we have no way of knowing if the file on disk changed but we still return changed true.
+			return "", changed, fmt.Errorf("Error writing updates to " + beegfsMountsConfFile)
+		}
+		glog.Infof("updateBeegfsMountsFile: Successfully wrote updates to %s.", beegfsMountsConfFile)
+	} else {
+		glog.Infof("updateBeegfsMountsFile: No changes required to %s.", beegfsMountsConfFile)
+	}
+
+	return requestedMountPath, changed, nil
 }
