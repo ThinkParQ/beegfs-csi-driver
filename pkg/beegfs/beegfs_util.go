@@ -8,16 +8,17 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/golang/glog"
 )
 
-const beegfsDefaultMountPath = "/mnt/"                        // Default path where BeeGFS instances will be mounted under (may be overridden).
+const beegfsDefaultMountPath = "/mnt"                         // Default path where BeeGFS instances will be mounted under (may be overridden).
 const beegfsMountsConfFile = "/etc/beegfs/beegfs-mounts.conf" // Location of beegfs-mounts.conf.
-const beegfsNewConfPath = "/etc/beegfs/"                      // Default where conf files for each BeeGFS instance will be created/updated (may be overridden).
-const beegfsDefaultClientConfPath = "/etc/beegfs/"            // A path where a BeeGFS conf file used to create new conf files exists.
+const beegfsNewConfPath = "/etc/beegfs"                       // Default where conf files for each BeeGFS instance will be created/updated (may be overridden).
+const beegfsDefaultClientConfPath = "/etc/beegfs"             // A path where a BeeGFS conf file used to create new conf files exists.
 const beegfsDefaultClientConfFile = "beegfs-client.conf"      // The name of the file in the above path copied to create conf files for each BeeGFS instance.
 
 const beegfsUrlScheme = "beegfs"
@@ -116,8 +117,8 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 		}
 	}
 
-	requestedConfPath := confPath + strings.Replace(params["sysMgmtdHost"], ".", "_", 3) + "_" + beegfsDefaultClientConfFile
-	defaultConfPath := beegfsDefaultClientConfPath + beegfsDefaultClientConfFile
+	requestedConfPath := path.Join(confPath, strings.Replace(params["sysMgmtdHost"], ".", "_", 3)+"_"+beegfsDefaultClientConfFile)
+	defaultConfPath := path.Join(beegfsDefaultClientConfPath, beegfsDefaultClientConfFile)
 
 	glog.Infof("Checking for existing configuration file at %s.", requestedConfPath)
 	_, err := os.Stat(requestedConfPath)
@@ -230,7 +231,7 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 	if requestedMountPath == "" {
 		// (jmccormi) Generate a default mount location using the format beegfsDefaultMountPath/<sysMgmtdHost>_beegfs
 		requestedMountPath = strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
-		requestedMountPath = fmt.Sprintf("%s%s_beegfs", beegfsDefaultMountPath, requestedMountPath)
+		requestedMountPath = fmt.Sprintf("%s_beegfs", path.Join(beegfsDefaultMountPath, requestedMountPath))
 	}
 
 	beegfsMount := fmt.Sprintf("%s %s", strings.TrimSpace(requestedMountPath), strings.TrimSpace(requestedConfPath))
