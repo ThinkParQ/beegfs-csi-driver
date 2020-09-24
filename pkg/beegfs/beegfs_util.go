@@ -29,8 +29,8 @@ func newBeegfsUrl(host string, path string) string {
 	return structURL.String()
 }
 
-// parseBeegfsUrl parses a URL and returns a hostname and path
-func parseBeegfsUrl(rawUrl string) (host string, path string, err error) {
+// parseBeegfsUrl parses a URL and returns a sysMgmtdHost and path
+func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error) {
 	var structUrl *url.URL
 	if structUrl, err = url.Parse(rawUrl); err != nil {
 		return "", "", err
@@ -84,8 +84,10 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 //	Entries not prefixed with beegfsConf/ are ignored.
 // Requires a confPath string corresponding with the location to generate new beegfs-client.conf files.
 // 	If this is set to "" the default specified by beegfsNewConfPath will be used.
+// Requires a boolean indicating whether or not an existing configuration file should be overwritten if found.
 // Returns the path the the configuration file (if created/updated), a boolean indicating if changes were made, and an error or nil.
-func generateBeeGFSClientConf(params map[string]string, confPath string) (string, bool, error) {
+//  generateBeeGFSClientConf does NOT generate an error if an existing file is found and allowOverwrite is false.
+func generateBeeGFSClientConf(params map[string]string, confPath string, allowOverwrite bool) (string, bool, error) {
 
 	changed := false
 
@@ -135,48 +137,53 @@ func generateBeeGFSClientConf(params map[string]string, confPath string) (string
 
 		glog.Infof("Created new configuration file at %s.", requestedConfPath)
 	} else {
-		glog.Infof("Found existing configuration file at %s, checking if any updates are required.", requestedConfPath)
+		glog.Infof("Found existing configuration file at %s.", requestedConfPath)
 	}
 
-	fileContents, err := ioutil.ReadFile(requestedConfPath)
-	if err != nil {
-		return "", changed, fmt.Errorf("unknown error reading %s file to check for required updates", requestedConfPath)
-	}
+	if allowOverwrite {
+		glog.Infof("Checking if any updates are required for configuration file at %s.", requestedConfPath)
+		fileContents, err := ioutil.ReadFile(requestedConfPath)
+		if err != nil {
+			return "", changed, fmt.Errorf("unknown error reading %s file to check for required updates", requestedConfPath)
+		}
 
-	fileLines := strings.Split(string(fileContents), "\n")
+		fileLines := strings.Split(string(fileContents), "\n")
 
-	for i, line := range fileLines {
+		for i, line := range fileLines {
 
-		// (jmccormi) For each uncommented key=value in the .conf file:
-		if !strings.Contains(line, "#") && strings.Contains(line, "=") {
+			// (jmccormi) For each uncommented key=value in the .conf file:
+			if !strings.Contains(line, "#") && strings.Contains(line, "=") {
 
-			// (jmccormi) Parse out just the key and value:
-			parsedLine := strings.Split(string(line), "=")
+				// (jmccormi) Parse out just the key and value:
+				parsedLine := strings.Split(string(line), "=")
 
-			// (jmccormi) Check if we were passed a param corresponding with the key in beegfs-client.conf:
-			if param, ok := params[strings.TrimSpace(parsedLine[0])]; ok {
+				// (jmccormi) Check if we were passed a param corresponding with the key in beegfs-client.conf:
+				if param, ok := params[strings.TrimSpace(parsedLine[0])]; ok {
 
-				// (jmccormi) Check if the param value differs from the value in beegfs-client.conf:
-				if param != strings.TrimSpace(parsedLine[1]) {
-					fileLines[i] = parsedLine[0] + "= " + param
-					changed = true
+					// (jmccormi) Check if the param value differs from the value in beegfs-client.conf:
+					if param != strings.TrimSpace(parsedLine[1]) {
+						fileLines[i] = parsedLine[0] + "= " + param
+						changed = true
+					}
 				}
 			}
 		}
-	}
 
-	// (jmccormi) If any of the fileLines changed, overwrite the file with the new version:
-	if changed == true {
-		glog.Infof("Attempting to write updates to %s.", requestedConfPath)
-		output := strings.Join(fileLines, "\n")
-		err = ioutil.WriteFile(requestedConfPath, []byte(output), 0644)
-		if err != nil {
-			// (jmccormi) Technically at this point we have no way of knowing if the file on disk changed but we still return changed true.
-			return "", changed, fmt.Errorf("Error writing updates to " + requestedConfPath)
+		// (jmccormi) If any of the fileLines changed, overwrite the file with the new version:
+		if changed == true {
+			glog.Infof("Attempting to write updates to %s.", requestedConfPath)
+			output := strings.Join(fileLines, "\n")
+			err = ioutil.WriteFile(requestedConfPath, []byte(output), 0644)
+			if err != nil {
+				// (jmccormi) Technically at this point we have no way of knowing if the file on disk changed but we still return changed true.
+				return "", changed, fmt.Errorf("Error writing updates to " + requestedConfPath)
+			}
+			glog.Infof("Successfully wrote updates to %s.", requestedConfPath)
+		} else {
+			glog.Infof("No updates required to %s.", requestedConfPath)
 		}
-		glog.Infof("Successfully wrote updates to %s.", requestedConfPath)
 	} else {
-		glog.Infof("No updates required to %s.", requestedConfPath)
+		glog.Infof("No overwrites requested by caller for configuration file at %s.", requestedConfPath)
 	}
 
 	return requestedConfPath, changed, nil
