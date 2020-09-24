@@ -19,6 +19,7 @@ package beegfs
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
@@ -79,10 +80,21 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		// We can't find the volume so we need to create one
 		glog.Infof("Volume %s does not exist under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePath,
 			sysMgmtdHost)
-		_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dirPath})
-		if err != nil {
-			// We can't create the volume
-			return nil, fmt.Errorf("cannot create volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
+
+		// Create parent directories if necessary
+		// Create a slice of paths where the first path is the most general and each subsequent path is less general
+		dirsToMake := []string{dirPath}
+		for dir := path.Dir(dirPath); dir != "."; {  // path.Dir() returns "." if there is no parent
+			dirsToMake = append([]string{dir}, dirsToMake...)  // Prepend so the more general path comes first
+			dir = path.Dir(dir)
+		}
+		// Starting with the most general path, create all directories required to eventually create dirPath
+		for _, dir := range dirsToMake {
+			_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dir})
+			if err != nil && strings.Contains(err.Error(), "Entry exists already"){
+				// We can't create the volume
+				return nil, fmt.Errorf("cannot create directory with path %s on filesystem %s", dir, sysMgmtdHost)
+			}
 		}
 	} else {
 		glog.Infof("Volume %s already exists under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePath,
