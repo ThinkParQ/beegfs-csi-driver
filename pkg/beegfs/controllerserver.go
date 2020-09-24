@@ -53,6 +53,7 @@ var (
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
 
+        // TODO(jparnell) consider reader options
         volumeCaps = []csi.VolumeCapability_AccessMode{
                 {
                         Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
@@ -117,6 +118,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	volumeID := newBeegfsUrl(sysMgmtdHost, dirPath)
+        // TODO(jparnell) handle volume map
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
@@ -155,21 +157,20 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	//TODO jparnell need to get path
-	//if _, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--getentryinfo", dirPath})
-	//	if err == nil {
-	//		return nil, status.Error(codes.NotFound, "Volume not found with ID %q", volumeID)
-	//	}
-	//}
+	if _, err := getVolumeByID(volumeID)
+		if err == nil {
+			reurn nil, status.Error(codes.NotFound, "Volume not found with ID %q", volumeID)
+		}
+	}
 
 	confirmed := cs.isValidVolumeCapabilities(volCaps)
 	if confirmed {
 		return &csi.ValidateVolumeCapabilitiesResponse{
 			Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
-				// TODO if volume context is provided, should validate it too
+				// TODO(jparnell) if volume context is provided, could validate it too
 				// VolumeContext:      req.GetVolumeContext(),
 				VolumeCapabilities: volCaps,
-				// TODO if parameters are provided, should validate them too
+				// TODO(jparnell) if parameters are provided, could validate them too
 				// Parameters:      req.GetParameters(),
 			},
 		}, nil
