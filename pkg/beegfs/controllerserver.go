@@ -18,11 +18,12 @@ package beegfs
 
 import (
 	"fmt"
+	"path"
+
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"path"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 )
@@ -92,8 +93,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId: volumeID,
-			VolumeContext: reqParams,  // These params will be needed again by the node service
+			VolumeId:      volumeID,
+			VolumeContext: reqParams, // These params will be needed again by the node service
 		},
 	}, nil
 }

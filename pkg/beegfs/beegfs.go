@@ -19,19 +19,21 @@ package beegfs
 import (
 	"errors"
 	"fmt"
-//	"io"
-//	"io/ioutil"
+
+	//	"io"
+	//	"io/ioutil"
 	"os"
 	"path/filepath"
-//	"strings"
+
+	//	"strings"
 
 	"github.com/golang/glog"
-//	"google.golang.org/grpc/codes"
-//	"google.golang.org/grpc/status"
-//	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
-//	utilexec "k8s.io/utils/exec"
+	//	"google.golang.org/grpc/codes"
+	//	"google.golang.org/grpc/status"
+	//	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
+	//	utilexec "k8s.io/utils/exec"
 
-//	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+	//	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 
 	// todo(eastburj): change module name to the correct github repository and consider supporting multiple go.mod, remove hostpath from the project, or update all corresponding imports in hostpath
 	common "github.com/kubernetes-csi/csi-driver-host-path/pkg/common"
@@ -51,20 +53,20 @@ type beegfs struct {
 }
 
 type beegfsVolume struct {
-	VolName       string     `json:"volName"`
-	VolID         string     `json:"volID"`
-	VolSize       int64      `json:"volSize"`
-	VolPath       string     `json:"volPath"`
-//	VolAccessType accessType `json:"volAccessType"`
-	ParentVolID   string     `json:"parentVolID,omitempty"`
-	ParentSnapID  string     `json:"parentSnapID,omitempty"`
-	Ephemeral     bool       `json:"ephemeral"`
+	VolName string `json:"volName"`
+	VolID   string `json:"volID"`
+	VolSize int64  `json:"volSize"`
+	VolPath string `json:"volPath"`
+	//	VolAccessType accessType `json:"volAccessType"`
+	ParentVolID  string `json:"parentVolID,omitempty"`
+	ParentSnapID string `json:"parentSnapID,omitempty"`
+	Ephemeral    bool   `json:"ephemeral"`
 }
 
 var (
 	vendorVersion = "dev"
 
-	beegfsVolumes         map[string]beegfsVolume
+	beegfsVolumes map[string]beegfsVolume
 )
 
 const (
@@ -76,7 +78,7 @@ const (
 
 func init() {
 	beegfsVolumes = map[string]beegfsVolume{}
-	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts) 
+	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts)
 }
 
 func NewBeegfsDriver(driverName, nodeID, endpoint string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
@@ -156,4 +158,3 @@ func updateBeegfsVolume(volID string, volume beegfsVolume) error {
 	beegfsVolumes[volID] = volume
 	return nil
 }
-

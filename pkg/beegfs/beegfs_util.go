@@ -60,7 +60,7 @@ func getBeegfsConfValueFromParams(beegfsConfKey string, params map[string]string
 func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
 	args = append([]string{"/bin/beegfs-ctl"}, args...)
-	cmd := exec.Command("sudo", args...)  // use sudo in case we are not root but have sudo priveleges
+	cmd := exec.Command("sudo", args...) // use sudo in case we are not root but have sudo priveleges
 	glog.Infof("Executing command: %s", cmd.Args)
 
 	var stdoutBuffer bytes.Buffer
