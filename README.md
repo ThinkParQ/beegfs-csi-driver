@@ -24,8 +24,32 @@ The following examples assume that the CSI hostpath driver has been deployed and
 If you want to build the driver yourself, you can do so with the following command from the root directory:
 
 ```shell
+make
+```
+
+Note: By default 'beegfsplugin' is built.  Optionally set 'CMDS' to a space delimited list of plugins:
+
+```shell
 env CMDS=hostpathplugin make
 env CMDS=beegfsplugin make
+```
+
+## Building the containers
+
+```shell
+make containers
+```
+
+## Building and pushing the containers
+
+```shell
+make push
+```
+
+Or, set IMAGE_TAGS:
+
+```shell
+env IMAGE_TAGS=master-canary make push
 ```
 
 ## Community, discussion, contribution, and support
