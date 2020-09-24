@@ -72,8 +72,8 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 }
 
 // generateBeeGFSClientConf generates <beegfsConf/sysMgmtdHost>_beegfs-client.conf files.
-// Requires a map including at minimum a beegfsConf/sysMgmtdHost entry.
-// Optionally the map can include additional beegfsConf/* entries corresponding to keys in beegfs-client.conf.
+// Requires a params map including at minimum a beegfsConf/sysMgmtdHost entry.
+// 	Optionally the map can include additional beegfsConf/* entries corresponding to keys in beegfs-client.conf.
 // 	Entries that do not correspond to keys in beegfs-client.conf are ignored.
 //	Entries not prefixed with beegfsConf/ are ignored.
 // Requires a confPath string corresponding with the location to generate new beegfs-client.conf files.
@@ -203,9 +203,9 @@ func getParsedClientParams(params map[string]string) map[string]string {
 }
 
 // updateBeegfsMountsFile manages entries in the beegfs-mounts.conf file but does not handle actually mounting BeeGFS.
-// Requires a string with the requested path to mount BeeGFS.
+// Requires a requestedMountPath string with the requested path to mount BeeGFS.
 // 	If this is set to "" it will default to "beegfsDefaultMountPath/<sysMgmtdHost>_beegfs" (ex. /mnt/10.113.123.124_beegfs).
-// Requires a string with the full path to an existing BeeGFS client configuration file for the file system you wish to add to beegfs-mounts.conf.
+// Requires a requestedConfPath string with the full path to an existing BeeGFS client configuration file for the file system you wish to add to beegfs-mounts.conf.
 // Returns the path where this BeeGFS file system would be mounted, a boolean indicating if changes were made, and an error or nil.
 func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string) (string, bool, error) {
 
