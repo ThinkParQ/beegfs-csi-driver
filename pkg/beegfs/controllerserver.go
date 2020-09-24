@@ -193,10 +193,8 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if _, err := getVolumeByID(volumeID)
-		if err == nil {
-			reurn nil, status.Error(codes.NotFound, "Volume not found with ID %q", volumeID)
-		}
+	if _, err := getVolumeByID(volumeID); err != nil {
+		return nil, status.Error(codes.NotFound, volumeID)
 	}
 
 	confirmed := cs.isValidVolumeCapabilities(volCaps)
