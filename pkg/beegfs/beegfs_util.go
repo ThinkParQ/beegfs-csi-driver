@@ -54,7 +54,9 @@ func getBeegfsConfValueFromParams(beegfsConfKey string, params map[string]string
 
 func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
-	cmd := exec.Command("/bin/beegfs-ctl", args...)
+	args = append([]string{"/bin/beegfs-ctl"}, args...)
+	cmd := exec.Command("sudo", args...)  // use sudo in case we are not root but have sudo priveleges
+	glog.Infof("Executing command: %s", cmd.Args)
 
 	var stdoutBuffer bytes.Buffer
 	var stderrBuffer bytes.Buffer
@@ -62,10 +64,12 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 	cmd.Stderr = &stderrBuffer
 
 	err = cmd.Run()
-	glog.Info(stderrBuffer.String())
-	glog.Info(stdoutBuffer.String())
+	stdOutString := stdoutBuffer.String()
+	stderrString := stderrBuffer.String()
+	glog.V(5).Infof(stdOutString)
+	glog.V(5).Infof(stderrString)
 
-	return stdoutBuffer.String(), err
+	return stdOutString, err
 }
 
 // generateBeeGFSClientConf generates <beegfsConf/sysMgmtdHost>_beegfs-client.conf files.
