@@ -90,6 +90,18 @@ func generateBeeGFSClientConf(params map[string]string, confPath string) (string
 
 	params = getParsedClientParams(params)
 
+	// (jmccormi) TODO: This is intended to be a temporary workaround for the fact we need a unique connClientPortUDP value for each instance.
+	// This is poor implementation as we're picking a port out of the ephemeral port range (49152-65535) without verifying if its already in use.
+	// This also won't work if we are provided a hostname or IPv6 instead of an IPv4 address and assumes all possible mgmt IPs are in the same subnet.
+	if _, ok := params["connClientPortUDP"]; !ok {
+		lastOctet := strings.Split(params["sysMgmtdHost"], ".")[3]
+		if len(lastOctet) == 2 {
+			params["connClientPortUDP"] = "500" + lastOctet
+		} else {
+			params["connClientPortUDP"] = "50" + lastOctet
+		}
+	}
+
 	requestedConfPath := confPath + strings.Replace(params["sysMgmtdHost"], ".", "_", 3) + "_" + beegfsDefaultClientConfFile
 	defaultConfPath := beegfsDefaultClientConfPath + beegfsDefaultClientConfFile
 
