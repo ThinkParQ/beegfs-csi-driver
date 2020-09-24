@@ -59,11 +59,11 @@ func getBeegfsConfValueFromParams(beegfsConfKey string, params map[string]string
 	return "", false
 }
 
-// beegfsCtlExec executes arbitrary beegfs-ctl commands like "sudo /bin/beegfs-ctl --arg1 --arg2=value". It returns the logs
+// beegfsCtlExec executes arbitrary beegfs-ctl commands like "sudo /opt/beegfs/sbin/beegfs-ctl --arg1 --arg2=value". It returns
 // the stdout and stderr at a high verbosity, and it returns stdout as a string (as well as any potential errors).
 func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
-	args = append([]string{"/bin/beegfs-ctl"}, args...)
+	args = append([]string{"/opt/beegfs/sbin/beegfs-ctl"}, args...)
 	cmd := exec.Command("sudo", args...) // use sudo in case we are not root but have sudo priveleges
 	glog.Infof("Executing command: %s", cmd.Args)
 
