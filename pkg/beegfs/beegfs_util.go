@@ -78,7 +78,7 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 //	Entries not prefixed with beegfsConf/ are ignored.
 // Requires a confPath string corresponding with the location to generate new beegfs-client.conf files.
 // 	If this is set to "" the default specified by beegfsNewConfPath will be used.
-// Returns the path the the configuration file (if created/updated), a boolean indicating if changes were made, and an error or nil.
+// Returns the path to the new/existing/updated configuration file, a boolean indicating if changes were made, and an error or nil.
 func generateBeeGFSClientConf(params map[string]string, confPath string) (string, bool, error) {
 
 	changed := false
