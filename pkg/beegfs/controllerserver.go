@@ -53,6 +53,7 @@ func NewControllerServer(ephemeral bool, nodeID string) *controllerServer {
 }
 
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
+	// TODO(webere): This function returns quite a few errors with no valid GRPC error codes
 	// Get or generate necessary parameters to generate URL
 	reqParams := req.GetParameters()
 	sysMgmtdHost, ok := getBeegfsConfValueFromParams(sysMgmtdHostKey, reqParams)
@@ -66,7 +67,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	dirPath := path.Join(volDirBasePath, req.GetName())
 
 	// Generate a beegfs-client.conf file under dataRoot if necessary
-	cfgFilePath, _, err := generateBeeGFSClientConf(reqParams, dataRoot)
+	cfgFilePath, _, err := generateBeeGFSClientConf(reqParams, dataRoot, true)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +92,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	volumeID := newBeegfsUrl(sysMgmtdHost, dirPath)
 	glog.Infof("Generated ID %s for volume %s", volumeID, req.GetName())
 
+	// TODO(webere): Clean up beegfs-client.conf file if we know we no longer need it
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      volumeID,
@@ -100,7 +102,29 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 }
 
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	// Get and parse volumeID
+	volumeId := req.GetVolumeId()
+	sysMgmtdHost, dirPath, err := parseBeegfsUrl(volumeId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+	}
+
+	// Generate a beegfs-client.conf file under dataRoot if necessary
+	// We don't have params, so don't attempt to overwrite the file if it exists
+	simpleParams := map[string]string{path.Join(beegfsConfPrefix, "sysMgmtdHost"): sysMgmtdHost}
+	cfgFilePath, _, err := generateBeeGFSClientConf(simpleParams, dataRoot, false)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s", err)
+	}
+
+	// Delete volume
+	// TODO(webere): This function CAN'T work as anticipated, because there is no deletedir or related beegfs-ctl command
+	if _, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--deletedir"}); err != nil {
+		return nil, status.Errorf(codes.Unavailable, "Cannot delete volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
+	}
+
+	// TODO(webere): Clean up beegfs-client.conf file if we know we no longer need it
+	return nil, nil
 }
 
 func (cs *controllerServer) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
