@@ -19,25 +19,13 @@ package beegfs
 import (
 	"fmt"
 	"path"
-	"strings"
 
-	//	"fmt"
-	//	"math"
-	//	"os"
-	//	"path/filepath"
-	//	"sort"
-	//	"strconv"
-	//
-	//	"github.com/golang/protobuf/ptypes"
-	//
 	"github.com/golang/glog"
-	//	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	//	utilexec "k8s.io/utils/exec"
 )
 
 const (
@@ -71,30 +59,42 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if !ok {
 		return nil, fmt.Errorf("%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
 	}
-	parentDirPath, ok := reqParams[volDirBasePathKey]
+	volDirBasePath, ok := reqParams[volDirBasePathKey]
 	if !ok {
 		return nil, fmt.Errorf("%s not in CreateVolumeRequest parameters", volDirBasePathKey)
 	}
-	dirPath := path.Join(parentDirPath, req.GetName())
-	cfgFilePath := path.Join(dataRoot, strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs-client.conf")
+	dirPath := path.Join(volDirBasePath, req.GetName())
+
+	// Generate a beegfs-client.conf file under dataRoot if necessary
+	cfgFilePath, _, err := generateBeeGFSClientConf(reqParams, dataRoot)
+	if err != nil {
+		return nil, err
+	}
 
 	// Check if volume already exists
-	_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--getentryinfo", dirPath})
+	_, err = beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--getentryinfo", dirPath})
 	if err != nil {
 		// TODO(webere) More in-depth error check
-		// We couldn't find the volume so we need to create one
+		// We can't find the volume so we need to create one
+		glog.Infof("Volume %s does not exist under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePath,
+			sysMgmtdHost)
 		_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dirPath})
 		if err != nil {
-			// We couldn't create the volume
-			return nil, fmt.Errorf("could not create volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
+			// We can't create the volume
+			return nil, fmt.Errorf("cannot create volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
 		}
+	} else {
+		glog.Infof("Volume %s already exists under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePath,
+			sysMgmtdHost)
 	}
 
 	volumeID := newBeegfsUrl(sysMgmtdHost, dirPath)
+	glog.Infof("Generated ID %s for volume %s", volumeID, req.GetName())
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId: volumeID,
+			VolumeId:      volumeID,
+			VolumeContext: reqParams, // These params will be needed again by the node service
 		},
 	}, nil
 }
