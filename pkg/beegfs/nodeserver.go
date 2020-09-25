@@ -24,8 +24,10 @@ import (
 	//	"github.com/golang/glog"
 
 	"golang.org/x/net/context"
+
 	//
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/glog"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	//	"k8s.io/kubernetes/pkg/util/mount"
@@ -57,7 +59,37 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	// Check arguments
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	}
+	if len(req.GetStagingTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+	}
+	if req.GetVolumeCapability() == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume Capability missing in request")
+	}
+
+	// fmt.Printf("Context: %#v\n", ctx)
+	// fmt.Printf("Request: %#v\n", req)
+
+	//Ensure this node has a BeeGFS client configuration file for the requested BeeGFS instance:
+	requestedConfPath, _, err := generateBeeGFSClientConf(req.VolumeContext, dataRoot, true)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "error %s occured generating a BeeGFS client conf file for %s at %s", err, req.VolumeContext, dataRoot)
+	}
+
+	// Ensure this BeeGFS instance is mounted:
+	requestedMountPath, changed, err := mountBeegfs(dataRoot, requestedConfPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "error '%s' occured while attempting to ensure a mount point existed for %s under %s", err, req.GetVolumeId(), dataRoot)
+	}
+
+	glog.Infof("NodeStageVolume: BeeGFS is mounted at %v (change required: %v).", requestedMountPath, changed)
+
+	// TODO (jmccormi): Return an appropriate response, probably the path where BeeGFS is mounted.
+	return &csi.NodeStageVolumeResponse{}, nil
+	//return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
