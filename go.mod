@@ -9,11 +9,10 @@ require (
 	github.com/google/uuid v1.0.0 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.3.0
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
-	github.com/spf13/afero v1.2.2 // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/net v0.0.0-20190311183353-d8887717615a
 	google.golang.org/grpc v1.26.0
 	k8s.io/apimachinery v0.0.0-20181110190943-2a7c93004028 // indirect
 	k8s.io/kubernetes v1.12.2
-	k8s.io/utils v0.0.0-20181102055113-1bd4f387aa67
+	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 )
