@@ -275,10 +275,10 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 // 	If this is set to "" it will default to <beegfsDefaultMountPath>/.
 // Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
 // Returns the full path to the BeeGFS mount point (ex. /mnt/192.168.10.13_beegfs).
-func mountBeegfs(mountUnder string, requestedConfPath string) (string, bool, error) {
+func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
 
-	changed := false
-	requestedMountPath := ""
+	changed = false
+	requestedMountPath = ""
 	beegfsMountOpts := []string{"rw", "relatime", "cfgFile=" + requestedConfPath}
 
 	if mountUnder == "" {
@@ -321,7 +321,12 @@ func mountBeegfs(mountUnder string, requestedConfPath string) (string, bool, err
 	}
 
 	glog.Infof("mountBeegfs: attempting to mount BeeGFS to %v.", requestedMountPath)
-	beegfsMounter.Mount("beegfs_nodev", requestedMountPath, "beegfs", beegfsMountOpts)
+	if err = beegfsMounter.Mount("beegfs_nodev", requestedMountPath, "beegfs", beegfsMountOpts); err != nil {
+		if cleanupErr := os.Remove(requestedMountPath); cleanupErr != nil {
+			return requestedMountPath, changed, fmt.Errorf("failed to cleanup directory %v after mount failure occured: %v", requestedMountPath, err)
+		}
+		return requestedMountPath, changed, err
+	}
 	changed = true
 	return requestedMountPath, changed, nil
 }
