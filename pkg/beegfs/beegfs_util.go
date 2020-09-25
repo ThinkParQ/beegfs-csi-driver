@@ -330,3 +330,47 @@ func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPat
 	changed = true
 	return requestedMountPath, changed, nil
 }
+
+// unmountBeegfsAndCleanUpConf cleans up a globally mounted BeeGFS filesystem ONLY if it is not bind mounted somewhere
+// else. This is necessary to avoid trying to unmount a BeeGFS filesystem that is still in use by some container.
+// "Cleans up" in this context means unmount the BeeGFS filesystem, delete the mount point (mountPath), and delete the
+// configuration file (confPath).
+// Requires a mountPath to the global BeeGFS mountpoint (e.g. .../10_113_72_217_beegfs).
+// Requires a confPath to a BeeGFS client.conf file (e.g. .../10_113_72_217_beegfs-client.conf).
+// Quietly returns WITHOUT error if the BeeGFS filesystem should not be unmounted.
+func unmountBeegfsAndCleanUpConf(mountPath string, confPath string) (err error) {
+	beegfsMounter := mount.New("/bin/mount")
+
+	// Decide whether or not to unmount BeeGFS filesystem by checking whether it is bind mounted somewhere else.
+	safeToUnmount := true
+	// Cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../10_113_72_217_beegfs is
+	// the initial mount point but .../10_113_72_217_beegfs/scratch is the directory we bind mount). beegfsMounter.GetRefs()
+	// is incapable of discovering this.
+	allMounts, err := beegfsMounter.List()
+	if err != nil {
+		return err
+	}
+	for _, entry := range allMounts {
+		if entry.Device == "beegfs_nodev" && entry.Path != mountPath {
+			for _, opt := range entry.Opts {
+				if strings.Contains(opt, confPath) {
+					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
+					glog.Infof("Refusing to unmount filesystem at %v because it is bind mounted at %v", mountPath, entry.Path)
+					safeToUnmount = false
+				}
+			}
+		}
+	}
+
+	if safeToUnmount {
+		glog.Infof("Unmounting filesystem at %v and removing mountpoint", mountPath)
+		if err = mount.CleanupMountPoint(mountPath, beegfsMounter, false); err != nil {
+			return err
+		}
+		glog.Infof("Removing configuration file at %v", confPath)
+		if err = os.Remove(confPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}

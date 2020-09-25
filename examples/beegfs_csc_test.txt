@@ -1,6 +1,6 @@
 Example csc commands for testing the compiled CSI. (We can remove this file further into development).
 
-csc -e unix:///tmp/csi.sock controller create-volume webere_test_1 --params "volDirBasePath=webere_scratch,beegfsConf/sysMgmtdHost=10.113.72.217"
+csc -e unix:///tmp/csi.sock controller create-volume webere_test_1 --cap "MULTI_NODE_MULTI_WRITER,mount," --params "volDirBasePath=webere_scratch,beegfsConf/sysMgmtdHost=10.113.72.217"
 csc -e unix:///tmp/csi.sock controller delete-volume beegfs://10.113.72.217/webere_scratch/webere_test_1
 
 

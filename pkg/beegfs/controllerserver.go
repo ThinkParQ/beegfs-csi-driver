@@ -17,6 +17,8 @@ limitations under the License.
 package beegfs
 
 import (
+	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -147,7 +149,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	volumeId := req.GetVolumeId()
 	sysMgmtdHost, dirPath, err := parseBeegfsUrl(volumeId)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
 	// Generate a beegfs-client.conf file under dataRoot if necessary
@@ -155,17 +157,32 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	simpleParams := map[string]string{path.Join(beegfsConfPrefix, "sysMgmtdHost"): sysMgmtdHost}
 	cfgFilePath, _, err := generateBeeGFSClientConf(simpleParams, dataRoot, false)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%s", err)
+		glog.Error(err)
+		return nil, status.Errorf(codes.Internal, "Failed to generate a beegfs-client.conf file for filesystem %s", sysMgmtdHost)
 	}
 
-	// Delete volume
-	// TODO(webere): This function CAN'T work as anticipated, because there is no deletedir or related beegfs-ctl command
-	if _, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--deletedir"}); err != nil {
-		return nil, status.Errorf(codes.Unavailable, "Cannot delete volume with path %s on filesystem %s", dirPath, sysMgmtdHost)
+	// Attempt to mount BeeGFS to dataRoot if necessary
+	mountPath, _, err := mountBeegfs(dataRoot, cfgFilePath)
+	if err != nil {
+		glog.Error(err)
+		return nil, status.Errorf(codes.Internal, "Failed to mount filesystem %s to %s", sysMgmtdHost, mountPath)
 	}
 
-	// TODO(webere): Clean up beegfs-client.conf file if we know we no longer need it
-	return nil, nil
+	// Delete volume from mounted BeeGFS
+	absoluteDirPath := path.Clean(path.Join(mountPath, dirPath))
+	glog.Infof("Removing %s from filesystem %s", dirPath, sysMgmtdHost)
+	if err = os.RemoveAll(absoluteDirPath); err != nil {
+		glog.Error(err)
+		return nil, status.Errorf(codes.Internal, "Failed to remove %s from filesystem %s")
+	}
+
+	// Unmount BeeGFS and clean up configuration file if not in use elsewhere
+	if err = unmountBeegfsAndCleanUpConf(mountPath, cfgFilePath); err != nil {
+		glog.Error(err)
+		return nil, status.Errorf(codes.Internal, "Failed to unmount filesystem %s")
+	}
+
+	return &csi.DeleteVolumeResponse{}, nil
 }
 
 func (cs *controllerServer) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
