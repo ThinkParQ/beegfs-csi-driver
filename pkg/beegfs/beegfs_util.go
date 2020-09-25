@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
+	"k8s.io/utils/mount"
 )
 
 const beegfsDefaultMountPath = "/mnt"                         // Default path where BeeGFS instances will be mounted under (may be overridden).
@@ -266,5 +267,61 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 		glog.Infof("updateBeegfsMountsFile: No changes required to %s.", beegfsMountsConfFile)
 	}
 
+	return requestedMountPath, changed, nil
+}
+
+// mountBeeGFS handles mounting BeeGFS and creating a directory for the mount point (along with any necessary parents).
+// Requires a mountUnder string pointing to a parent directory for the BeeGFS mount point.
+// 	If this is set to "" it will default to <beegfsDefaultMountPath>/.
+// Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
+// Returns the full path to the BeeGFS mount point (ex. /mnt/192.168.10.13_beegfs).
+func mountBeegfs(mountUnder string, requestedConfPath string) (string, bool, error) {
+
+	changed := false
+	requestedMountPath := ""
+	beegfsMountOpts := []string{"rw", "relatime", "cfgFile=" + requestedConfPath}
+
+	if mountUnder == "" {
+		// (jmccormi) If needed generate a default mount location using the format beegfsDefaultMountPath/<sysMgmtdHost>_beegfs
+		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
+		requestedMountPath = fmt.Sprintf("%s_beegfs", path.Join(beegfsDefaultMountPath, mountDir))
+	} else {
+		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
+		requestedMountPath = fmt.Sprintf("%s_beegfs", path.Join(mountUnder, mountDir))
+	}
+
+	beegfsMounter := mount.New("/usr/bin/mount")
+	// (jmccormi) We can't use this as BeeGFS doesn't meet whatever heuristics IsLikelyNotMountPoint uses to determine if a dir is a mountpoint.
+	// alreadyMounted, err := beegfsMounter.IsLikelyNotMountPoint(requestedMountPath)
+
+	currentMounts, err := beegfsMounter.List()
+	if err != nil {
+		return "", changed, fmt.Errorf("encountered error '%s' while attempting to get the list of currently mounted file systems", err)
+	}
+
+	for _, mount := range currentMounts {
+		fmt.Println(mount)
+		if mount.Type == "beegfs" && mount.Path == requestedMountPath {
+			glog.Infof("mountBeegfs: BeeGFS is already mounted to %v.", requestedMountPath)
+			return requestedMountPath, changed, nil
+		}
+	}
+
+	_, err = os.Stat(requestedMountPath)
+	if os.IsNotExist(err) {
+		glog.Infof("mountBeegfs: requested path to mount BeeGFS doesn't exist, attempting to create directory %v.", requestedMountPath)
+		err := os.MkdirAll(requestedMountPath, 0755)
+		changed = true
+		if err != nil {
+			return "", changed, fmt.Errorf("encountered an unknown error '%v' when attempting to create directory %v", err, requestedMountPath)
+		}
+	} else if err != nil {
+		fmt.Printf("%#v", err)
+		return "", changed, fmt.Errorf("encountered an unknown error '%v' when whem checking if %v is a directory", err, requestedMountPath)
+	}
+
+	glog.Infof("mountBeegfs: attempting to mount BeeGFS to %v.", requestedMountPath)
+	beegfsMounter.Mount("beegfs_nodev", requestedMountPath, "beegfs", beegfsMountOpts)
+	changed = true
 	return requestedMountPath, changed, nil
 }
