@@ -23,6 +23,9 @@ import (
 	//
 	//	"github.com/golang/glog"
 
+	"os"
+	"path"
+	"strings"
 	"golang.org/x/net/context"
 
 	//
@@ -76,26 +79,49 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.InvalidArgument, "Volume Capability missing in request")
 	}
 
-	// fmt.Printf("Context: %#v\n", ctx)
-	// fmt.Printf("Request: %#v\n", req)
+	// (jmccormi) TODO: Check and return all possible NodeStageVolume errors:
+	//	https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 
-	//Ensure this node has a BeeGFS client configuration file for the requested BeeGFS instance:
-	requestedConfPath, _, err := generateBeeGFSClientConf(req.VolumeContext, dataRoot, true)
+	/* (jmccormi) the full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
+		staging_target_path/
+			sysMgmtdHost_beegfs_vols/ <-- Replacing . with _ if provided an IP address for sysMgmtdHost.
+				volPath/			  <-- The full path to the requested directory within the BeeGFS instance.
+					sysMgmtdHost_beegfs/ <-- The actual BeeGFS mount point for this volume will be created here. 
+					sysMgmtdHost_beegfs-client.conf <-- A corresponding BeeGFS client config file will be created here.
+		=== Example ===
+		/mnt/
+			10_113_72_217_beegfs_vols/
+				jmccormi_scratch/jmccormi_test_1/
+					10_113_72_217_beegfs/
+					10_113_72_217_beegfs-client.conf
+	*/
+
+	sysMgmtdHost, volPath, err := parseBeegfsUrl(req.GetVolumeId())
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "error %s occured generating a BeeGFS client conf file for %s at %s", err, req.VolumeContext, dataRoot)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// Ensure this BeeGFS instance is mounted:
-	requestedMountPath, changed, err := mountBeegfs(dataRoot, requestedConfPath)
+	volumeStagingTargetPath := path.Join(req.GetStagingTargetPath(), strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs_vols", volPath)
+
+	err = os.MkdirAll(path.Join(volumeStagingTargetPath), 0755)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "error '%s' occured while attempting to ensure a mount point existed for %s under %s", err, req.GetVolumeId(), dataRoot)
+		return nil, status.Errorf(codes.Internal, "%s\n occured creating volume staging target path %s for volume ID %s", err, volumeStagingTargetPath, req.GetVolumeId())
+	}
+
+	//Ensure a BeeGFS client configuration file exists for this volume:
+	requestedConfPath, _, err := generateBeeGFSClientConf(req.VolumeContext, volumeStagingTargetPath, true)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "%s\noccured generating a BeeGFS client conf file for %s at %s", err, req.VolumeContext, volumeStagingTargetPath)
+	}
+
+	// Ensure there is a BeeGFS mount point for this volume: 
+	requestedMountPath, changed, err := mountBeegfs(volumeStagingTargetPath, requestedConfPath)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "%s\noccured while attempting to ensure a mount point existed for %s under %s", err, req.GetVolumeId(), volumeStagingTargetPath)
 	}
 
 	glog.Infof("NodeStageVolume: BeeGFS is mounted at %v (change required: %v).", requestedMountPath, changed)
-
-	// TODO (jmccormi): Return an appropriate response, probably the path where BeeGFS is mounted.
 	return &csi.NodeStageVolumeResponse{}, nil
-	//return nil, status.Error(codes.Unimplemented, "")
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
