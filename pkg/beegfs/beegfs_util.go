@@ -15,6 +15,7 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/utils/mount"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const beegfsDefaultMountPath = "/mnt"                         // Default path where BeeGFS instances will be mounted under (may be overridden).
@@ -395,4 +396,34 @@ func isUDPPortAvailable(port string) (available bool, err error) {
 	}
 
 	return true, err
+}
+
+
+/* 
+Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
+
+The full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
+	staging_target_path/
+		sysMgmtdHost_beegfs_vols/ // Replacing . with _ if provided an IP address for sysMgmtdHost.
+			volPath/			  // The full path to the requested directory within the BeeGFS instance.
+				sysMgmtdHost_beegfs/ // The actual BeeGFS mount point for this volume will be created here. 
+				sysMgmtdHost_beegfs-client.conf // A corresponding BeeGFS client config file will be created here.
+
+	=== Example ===
+	/mnt/
+		10_113_72_217_beegfs_vols/
+			jmccormi_scratch/jmccormi_test_1/
+				10_113_72_217_beegfs/
+				10_113_72_217_beegfs-client.conf
+*/
+func getBeegfsVolumeStagingTargetPath(req csi.NodeStageVolumeRequest) (volumeStagingTargetPath string, err error) {
+
+	sysMgmtdHost, volPath, err := parseBeegfsUrl(req.GetVolumeId())
+	if err != nil {
+		return "", err
+	}
+
+	volumeStagingTargetPath = path.Join(req.GetStagingTargetPath(), strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs_vols", volPath)
+
+	return volumeStagingTargetPath, nil
 }
