@@ -15,7 +15,6 @@ import (
 
 	"github.com/golang/glog"
 	"k8s.io/utils/mount"
-	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 const beegfsDefaultMountPath = "/mnt"                         // Default path where BeeGFS instances will be mounted under (may be overridden).
@@ -25,6 +24,11 @@ const beegfsDefaultClientConfPath = "/etc/beegfs"             // A path where a 
 const beegfsDefaultClientConfFile = "beegfs-client.conf"      // The name of the file in the above path copied to create conf files for each BeeGFS instance.
 
 const beegfsUrlScheme = "beegfs"
+
+type beegfsVolStagingTargetPath interface {
+	GetVolumeId() string
+	GetStagingTargetPath() string
+}
 
 // newBeegfsUrl converts a hostname or IP address and path into a URL
 func newBeegfsUrl(host string, path string) string {
@@ -416,7 +420,7 @@ The full volumeStagingTargetPath within the local root filesystem for each BeeGF
 				10_113_72_217_beegfs/
 				10_113_72_217_beegfs-client.conf
 */
-func getBeegfsVolumeStagingTargetPath(req csi.NodeStageVolumeRequest) (volumeStagingTargetPath string, err error) {
+func getBeegfsVolStagingTargetPath(req beegfsVolStagingTargetPath) (volumeStagingTargetPath string, err error) {
 
 	sysMgmtdHost, volPath, err := parseBeegfsUrl(req.GetVolumeId())
 	if err != nil {
