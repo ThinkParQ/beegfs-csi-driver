@@ -108,6 +108,9 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 	params = getParsedClientParams(params)
 
 	// (jmccormi) If connClientPortUDP wasn't specified loop through UDP ports in the ephemeral range and find an available port.
+	// Note if generateBeeGFSClientConf is rerun against the same confPath with allowOverwrite this always results in the file being updated with a new UDP port.
+	// This seemed safer than trying to see if connClientPortUDP was already set to ensure we always mount BeeGFS with a (probably) available UDP port.
+	// If BeeGFS is actively mounted it will continue to use the original UDP port (presumably until remounted). 
 	if _, ok := params["connClientPortUDP"]; !ok {
 		for i := 49152; i < 65535; i++ {
 			available, err := isUDPPortAvailable(strconv.Itoa(i))
