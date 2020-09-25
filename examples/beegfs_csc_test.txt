@@ -2,3 +2,8 @@ Example csc commands for testing the compiled CSI. (We can remove this file furt
 
 csc -e unix:///tmp/csi.sock controller create-volume webere_test_1 --params "volDirBasePath=webere_scratch,beegfsConf/sysMgmtdHost=10.113.72.217"
 csc -e unix:///tmp/csi.sock controller delete-volume beegfs://10.113.72.217/webere_scratch/webere_test_1
+
+
+// (jmccormi) Example csc command for testing node staging:
+
+csc -e unix:///tmp/csi.sock node stage beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 --staging-target-path="/mnt" --cap "MULTI_NODE_MULTI_WRITER,mount," --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=jmccormi_scratch,volume_id=beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1"
