@@ -387,7 +387,7 @@ func isUDPPortAvailable(port string) (available bool, err error) {
 		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu", err, port)
 	}
 
-	if strings.Contains(port, string(cmd)) {
+	if strings.Contains(string(cmd), port) {
 		return false, nil
 	}
 
