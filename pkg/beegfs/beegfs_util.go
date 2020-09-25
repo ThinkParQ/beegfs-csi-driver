@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
@@ -106,15 +107,19 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 
 	params = getParsedClientParams(params)
 
-	// (jmccormi) TODO: This is intended to be a temporary workaround for the fact we need a unique connClientPortUDP value for each instance.
-	// This is poor implementation as we're picking a port out of the ephemeral port range (49152-65535) without verifying if its already in use.
-	// This also won't work if we are provided a hostname or IPv6 instead of an IPv4 address and assumes all possible mgmt IPs are in the same subnet.
+	// (jmccormi) If connClientPortUDP wasn't specified loop through UDP ports in the ephemeral range and find an available port.
+	// Note if generateBeeGFSClientConf is rerun against the same confPath with allowOverwrite this always results in the file being updated with a new UDP port.
+	// This seemed safer than trying to see if connClientPortUDP was already set to ensure we always mount BeeGFS with a (probably) available UDP port.
+	// If BeeGFS is actively mounted it will continue to use the original UDP port (presumably until remounted). 
 	if _, ok := params["connClientPortUDP"]; !ok {
-		lastOctet := strings.Split(params["sysMgmtdHost"], ".")[3]
-		if len(lastOctet) == 2 {
-			params["connClientPortUDP"] = "500" + lastOctet
-		} else {
-			params["connClientPortUDP"] = "50" + lastOctet
+		for i := 49152; i < 65535; i++ {
+			available, err := isUDPPortAvailable(strconv.Itoa(i))
+			if err != nil {
+				return "", false, err
+			} else if available == true {
+				params["connClientPortUDP"] = strconv.Itoa(i)
+				break
+			}
 		}
 	}
 
@@ -274,7 +279,7 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 // Requires a mountUnder string pointing to a parent directory for the BeeGFS mount point.
 // 	If this is set to "" it will default to <beegfsDefaultMountPath>/.
 // Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
-// Returns the full path to the BeeGFS mount point (ex. /mnt/192.168.10.13_beegfs).
+// Returns the full path to the BeeGFS mount point (ex. /mnt/192_168_10_13_beegfs).
 func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
 
 	changed = false
@@ -300,7 +305,6 @@ func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPat
 	}
 
 	for _, mount := range currentMounts {
-		fmt.Println(mount)
 		if mount.Type == "beegfs" && mount.Path == requestedMountPath {
 			glog.Infof("mountBeegfs: BeeGFS is already mounted to %v.", requestedMountPath)
 			return requestedMountPath, changed, nil
@@ -316,7 +320,6 @@ func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPat
 			return "", changed, fmt.Errorf("encountered an unknown error '%v' when attempting to create directory %v", err, requestedMountPath)
 		}
 	} else if err != nil {
-		fmt.Printf("%#v", err)
 		return "", changed, fmt.Errorf("encountered an unknown error '%v' when whem checking if %v is a directory", err, requestedMountPath)
 	}
 
@@ -373,4 +376,23 @@ func unmountBeegfsAndCleanUpConf(mountPath string, confPath string) (err error) 
 		}
 	}
 	return nil
+}
+
+// isUDPPortAvailable checks if a port is already listed in "sudo netstat -lu".
+// This is a rudimentary implementation that doesn't validate if it was passed a valid port vs. some other string.
+// If the port is already listed returns false, if the port is not listed returns true.
+func isUDPPortAvailable(port string) (available bool, err error) {
+
+	glog.Infof("Checking for in use UDP port with: sudo netstat -lu")
+	cmd, err := exec.Command("sudo", "netstat", "-lu").Output() // use sudo in case we are not root but have sudo privileges
+
+	if err != nil {
+		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu", err, port)
+	}
+
+	if strings.Contains(string(cmd), port) {
+		return false, nil
+	}
+
+	return true, err
 }
