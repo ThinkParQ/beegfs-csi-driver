@@ -17,7 +17,6 @@ limitations under the License.
 package beegfs
 
 import (
-	"fmt"
 	"path"
 	"strings"
 
@@ -86,18 +85,20 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	reqParams := req.GetParameters()
 	sysMgmtdHost, ok := getBeegfsConfValueFromParams(sysMgmtdHostKey, reqParams)
 	if !ok {
-		return nil, fmt.Errorf("%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
+		return nil, status.Errorf(codes.InvalidArgument,"%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
 	}
 	volDirBasePath, ok := reqParams[volDirBasePathKey]
 	if !ok {
-		return nil, fmt.Errorf("%s not in CreateVolumeRequest parameters", volDirBasePathKey)
+		return nil, status.Errorf(codes.InvalidArgument, "%s not in CreateVolumeRequest parameters", volDirBasePathKey)
 	}
+	volDirBasePath = strings.TrimLeft(volDirBasePath, "/")  // Trim leading slash if included
+
 	dirPath := path.Join(volDirBasePath, req.GetName())
 
 	// Generate a beegfs-client.conf file under dataRoot if necessary
 	cfgFilePath, _, err := generateBeeGFSClientConf(reqParams, dataRoot, true)
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// Check if volume already exists
@@ -120,7 +121,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dir})
 			if err != nil && strings.Contains(err.Error(), "Entry exists already"){
 				// We can't create the volume
-				return nil, fmt.Errorf("cannot create directory with path %s on filesystem %s", dir, sysMgmtdHost)
+				return nil, status.Errorf(codes.Internal, "cannot create directory with path %s on filesystem %s", dir, sysMgmtdHost)
 			}
 		}
 	} else {
