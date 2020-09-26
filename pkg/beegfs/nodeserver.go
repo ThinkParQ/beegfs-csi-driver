@@ -25,7 +25,6 @@ import (
 
 	"os"
 	"path"
-	"strings"
 	"golang.org/x/net/context"
 
 	//
@@ -82,26 +81,11 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	// (jmccormi) TODO: Check and return all possible NodeStageVolume errors:
 	//	https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 
-	/* (jmccormi) the full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
-		staging_target_path/
-			sysMgmtdHost_beegfs_vols/ <-- Replacing . with _ if provided an IP address for sysMgmtdHost.
-				volPath/			  <-- The full path to the requested directory within the BeeGFS instance.
-					sysMgmtdHost_beegfs/ <-- The actual BeeGFS mount point for this volume will be created here. 
-					sysMgmtdHost_beegfs-client.conf <-- A corresponding BeeGFS client config file will be created here.
-		=== Example ===
-		/mnt/
-			10_113_72_217_beegfs_vols/
-				jmccormi_scratch/jmccormi_test_1/
-					10_113_72_217_beegfs/
-					10_113_72_217_beegfs-client.conf
-	*/
-
-	sysMgmtdHost, volPath, err := parseBeegfsUrl(req.GetVolumeId())
+	// (jmccormi) Determine the unique path within the local root file system where we can stage this specific BeeGFS URL: 
+	volumeStagingTargetPath, err := getBeegfsVolStagingTargetPath(req)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "%s\n occured determining volume staging target path %s for volume ID %s", err, volumeStagingTargetPath, req.GetVolumeId())
 	}
-
-	volumeStagingTargetPath := path.Join(req.GetStagingTargetPath(), strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs_vols", volPath)
 
 	err = os.MkdirAll(path.Join(volumeStagingTargetPath), 0755)
 	if err != nil {
@@ -125,7 +109,50 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	// Check arguments
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	}
+	if len(req.GetStagingTargetPath()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+	}
+
+	// (jmccormi) Determine the unique path within the local root file system where we staged this specific BeeGFS URL: 
+	volumeStagingTargetPath, err := getBeegfsVolStagingTargetPath(req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%s\n occured determining volume staging target path %s for volume ID %s", err, volumeStagingTargetPath, req.GetVolumeId())
+	}
+
+	// (jmccormi) Ensure a BeeGFS client configuration file exists for this volume but don't try to update it:
+	sysMgmtdHost, _, err := parseBeegfsUrl(req.GetVolumeId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+	}
+	simpleParams := map[string]string{path.Join(beegfsConfPrefix, "sysMgmtdHost"): sysMgmtdHost}
+
+	requestedConfPath, _, err := generateBeeGFSClientConf(simpleParams, volumeStagingTargetPath, false)
+	if err != nil {
+		return nil, status.Errorf(codes.Unavailable, "%s\noccured ensuring a BeeGFS client conf file for %s exists at %s", err, req.GetVolumeId(), volumeStagingTargetPath)
+	}
+
+	// (jmccormi) Generate the full path to where we need to unmount this specific BeeGFS volume from:
+	requestedMountPath := generateBeegfsMountPoint(volumeStagingTargetPath, requestedConfPath)
+
+	// (jmccormi) Attempt to unmount this BeeGFS volue:
+	err = unmountBeegfsAndCleanUpConf(requestedMountPath, requestedConfPath)
+	if err != nil{
+		return nil, status.Errorf(codes.Unavailable, "%s\noccured unmounting %s from %s", err, req.GetVolumeId(), volumeStagingTargetPath)
+	}
+
+	// (jmccormi) Cleanup the unique volume staging target path for this volume.
+	// (jmccormi) TODO: This only removes the last element of the path, do we want to remove back to the first empty parent directory?
+	glog.Infof("NodeUnstageVolume: Removing volume staging target path %v.", volumeStagingTargetPath)
+	err = os.Remove(volumeStagingTargetPath)
+	if err != nil {
+		glog.Warningf("NodeUnstageVolume: Successfully unmounted %v but failed to cleanup volume staging target path at %v due to error: %v", req.GetVolumeId(), volumeStagingTargetPath, err)
+	}
+
+	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
