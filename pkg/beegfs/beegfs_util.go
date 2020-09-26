@@ -280,25 +280,16 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 	return requestedMountPath, changed, nil
 }
 
-// mountBeeGFS handles mounting BeeGFS and creating a directory for the mount point (along with any necessary parents).
-// Requires a mountUnder string pointing to a parent directory for the BeeGFS mount point.
-// 	If this is set to "" it will default to <beegfsDefaultMountPath>/.
+// Handles mounting BeeGFS and creating a directory for the mount point (along with any necessary parents).
+// Requires a parentDirectory string pointing to a directory where the BeeGFS mount point will be created under. 
+// * If this is set to "" it will default to the constant beegfsDefaultMountPath. 
 // Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
 // Returns the full path to the BeeGFS mount point (ex. /mnt/192_168_10_13_beegfs).
-func mountBeegfs(mountUnder string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
+func mountBeegfs(parentDirectory string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
 
 	changed = false
-	requestedMountPath = ""
+	requestedMountPath = generateBeegfsMountPoint(parentDirectory, requestedConfPath)
 	beegfsMountOpts := []string{"rw", "relatime", "cfgFile=" + requestedConfPath}
-
-	if mountUnder == "" {
-		// (jmccormi) If needed generate a default mount location using the format beegfsDefaultMountPath/<sysMgmtdHost>_beegfs
-		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
-		requestedMountPath = fmt.Sprintf("%s_beegfs", path.Join(beegfsDefaultMountPath, mountDir))
-	} else {
-		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
-		requestedMountPath = fmt.Sprintf("%s_beegfs", path.Join(mountUnder, mountDir))
-	}
 
 	beegfsMounter := mount.New("/usr/bin/mount")
 	// (jmccormi) We can't use this as BeeGFS doesn't meet whatever heuristics IsLikelyNotMountPoint uses to determine if a dir is a mountpoint.
@@ -430,4 +421,24 @@ func getBeegfsVolStagingTargetPath(req beegfsVolStagingTargetPath) (volumeStagin
 	volumeStagingTargetPath = path.Join(req.GetStagingTargetPath(), strings.Replace(sysMgmtdHost, ".", "_", 3)+"_beegfs_vols", volPath)
 
 	return volumeStagingTargetPath, nil
+}
+
+// Generates the full path to a BeeGFS mount point given a parent directory and requested path to a BeeGFS Client configuration file. 
+// * The name of the directory where BeeGFS will be mounted is generated as <sysMgmtdHost>_beegfs.
+// * For example if provided client file 10_113_72_217_beegfs-client.conf the directory name is 10_113_72_217_beegfs. 
+// Returns the full path where BeeGFS should be mounted but does not handle mounting BeeGFS.
+func generateBeegfsMountPoint (parentDirectory string, requestedConfPath string ) (requestedMountDir string) {
+
+	requestedMountDir = ""
+
+	if parentDirectory == "" {
+		// (jmccormi) If needed generate a default mount location using the format beegfsDefaultMountPath/<sysMgmtdHost>_beegfs
+		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
+		requestedMountDir = fmt.Sprintf("%s_beegfs", path.Join(beegfsDefaultMountPath, mountDir))
+	} else {
+		mountDir := strings.Split(filepath.Base(requestedConfPath), "_"+beegfsDefaultClientConfFile)[0]
+		requestedMountDir = fmt.Sprintf("%s_beegfs", path.Join(parentDirectory, mountDir))
+	}
+
+	return requestedMountDir
 }
