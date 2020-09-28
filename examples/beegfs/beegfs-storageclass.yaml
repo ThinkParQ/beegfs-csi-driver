@@ -1,0 +1,12 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+    name: beegfs-scratch
+provisioner: beegfs.csi.netapp.com
+parameters:
+  beegfsConf/sysMgmtdHost: 10.113.72.217
+  beegfsConf/sysMountSanityCheckMS: "60000"
+  volDirBasePath: scratch 
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: false

@@ -1,0 +1,26 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: tensorflow
+  labels: 
+    apps: tensorflow
+spec:
+  containers:
+    - name: tensorflow-imagenet
+      image: tensorflow
+      resources:
+        limits:
+          cpu: 8
+          memory: 8Gi
+      volumeMounts:
+        - name: project-01-scratch
+          mountPath: "/scratch"
+        - name: image-net
+          mountPath: "/imagenet"
+  volumes:
+    - name: project-01-scratch
+      persistentVolumeClaim:
+        claimName: project-01-scratch-pvc # Defined in beegfs-pvc.yaml
+    - name: image-net 
+      persistentVolumeClaim:
+        claimName: image-net-static-pvc # Defined in beegfs-static-pvc.yaml.
