@@ -25,26 +25,26 @@
 ##### Command
 
     csc controller create-volume volume1 --cap "MULTI_NODE_MULTI_WRITER,mount," \
-    --params "volDirBasePath=demo,beegfsConf/sysMgmtdHost=10.113.72.217"
+    --params "volDirBasePath=scratch,beegfsConf/sysMgmtdHost=10.113.72.217"
     
 ##### Result
 
-    "beegfs://10.113.72.217/demo/volume1"   0       "beegfsConf/sysMgmtdHost"="10.113.72.217"       "volDirBasePath"="demo"
+    "beegfs://10.113.72.217/scratch/volume1"   0       "beegfsConf/sysMgmtdHost"="10.113.72.217"       "volDirBasePath"="scratch"
 
 ##### Evidence
 
-A subdirectory named demo/volume1 exists on the BeeGFS filesystem where one did not exist before.
+A subdirectory named scratch/volume1 exists on the BeeGFS filesystem where one did not exist before.
 
 #### NodeStageVolume
 
 ##### Command
 
     csc node stage --staging-target-path="/tmp/csi_data_dir/volume1" --cap "MULTI_NODE_MULTI_WRITER,mount," \
-    --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=demo" beegfs://10.113.72.217/demo/volume1
+    --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=scratch" beegfs://10.113.72.217/scratch/volume1
 
 #### Result
 
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
     
 #### Evidence
 
@@ -59,11 +59,11 @@ The beegfs filesystem is mounted at /tmp/csi_data_dir/volume1/beegfs.
 
     csc node publish --staging-target-path="/tmp/csi_data_dir/volume1" \
     --target-path="/tmp/fake_kubelet_dir/pods/pod1/volumes/volume1" --cap "MULTI_NODE_MULTI_WRITER,mount," \
-    --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=demo" beegfs://10.113.72.217/demo/volume1
+    --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=scratch" beegfs://10.113.72.217/scratch/volume1
     
 ##### Result
 
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
     
 ##### Evidence
 
@@ -83,7 +83,7 @@ Publish the volume again to another "pod". Confirm that it is mounted yet again 
 
     -> csc node publish --staging-target-path="/tmp/csi_data_dir/volume1" \
        --target-path="/tmp/fake_kubelet_dir/pods/pod2/volumes/volume1" --cap "MULTI_NODE_MULTI_WRITER,mount," \
-       --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=demo" beegfs://10.113.72.217/demo/volume1
+       --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=scratch" beegfs://10.113.72.217/scratch/volume1
     beegfs_nodev on /tmp/csi_data_dir/volume1/beegfs type beegfs (rw,relatime,cfgFile=/tmp/csi_data_dir/volume1/10_113_72_217_beegfs-client.conf)
     beegfs_nodev on /tmp/fake_kubelet_dir/pods/pod1/volumes/volume1 type beegfs (rw,relatime,cfgFile=/tmp/csi_data_dir/volume1/10_113_72_217_beegfs-client.conf)
     beegfs_nodev on /tmp/fake_kubelet_dir/pods/pod2/volumes/volume1 type beegfs (rw,relatime,cfgFile=/tmp/csi_data_dir/volume1/10_113_72_217_beegfs-client.conf)
@@ -104,11 +104,11 @@ Write data to one "pod" data directory and confirm that it can be read from the 
 If you executed NodePublishVolume for more than one "pod", repeat this command for each "pod".
 
     csc node unpublish --target-path="/tmp/fake_kubelet_dir/pods/pod1/volumes/volume1" \
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
     
 ##### Result
 
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
     
 ##### Evidence
 
@@ -122,11 +122,11 @@ data directories.
 
 ##### Command
 
-    csc node unstage --staging-target-path="/tmp/csi_data_dir/volume1" beegfs://10.113.72.217/demo/volume1
+    csc node unstage --staging-target-path="/tmp/csi_data_dir/volume1" beegfs://10.113.72.217/scratch/volume1
     
 ##### Result
 
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
 
 ##### Evidence
 
@@ -139,12 +139,12 @@ The BeeGFS filesystem is no longer mounted anywhere.
 
 ##### Command
 
-    csc controller delete-volume beegfs://10.113.72.217/demo/volume1
+    csc controller delete-volume beegfs://10.113.72.217/scratch/volume1
     
 ##### Result
 
-    beegfs://10.113.72.217/demo/volume1
+    beegfs://10.113.72.217/scratch/volume1
     
 ##### Evidence
 
-The subdirectory demo/volume1 no longer exists on the BeeGFS filesystem.
+The subdirectory scratch/volume1 no longer exists on the BeeGFS filesystem.
