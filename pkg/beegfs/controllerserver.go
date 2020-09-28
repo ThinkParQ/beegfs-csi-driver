@@ -149,6 +149,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	volumeId := req.GetVolumeId()
 	sysMgmtdHost, dirPath, err := parseBeegfsUrl(volumeId)
 	if err != nil {
+		glog.Error(err)
 		return nil, status.Errorf(codes.InvalidArgument, "Could not parse VolumeID %s", volumeId)
 	}
 
