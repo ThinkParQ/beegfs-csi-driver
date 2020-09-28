@@ -291,12 +291,12 @@ Handles mounting BeeGFS and creating a directory for the mount point (along with
  * If this is set to "" it will default to the constant beegfsDefaultMountPath. 
 * Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
 
-Returns the full path to the BeeGFS mount point (ex. /mnt/192_168_10_13_beegfs). 
+Returns the full path to the BeeGFS mount point (e.g. if parentDirectory is /mnt returns /mnt/beegfs). 
 */
 func mountBeegfs(parentDirectory string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
 
 	changed = false
-	requestedMountPath = generateBeegfsMountPoint(parentDirectory, requestedConfPath)
+	requestedMountPath = path.Join(parentDirectory, "beegfs")
 	beegfsMountOpts := []string{"rw", "relatime", "cfgFile=" + requestedConfPath}
 
 	beegfsMounter := mount.New("/usr/bin/mount")
@@ -402,7 +402,7 @@ func isUDPPortAvailable(port string) (available bool, err error) {
 
 
 /* 
-Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
+Deprecated: Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
 
 The full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
 	staging_target_path/
@@ -430,7 +430,7 @@ func getBeegfsVolStagingTargetPath(req beegfsVolStagingTargetPath) (volumeStagin
 	return volumeStagingTargetPath, nil
 }
 
-// Generates the full path to a BeeGFS mount point given a parent directory and requested path to a BeeGFS Client configuration file. 
+// Deprecated: Generates the full path to a BeeGFS mount point given a parent directory and requested path to a BeeGFS Client configuration file. 
 // * The name of the directory where BeeGFS will be mounted is generated as <sysMgmtdHost>_beegfs.
 // * For example if provided client file 10_113_72_217_beegfs-client.conf the directory name is 10_113_72_217_beegfs. 
 // Returns the full path where BeeGFS should be mounted but does not handle mounting BeeGFS.
