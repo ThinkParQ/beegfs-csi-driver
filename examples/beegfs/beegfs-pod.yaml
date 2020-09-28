@@ -20,7 +20,7 @@ spec:
   volumes:
     - name: project-01-scratch
       persistentVolumeClaim:
-        claimName: project-01-scratch-pvc # Defined in beegfs-pvc.yaml
+        claimName: project-01-scratch # Defined in beegfs-pvc.yaml
     - name: image-net 
       persistentVolumeClaim:
-        claimName: image-net-static-pvc # Defined in beegfs-static-pvc.yaml.
+        claimName: image-net-static # Defined in beegfs-static-pvc.yaml.
