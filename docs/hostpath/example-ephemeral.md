@@ -50,7 +50,7 @@ spec:
         driver: hostpath.csi.k8s.io
 ``` 
 
-> See sample YAML file [here](../examples/csi-app-inline.yaml).
+> See sample YAML file [here](../../examples/csi-app-inline.yaml).
 
 Notice the CSI driver is now specified directly in the container spec inside the `volumes:` block.  You can use the [same steps as above][Confirm Hostpath driver works] 
 to verify that the volume has been created and deleted (when the pod is removed).
