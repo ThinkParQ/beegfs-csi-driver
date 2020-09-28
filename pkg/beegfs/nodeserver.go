@@ -61,20 +61,28 @@ func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64) *node
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
 	beegfsMounter := mount.New("/bin/mount")
-	actualStagingTargetPath := path.Join(req.GetStagingTargetPath(), "beegfs")
+
+	_, relativePathtoSubdir, err := parseBeegfsUrl(req.GetVolumeId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not parse VolumeID %s", req.GetVolumeId())
+	}
+	// Filesystem is staged at targetPath/beegfs
+	pathToBeegfsRoot := path.Join(req.GetStagingTargetPath(), "beegfs")
+	// Volume to be mounted into pod is staged at targetPath/beegfs/some/relative/path
+	pathToBeegfsSubdir := path.Clean(path.Join(pathToBeegfsRoot, relativePathtoSubdir))
 
 	// It is the SP's responsibility to create the targetPath given that its parent has been created by the CO
-	// TODO(webere): Switch to Mkdir() (should not have to create parents and should error if this is necessary)
+	// TODO(webere): Switch to Mkdir() (should not have to create parents and should error if it is necessary)
 	// TODO(webere): Leaving as MkdirAll() for now to make demo easier
-	err := os.MkdirAll(req.GetTargetPath(), 0755)
+	err = os.MkdirAll(req.GetTargetPath(), 0755)
 	if err != nil {
 		glog.Error(err.Error())
-		return nil, status.Errorf(codes.Internal, "failed to create target path %s", req.GetTargetPath())
+		return nil, status.Errorf(codes.Internal, "failed to create TargetPath %s", req.GetTargetPath())
 	}
 
-	// Bind mount actualStagingTargetPath onto TargetPath
+	// Bind mount pathToBeegfsSubdir onto TargetPath
 	opts := []string{"bind"}
-	err = beegfsMounter.Mount(actualStagingTargetPath, req.GetTargetPath(), "beegfs", opts)
+	err = beegfsMounter.Mount(pathToBeegfsSubdir, req.GetTargetPath(), "beegfs", opts)
 	if err != nil {
 		glog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s", req.GetStagingTargetPath(), req.GetTargetPath())
