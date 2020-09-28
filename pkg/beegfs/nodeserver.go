@@ -115,8 +115,17 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	// (jmccormi) TODO: Check and return all possible NodeStageVolume errors:
 	//	https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 
+	// (jmccormi) It is the CO's responsibility to ensure there is one `staging_target_path` per volume and creating the directory if it does not exist.
+	// To simplify the demo we'll create the full staging target path if needed.
+	// TODO (jmccormi): Remove automatic creation of the staging target path before releasing.
+	err := os.MkdirAll(req.GetStagingTargetPath(), 0755)
+	if err != nil {
+		glog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create TargetPath %s", req.GetStagingTargetPath())
+	}
+
 	// (jmccormi) Note that req.GetStagingTargetPath() must already exist or this will fail.
-	_, err := os.Stat(req.GetStagingTargetPath())
+	_, err = os.Stat(req.GetStagingTargetPath())
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "%s\noccured validating the staging target directory for %s exists at %s", err, req.GetVolumeId(), req.GetStagingTargetPath())
 	}
