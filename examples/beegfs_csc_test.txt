@@ -6,10 +6,10 @@ csc -e unix:///tmp/csi.sock controller delete-volume beegfs://10.113.72.217/webe
 
 // (jmccormi) Example csc command for testing node staging:
 
-csc -e unix:///tmp/csi.sock node stage --staging-target-path="/mnt" --cap "MULTI_NODE_MULTI_WRITER,mount," --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=jmccormi_scratch,volume_id=beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 
+csc -e unix:///tmp/csi.sock node stage --staging-target-path="/mnt/jmccormi_test_1" --cap "MULTI_NODE_MULTI_WRITER,mount," --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=jmccormi_scratch,volume_id=beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 
 
-csc -e unix:///tmp/csi.sock node stage --staging-target-path="/mnt" --cap "MULTI_NODE_MULTI_WRITER,mount," --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=jmccormi_scratch" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 
+csc -e unix:///tmp/csi.sock node stage --staging-target-path="/mnt/jmccormi_test_1" --cap "MULTI_NODE_MULTI_WRITER,mount," --vol-context="beegfsConf/sysMgmtdHost=10.113.72.217,volDirBasePath=jmccormi_scratch" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 
 
 // (jmccormi) Example csc command for testing node unstaging: 
 
-csc -e unix:///tmp/csi.sock node unstage --staging-target-path="/mnt" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 
+csc -e unix:///tmp/csi.sock node unstage --staging-target-path="/mnt/jmccormi_test_1" beegfs://10.113.72.217/jmccormi_scratch/jmccormi_test_1 

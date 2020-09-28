@@ -124,13 +124,10 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		return nil, status.Errorf(codes.Unavailable, "%s\noccured ensuring a BeeGFS client conf file for %s exists at %s", err, req.GetVolumeId(), req.GetStagingTargetPath())
 	}
 
-	// (jmccormi) Generate the full path to where we need to unmount this specific BeeGFS volume from:
-	requestedMountPath := generateBeegfsMountPoint(req.GetStagingTargetPath(), requestedConfPath)
-
 	// (jmccormi) Attempt to unmount this BeeGFS volue:
-	err = unmountBeegfsAndCleanUpConf(requestedMountPath, requestedConfPath)
+	err = unmountBeegfsAndCleanUpConf(path.Join(req.GetStagingTargetPath(), "beegfs"), requestedConfPath)
 	if err != nil{
-		return nil, status.Errorf(codes.Unavailable, "%s\noccured unmounting %s from %s", err, req.GetVolumeId(), requestedMountPath)
+		return nil, status.Errorf(codes.Unavailable, "%s\noccured unmounting %s from %s", err, req.GetVolumeId(), path.Join(req.GetStagingTargetPath(), "beegfs"))
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
