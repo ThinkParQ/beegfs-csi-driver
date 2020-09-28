@@ -23,6 +23,7 @@ import (
 	//
 	//	"github.com/golang/glog"
 
+	"k8s.io/utils/mount"
 	"os"
 	"path"
 	"golang.org/x/net/context"
@@ -59,11 +60,44 @@ func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64) *node
 }
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	beegfsMounter := mount.New("/bin/mount")
+
+	_, relativePathtoSubdir, err := parseBeegfsUrl(req.GetVolumeId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Could not parse VolumeID %s", req.GetVolumeId())
+	}
+	// Filesystem is staged at targetPath/beegfs
+	pathToBeegfsRoot := path.Join(req.GetStagingTargetPath(), "beegfs")
+	// Volume to be mounted into pod is staged at targetPath/beegfs/some/relative/path
+	pathToBeegfsSubdir := path.Clean(path.Join(pathToBeegfsRoot, relativePathtoSubdir))
+
+	// It is the SP's responsibility to create the targetPath given that its parent has been created by the CO
+	// TODO(webere): Switch to Mkdir() (should not have to create parents and should error if it is necessary)
+	// TODO(webere): Leaving as MkdirAll() for now to make demo easier
+	err = os.MkdirAll(req.GetTargetPath(), 0755)
+	if err != nil {
+		glog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to create TargetPath %s", req.GetTargetPath())
+	}
+
+	// Bind mount pathToBeegfsSubdir onto TargetPath
+	opts := []string{"bind"}
+	err = beegfsMounter.Mount(pathToBeegfsSubdir, req.GetTargetPath(), "beegfs", opts)
+	if err != nil {
+		glog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s", req.GetStagingTargetPath(), req.GetTargetPath())
+	}
+	return &csi.NodePublishVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	beegfsMounter := mount.New("/bin/mount")
+	err := mount.CleanupMountPoint(req.GetTargetPath(), beegfsMounter, false)
+	if err != nil {
+		glog.Error(err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to unmount %s", req.GetTargetPath())
+	}
+	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
