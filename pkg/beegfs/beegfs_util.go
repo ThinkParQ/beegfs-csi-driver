@@ -402,7 +402,7 @@ func isUDPPortAvailable(port string) (available bool, err error) {
 
 
 /* 
-Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
+Deprecated: Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
 
 The full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
 	staging_target_path/
