@@ -1,0 +1,59 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-beegfs-resizer
+  labels:
+    app: csi-beegfs-resizer
+spec:
+  selector:
+    app: csi-beegfs-resizer
+  ports:
+    - name: dummy
+      port: 12345
+
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-resizer
+spec:
+  serviceName: "csi-beegfs-resizer"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-beegfs-resizer
+  template:
+    metadata:
+      labels:
+        app: csi-beegfs-resizer
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - csi-beegfsplugin
+            topologyKey: kubernetes.io/hostname
+      serviceAccountName: csi-resizer
+      containers:
+        - name: csi-resizer
+          image: k8scsi/csi-resizer:v0.6.0-rc1
+          args:
+            - -v=5
+            - -csi-address=/csi/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/csi-beegfs
+            type: DirectoryOrCreate
+          name: socket-dir
