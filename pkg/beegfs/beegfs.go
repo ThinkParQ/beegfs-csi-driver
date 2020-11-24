@@ -32,11 +32,7 @@ import (
 	//	"google.golang.org/grpc/status"
 	//	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
 	//	utilexec "k8s.io/utils/exec"
-
 	//	timestamp "github.com/golang/protobuf/ptypes/timestamp"
-
-	// todo(eastburj): change module name to the correct github repository and consider supporting multiple go.mod, remove hostpath from the project, or update all corresponding imports in hostpath
-	common "github.com/kubernetes-csi/csi-driver-host-path/pkg/common"
 )
 
 type beegfs struct {
@@ -120,7 +116,7 @@ func (b *beegfs) Run() {
 	b.ns = NewNodeServer(b.nodeID, b.ephemeral, b.maxVolumesPerNode)
 	b.cs = NewControllerServer(b.ephemeral, b.nodeID)
 
-	s := common.NewNonBlockingGRPCServer()
+	s := NewNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()
 }
