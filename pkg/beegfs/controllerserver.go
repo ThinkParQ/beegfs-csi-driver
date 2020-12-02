@@ -36,22 +36,21 @@ const (
 	sysMgmtdHostKey   = "sysMgmtdHost"
 )
 
-
 var (
 	// controllerCaps represents the capability of controller service
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
 
-        // TODO(jparnell) consider reader options
-        volumeCaps = []csi.VolumeCapability_AccessMode{
-                {
-                        Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-                },
-                {
-                        Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
-                },
-        }
+	// TODO(jparnell) consider reader options
+	volumeCaps = []csi.VolumeCapability_AccessMode{
+		{
+			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+		},
+		{
+			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+		},
+	}
 )
 
 type controllerServer struct {
@@ -87,13 +86,13 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	reqParams := req.GetParameters()
 	sysMgmtdHost, ok := getBeegfsConfValueFromParams(sysMgmtdHostKey, reqParams)
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument,"%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
+		return nil, status.Errorf(codes.InvalidArgument, "%s%s not in CreateVolumeRequest.Parameters", beegfsConfPrefix, sysMgmtdHostKey)
 	}
 	volDirBasePath, ok := reqParams[volDirBasePathKey]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "%s not in CreateVolumeRequest parameters", volDirBasePathKey)
 	}
-	volDirBasePath = strings.TrimLeft(volDirBasePath, "/")  // Trim leading slash if included
+	volDirBasePath = strings.TrimLeft(volDirBasePath, "/") // Trim leading slash if included
 
 	dirPath := path.Join(volDirBasePath, req.GetName())
 
@@ -114,14 +113,14 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		// Create parent directories if necessary
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general
 		dirsToMake := []string{dirPath}
-		for dir := path.Dir(dirPath); dir != "."; {  // path.Dir() returns "." if there is no parent
-			dirsToMake = append([]string{dir}, dirsToMake...)  // Prepend so the more general path comes first
+		for dir := path.Dir(dirPath); dir != "."; { // path.Dir() returns "." if there is no parent
+			dirsToMake = append([]string{dir}, dirsToMake...) // Prepend so the more general path comes first
 			dir = path.Dir(dir)
 		}
 		// Starting with the most general path, create all directories required to eventually create dirPath
 		for _, dir := range dirsToMake {
 			_, err := beegfsCtlExec(cfgFilePath, []string{"--unmounted", "--createdir", dir})
-			if err != nil && strings.Contains(err.Error(), "Entry exists already"){
+			if err != nil && strings.Contains(err.Error(), "Entry exists already") {
 				// We can't create the volume
 				return nil, status.Errorf(codes.Internal, "cannot create directory with path %s on filesystem %s", dir, sysMgmtdHost)
 			}
@@ -132,7 +131,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	volumeID := newBeegfsUrl(sysMgmtdHost, dirPath)
-        // TODO(jparnell) handle volume map
+	// TODO(jparnell) handle volume map
 	glog.Infof("Generated ID %s for volume %s", volumeID, req.GetName())
 
 	// TODO(webere): Clean up beegfs-client.conf file if we know we no longer need it
@@ -174,13 +173,13 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	glog.Infof("Removing %s from filesystem %s", dirPath, sysMgmtdHost)
 	if err = os.RemoveAll(absoluteDirPath); err != nil {
 		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to remove %s from filesystem %s")
+		return nil, status.Errorf(codes.Internal, "Failed to remove %s from filesystem %s", dirPath, sysMgmtdHost)
 	}
 
 	// Unmount BeeGFS and clean up configuration file if not in use elsewhere
 	if err = unmountBeegfsAndCleanUpConf(mountPath, cfgFilePath); err != nil {
 		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to unmount filesystem %s")
+		return nil, status.Errorf(codes.Internal, "Failed to unmount filesystem %s", sysMgmtdHost)
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil

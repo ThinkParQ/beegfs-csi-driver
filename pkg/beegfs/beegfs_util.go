@@ -88,8 +88,8 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 	return stdOutString, err
 }
 
-/* 
-Generates BeeGFS Client Configuration files. The file name will be generated in the format `beegfsConf/sysMgmtdHost`_beegfs-client.conf.
+/*
+Generates BeeGFS Client Configuration files. The file name will be generated in the format `beegfsConf/SysMgmtdHost`_beegfs-client.conf.
 
 * Requires a params map including at minimum a beegfsConf/sysMgmtdHost entry:
   * Optionally the map can include additional beegfsConf/* entries corresponding to keys in beegfs-client.conf.
@@ -107,7 +107,7 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 	changed := false
 
 	if _, ok := params["beegfsConf/sysMgmtdHost"]; !ok {
-		return "", false, fmt.Errorf("required parameter beegfsConf/sysMgmtdHost was not included in params")
+		return "", false, fmt.Errorf("required parameter beegfsConf/SysMgmtdHost was not included in params")
 	}
 
 	if confPath == "" {
@@ -119,7 +119,7 @@ func generateBeeGFSClientConf(params map[string]string, confPath string, allowOv
 	// (jmccormi) If connClientPortUDP wasn't specified loop through UDP ports in the ephemeral range and find an available port.
 	// Note if generateBeeGFSClientConf is rerun against the same confPath with allowOverwrite this always results in the file being updated with a new UDP port.
 	// This seemed safer than trying to see if connClientPortUDP was already set to ensure we always mount BeeGFS with a (probably) available UDP port.
-	// If BeeGFS is actively mounted it will continue to use the original UDP port (presumably until remounted). 
+	// If BeeGFS is actively mounted it will continue to use the original UDP port (presumably until remounted).
 	if _, ok := params["connClientPortUDP"]; !ok {
 		for i := 49152; i < 65535; i++ {
 			available, err := isUDPPortAvailable(strconv.Itoa(i))
@@ -284,14 +284,14 @@ func updateBeegfsMountsFile(requestedMountPath string, requestedConfPath string)
 	return requestedMountPath, changed, nil
 }
 
-/* 
+/*
 Handles mounting BeeGFS and creating a directory for the mount point (along with any necessary parents).
 
-* Requires a parentDirectory string pointing to a directory where the BeeGFS mount point will be created under. 
- * If this is set to "" it will default to the constant beegfsDefaultMountPath. 
+* Requires a parentDirectory string pointing to a directory where the BeeGFS mount point will be created under.
+ * If this is set to "" it will default to the constant beegfsDefaultMountPath.
 * Requires a requestedConfPath string pointing the BeeGFS client conf file for the file system to mount.
 
-Returns the full path to the BeeGFS mount point (e.g. if parentDirectory is /mnt returns /mnt/beegfs). 
+Returns the full path to the BeeGFS mount point (e.g. if parentDirectory is /mnt returns /mnt/beegfs).
 */
 func mountBeegfs(parentDirectory string, requestedConfPath string) (requestedMountPath string, changed bool, err error) {
 
@@ -400,15 +400,14 @@ func isUDPPortAvailable(port string) (available bool, err error) {
 	return true, err
 }
 
-
-/* 
+/*
 Deprecated: Determines the unique path within the local root file system for a specific BeeGFS URL / volume ID.
 
 The full volumeStagingTargetPath within the local root filesystem for each BeeGFS volume is determined as follows:
 	staging_target_path/
 		sysMgmtdHost_beegfs_vols/ // Replacing . with _ if provided an IP address for sysMgmtdHost.
 			volPath/			  // The full path to the requested directory within the BeeGFS instance.
-				sysMgmtdHost_beegfs/ // The actual BeeGFS mount point for this volume will be created here. 
+				sysMgmtdHost_beegfs/ // The actual BeeGFS mount point for this volume will be created here.
 				sysMgmtdHost_beegfs-client.conf // A corresponding BeeGFS client config file will be created here.
 
 	=== Example ===
@@ -430,11 +429,11 @@ func getBeegfsVolStagingTargetPath(req beegfsVolStagingTargetPath) (volumeStagin
 	return volumeStagingTargetPath, nil
 }
 
-// Deprecated: Generates the full path to a BeeGFS mount point given a parent directory and requested path to a BeeGFS Client configuration file. 
+// Deprecated: Generates the full path to a BeeGFS mount point given a parent directory and requested path to a BeeGFS Client configuration file.
 // * The name of the directory where BeeGFS will be mounted is generated as <sysMgmtdHost>_beegfs.
-// * For example if provided client file 10_113_72_217_beegfs-client.conf the directory name is 10_113_72_217_beegfs. 
+// * For example if provided client file 10_113_72_217_beegfs-client.conf the directory name is 10_113_72_217_beegfs.
 // Returns the full path where BeeGFS should be mounted but does not handle mounting BeeGFS.
-func generateBeegfsMountPoint (parentDirectory string, requestedConfPath string ) (requestedMountDir string) {
+func generateBeegfsMountPoint(parentDirectory string, requestedConfPath string) (requestedMountDir string) {
 
 	requestedMountDir = ""
 
