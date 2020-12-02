@@ -15,6 +15,11 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
 # github.com/kubernetes-csi/csi-lib-utils v0.3.0
 github.com/kubernetes-csi/csi-lib-utils/protosanitizer
+# github.com/kylelemons/godebug v1.1.0
+github.com/kylelemons/godebug/diff
+# github.com/spf13/afero v1.2.2
+github.com/spf13/afero
+github.com/spf13/afero/mem
 # golang.org/x/net v0.0.0-20190311183353-d8887717615a
 golang.org/x/net/context
 golang.org/x/net/http/httpguts
@@ -69,6 +74,8 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
+# gopkg.in/ini.v1 v1.62.0
+gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
 # k8s.io/klog/v2 v2.0.0

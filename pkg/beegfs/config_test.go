@@ -3,12 +3,16 @@ package beegfs
 import (
 	"reflect"
 	"testing"
+
+	"github.com/spf13/afero"
 )
 
 // TestParseConfig makes use of .yaml files in the testdata directory. Numerical values in these files attempt to
 // follow a convention in which 0 represents a value that is unmodified (e.g. 8000 or 127.0.0.0), 1 represents a value
 // that has been modified once (e.g. 8001 or 127.0.0.1), etc.
 func TestParseConfig(t *testing.T) {
+	fs = afero.NewOsFs()
+	fsutil = afero.Afero{Fs: fs}
 	tests := map[string]struct {
 		configFile string
 		nodeID     string
