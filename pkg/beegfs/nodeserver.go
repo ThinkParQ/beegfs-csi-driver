@@ -23,10 +23,10 @@ import (
 	//
 	//	"github.com/golang/glog"
 
+	"golang.org/x/net/context"
 	"k8s.io/utils/mount"
 	"os"
 	"path"
-	"golang.org/x/net/context"
 
 	//
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -136,7 +136,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Errorf(codes.Unavailable, "%s\noccured generating a BeeGFS client conf file for %s at %s", err, req.VolumeContext, req.GetStagingTargetPath())
 	}
 
-	// Ensure there is a BeeGFS mount point for this volume: 
+	// Ensure there is a BeeGFS mount point for this volume:
 	requestedMountPath, changed, err := mountBeegfs(req.GetStagingTargetPath(), requestedConfPath)
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "%s\noccured while attempting to ensure a mount point existed for %s under %s", err, req.GetVolumeId(), req.GetStagingTargetPath())
@@ -169,7 +169,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 	// (jmccormi) Attempt to unmount this BeeGFS volue:
 	err = unmountBeegfsAndCleanUpConf(path.Join(req.GetStagingTargetPath(), "beegfs"), requestedConfPath)
-	if err != nil{
+	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "%s\noccured unmounting %s from %s", err, req.GetVolumeId(), path.Join(req.GetStagingTargetPath(), "beegfs"))
 	}
 

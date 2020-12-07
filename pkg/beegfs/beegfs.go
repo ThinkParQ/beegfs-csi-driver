@@ -19,20 +19,10 @@ package beegfs
 import (
 	"errors"
 	"fmt"
-
-	//	"io"
-	//	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	//	"strings"
-
 	"github.com/golang/glog"
-	//	"google.golang.org/grpc/codes"
-	//	"google.golang.org/grpc/status"
-	//	"k8s.io/kubernetes/pkg/volume/util/volumepathhandler"
-	//	utilexec "k8s.io/utils/exec"
-	//	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 )
 
 type beegfs struct {
@@ -42,6 +32,7 @@ type beegfs struct {
 	endpoint          string
 	ephemeral         bool
 	maxVolumesPerNode int64
+	pluginConfig      pluginConfig
 
 	ids *identityServer
 	ns  *nodeServer
@@ -77,7 +68,7 @@ func init() {
 	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts)
 }
 
-func NewBeegfsDriver(driverName, nodeID, endpoint string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
+func NewBeegfsDriver(driverName, nodeID, endpoint, configFile string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -91,6 +82,15 @@ func NewBeegfsDriver(driverName, nodeID, endpoint string, ephemeral bool, maxVol
 	}
 	if version != "" {
 		vendorVersion = version
+	}
+
+	var pluginConfig pluginConfig
+	if configFile != "" {
+		var err error
+		pluginConfig, err = parseConfigFromFile(configFile, nodeID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to handle configuration file: %v", err)
+		}
 	}
 
 	if err := os.MkdirAll(dataRoot, 0750); err != nil {
@@ -107,6 +107,7 @@ func NewBeegfsDriver(driverName, nodeID, endpoint string, ephemeral bool, maxVol
 		endpoint:          endpoint,
 		ephemeral:         ephemeral,
 		maxVolumesPerNode: maxVolumesPerNode,
+		pluginConfig:      pluginConfig,
 	}, nil
 }
 

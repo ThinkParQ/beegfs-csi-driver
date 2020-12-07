@@ -1,0 +1,21 @@
+config:
+  connInterfaces:
+    - ib0
+  connNetFilter:
+    - "127.0.0.0/24"
+  connTcpOnlyFilter:
+    - "127.0.0.0"
+  beegfsClientConf:
+    connMgmtdPort: 8000
+nodeSpecificConfigs:
+  - nodeList:
+      - testnode
+    config:
+      connInterfaces:
+        - ib1
+      connNetFilter:
+        - "127.0.0.1/24"
+      connTcpOnlyFilter:
+        - "127.0.0.1"
+      beegfsClientConf:
+        connMgmtdPort: 8001
