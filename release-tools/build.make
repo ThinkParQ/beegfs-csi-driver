@@ -21,8 +21,7 @@
 # This is the default. It can be overridden in the main Makefile after
 # including build.make.
 #REGISTRY_NAME=quay.io/k8scsi
-# todo(eastburj): temporarily just hard-code the engdome repo
-REGISTRY_NAME=docker.repo.eng.netapp.com/team/hpcccs
+REGISTRY_NAME ?= 
 
 # Can be set to -mod=vendor to ensure that the "vendor" directory is used.
 GOFLAGS_VENDOR=

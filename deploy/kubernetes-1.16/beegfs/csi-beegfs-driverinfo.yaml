@@ -1,8 +1,0 @@
-apiVersion: storage.k8s.io/v1beta1
-kind: CSIDriver
-metadata:
-  name: beegfs.csi.netapp.com
-spec:
-  # To determine at runtime which mode a volume uses, pod info and its
-  # "csi.storage.k8s.io/ephemeral" entry are needed.
-  podInfoOnMount: true

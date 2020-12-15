@@ -5,12 +5,12 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: csi-hostpathplugin
+  name: csi-beegfsplugin
   labels:
-    app: csi-hostpathplugin
+    app: csi-beegfsplugin
 spec:
   selector:
-    app: csi-hostpathplugin
+    app: csi-beegfsplugin
   ports:
     - name: dummy
       port: 12345
@@ -18,9 +18,9 @@ spec:
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: csi-hostpathplugin
+  name: csi-beegfsplugin
 spec:
-  serviceName: "csi-hostpathplugin"
+  serviceName: "csi-beegfsplugin"
   # One replica only:
   # Host path driver only works when everything runs
   # on a single node. We achieve that by starting it once and then
@@ -28,19 +28,19 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: csi-hostpathplugin
+      app: csi-beegfsplugin
   template:
     metadata:
       labels:
-        app: csi-hostpathplugin
+        app: csi-beegfsplugin
     spec:
       containers:
         - name: node-driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v1.3.0
+          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.0.1
           args:
             - --v=5
             - --csi-address=/csi/csi.sock
-            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-hostpath/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/csi-beegfs/csi.sock
           securityContext:
             # This is necessary only for systems with SELinux, where
             # non-privileged sidecar containers cannot access unix domain socket
@@ -60,10 +60,10 @@ spec:
           - mountPath: /csi-data-dir
             name: csi-data-dir
 
-        - name: hostpath
-          image: quay.io/k8scsi/hostpathplugin:v1.4.0-rc2
+        - name: beegfs
+          image: netapp.com/k8scsi/beegfsplugin:v1.4.0
           args:
-            - "--drivername=hostpath.csi.k8s.io"
+            - "--drivername=beegfs.csi.netapp.com"
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
@@ -106,19 +106,14 @@ spec:
           volumeMounts:
           - mountPath: /csi
             name: socket-dir
-          securityContext:
-            # This is necessary only for systems with SELinux, where
-            # non-privileged sidecar containers cannot access unix domain socket
-            # created by privileged CSI driver container.
-            privileged: true
-          image: quay.io/k8scsi/livenessprobe:v1.1.0
+          image: k8s.gcr.io/sig-storage/livenessprobe:v2.1.0
           args:
           - --csi-address=/csi/csi.sock
           - --health-port=9898
 
       volumes:
         - hostPath:
-            path: /var/lib/kubelet/plugins/csi-hostpath
+            path: /var/lib/kubelet/plugins/csi-beegfs
             type: DirectoryOrCreate
           name: socket-dir
         - hostPath:
@@ -136,7 +131,7 @@ spec:
         - hostPath:
             # 'path' is where PV data is persisted on host.
             # using /tmp is also possible while the PVs will not available after plugin container recreation or host reboot
-            path: /var/lib/csi-hostpath-data/
+            path: /var/lib/csi-beegfs-data/
             type: DirectoryOrCreate
           name: csi-data-dir
         - hostPath:
