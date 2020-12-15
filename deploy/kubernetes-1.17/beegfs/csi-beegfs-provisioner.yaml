@@ -1,31 +1,17 @@
-kind: Service
-apiVersion: v1
-metadata:
-  name: csi-beegfs-resizer
-  labels:
-    app: csi-beegfs-resizer
-spec:
-  selector:
-    app: csi-beegfs-resizer
-  ports:
-    - name: dummy
-      port: 12345
-
----
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: csi-beegfs-resizer
+  name: csi-beegfs-provisioner
 spec:
-  serviceName: "csi-beegfs-resizer"
+  serviceName: "csi-beegfs-provisioner"
   replicas: 1
   selector:
     matchLabels:
-      app: csi-beegfs-resizer
+      app: csi-beegfs-provisioner
   template:
     metadata:
       labels:
-        app: csi-beegfs-resizer
+        app: csi-beegfs-provisioner
     spec:
       affinity:
         podAffinity:
@@ -37,13 +23,14 @@ spec:
                 values:
                 - csi-beegfsplugin
             topologyKey: kubernetes.io/hostname
-      serviceAccountName: csi-resizer
+      serviceAccountName: csi-provisioner
       containers:
-        - name: csi-resizer
-          image: k8scsi/csi-resizer:v0.6.0-rc1
+        - name: csi-provisioner
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.0.2
           args:
             - -v=5
-            - -csi-address=/csi/csi.sock
+            - --csi-address=/csi/csi.sock
+            - --feature-gates=Topology=true
           securityContext:
             # This is necessary only for systems with SELinux, where
             # non-privileged sidecar containers cannot access unix domain socket

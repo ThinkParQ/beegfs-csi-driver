@@ -1,1 +1,1 @@
-../util/deploy-hostpath.sh
+../util/deploy-beegfs.sh
