@@ -310,7 +310,10 @@ func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 		return err
 	}
 	for _, entry := range allMounts {
-		if entry.Device == "beegfs_nodev" && entry.Path != mountPath {
+		// Our container mounts the host's root filesystem at /host (like /:/host), so a file system might appear to be
+		// mounted at both /path/to/file/system and /host/path/to/file/system. These duplicates are NOT bind mounts, so
+		// we use !strings.Contains() instead of entry.Path != mountPath below.
+		if entry.Device == "beegfs_nodev" && !strings.Contains(entry.Path, mountPath) {
 			for _, opt := range entry.Opts {
 				if strings.Contains(opt, clientConfPath) {
 					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
