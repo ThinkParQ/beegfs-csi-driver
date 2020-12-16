@@ -19,10 +19,14 @@ package beegfs
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/golang/glog"
+)
+
+const (
+	volDirBasePathKey = "volDirBasePath"
+	sysMgmtdHostKey   = "sysMgmtdHost"
 )
 
 type beegfs struct {
@@ -33,12 +37,14 @@ type beegfs struct {
 	ephemeral         bool
 	maxVolumesPerNode int64
 	pluginConfig      pluginConfig
+	confTemplatePath  string
 
 	ids *identityServer
 	ns  *nodeServer
 	cs  *controllerServer
 }
 
+// TODO(webere): Determine whether or not we can throw this away.
 type beegfsVolume struct {
 	VolName string `json:"volName"`
 	VolID   string `json:"volID"`
@@ -68,7 +74,7 @@ func init() {
 	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts)
 }
 
-func NewBeegfsDriver(driverName, nodeID, endpoint, configFile string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
+func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientConfFile string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -93,7 +99,7 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile string, ephemeral 
 		}
 	}
 
-	if err := os.MkdirAll(dataRoot, 0750); err != nil {
+	if err := fs.MkdirAll(dataRoot, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create dataRoot: %v", err)
 	}
 
@@ -108,14 +114,15 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile string, ephemeral 
 		ephemeral:         ephemeral,
 		maxVolumesPerNode: maxVolumesPerNode,
 		pluginConfig:      pluginConfig,
+		confTemplatePath:  templateClientConfFile,
 	}, nil
 }
 
 func (b *beegfs) Run() {
 	// Create GRPC servers
 	b.ids = NewIdentityServer(b.name, b.version)
-	b.ns = NewNodeServer(b.nodeID, b.ephemeral, b.maxVolumesPerNode)
-	b.cs = NewControllerServer(b.ephemeral, b.nodeID)
+	b.ns = NewNodeServer(b.nodeID, b.ephemeral, b.maxVolumesPerNode, b.pluginConfig, b.confTemplatePath)
+	b.cs = NewControllerServer(b.ephemeral, b.nodeID, b.pluginConfig, b.confTemplatePath)
 
 	s := NewNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)

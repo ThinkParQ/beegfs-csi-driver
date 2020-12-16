@@ -2,8 +2,8 @@ package beegfs
 
 import (
 	"fmt"
+
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 // beegfsConfig contains all of the custom configuration (above and beyond whatever is in the beegfs-client.conf file)
@@ -13,6 +13,12 @@ type beegfsConfig struct {
 	ConnNetFilter     []string          `yaml:"connNetFilter"`
 	ConnTcpOnlyFilter []string          `yaml:"connTcpOnlyFilter"`
 	BeegfsClientConf  map[string]string `yaml:"beegfsClientConf"`
+}
+
+func newBeegfsConfig() *beegfsConfig {
+	return &beegfsConfig{
+		BeegfsClientConf: make(map[string]string),
+	}
 }
 
 // fileSystemSpecificConfig associates a beegfsConfig with a sysMgmtdHost.
@@ -55,7 +61,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 
 	// read and parse configuration file
 	// return immediately if an error occurs
-	rawConfigBytes, err := ioutil.ReadFile(path)
+	rawConfigBytes, err := fsutil.ReadFile(path)
 	if err != nil {
 		return pluginConfig{}, fmt.Errorf("failed to read configuration file: %v", err)
 	}
