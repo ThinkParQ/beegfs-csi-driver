@@ -355,17 +355,13 @@ func cleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 // that doesn't validate if it was passed a valid port vs. some other string. If the port is already listed returns
 // false, if the port is not listed returns true.
 func isUDPPortAvailable(port string) (available bool, err error) {
-	// Use sudo in case we are not root but have sudo privileges.
-	cmd, err := exec.Command("sudo", "netstat", "-lu").Output()
-
+	cmd, err := exec.Command("netstat", "-lu").Output()
 	if err != nil {
 		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu", err, port)
 	}
-
 	if strings.Contains(string(cmd), port) {
 		return false, nil
 	}
-
 	return true, err
 }
 
