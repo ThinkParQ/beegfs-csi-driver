@@ -32,6 +32,33 @@ connTcpOnlyFilterFile = /testvol/connTcpOnlyFilterFile
 
 `
 
+func TestNewBeegfsUrl(t *testing.T) {
+	tests := map[string]struct {
+		scheme, host, path string
+		want               string
+	}{
+		"basic ip example": {
+			host: "127.0.0.1",
+			path: "/path/to/volume",
+			want: "beegfs://127.0.0.1/path/to/volume",
+		},
+		"basic FQDN example": {
+			host: "some.domain.com",
+			path: "/path/to/volume",
+			want: "beegfs://some.domain.com/path/to/volume",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := newBeegfsUrl(tc.host, tc.path)
+			if tc.want != got {
+				t.Fatalf("expected: %s, got: %s", tc.want, got)
+			}
+		})
+	}
+}
+
 func TestWriteClientFiles(t *testing.T) {
 	fs = afero.NewMemMapFs() // test sets up its own, new, memory-mapped file system
 	fsutil = afero.Afero{Fs: fs}
@@ -120,11 +147,11 @@ func TestSanitizeVolumeID(t *testing.T) {
 		},
 		"basic FQDN example": {
 			provided: "beegfs://some.domain.com/path/to/volume",
-			want: "some.domain.com_path_to_volume",
+			want:     "some.domain.com_path_to_volume",
 		},
 		"example with underscores": {
 			provided: "beegfs://some.domain.com/path_with_underscores/to/volume",
-			want: "some.domain.com_path__with__underscores_to_volume",
+			want:     "some.domain.com_path__with__underscores_to_volume",
 		},
 		"example with too many characters": {
 			provided: "beegfs://some.domain.com/lots/of/characters/lots/of/characters/lots/of/characters/" +
