@@ -17,9 +17,9 @@ limitations under the License.
 package beegfs
 
 import (
+	"errors"
 	"fmt"
 	"path"
-	"strings"
 
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
@@ -131,11 +131,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// Check if volume already exists.
-	// TODO(webere): There are more serious errors than "already exists" that we are skirting over here.
 	_, err = beegfsCtlExec(clientConfPath, []string{"--unmounted", "--getentryinfo", volDirPathBeegfsRoot})
-	if err != nil {
-		// TODO(webere) More in-depth error check
-		// We can't find the volume so we need to create one
+	if errors.As(err, &ctlNotExistError{}) {
+		// We can't find the volume so we need to create one.
 		glog.Infof("Volume %s does not exist under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePathBeegfsRoot,
 			sysMgmtdHost)
 
@@ -149,12 +147,14 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		// Starting with the most general path, create all directories required to eventually create mountDirPath.
 		for _, dir := range dirsToMake {
 			_, err := beegfsCtlExec(clientConfPath, []string{"--unmounted", "--createdir", dir})
-			if err != nil && strings.Contains(err.Error(), "Entry exists already") {
-				// We can't create the volume
+			if err != nil && !errors.As(err, &ctlExistError{}) {
+				// We can't create the volume.
 				return nil, status.Errorf(codes.Internal, "cannot create directory with path %s on filesystem "+
 					"%s", dir, sysMgmtdHost)
 			}
 		}
+	} else if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	} else {
 		glog.Infof("Volume %s already exists under directory %s on BeeGFS instance %s", req.GetName(),
 			volDirBasePathBeegfsRoot, sysMgmtdHost)

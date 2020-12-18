@@ -120,11 +120,11 @@ func TestSanitizeVolumeID(t *testing.T) {
 		},
 		"basic FQDN example": {
 			provided: "beegfs://some.domain.com/path/to/volume",
-			want: "some.domain.com_path_to_volume",
+			want:     "some.domain.com_path_to_volume",
 		},
 		"example with underscores": {
 			provided: "beegfs://some.domain.com/path_with_underscores/to/volume",
-			want: "some.domain.com_path__with__underscores_to_volume",
+			want:     "some.domain.com_path__with__underscores_to_volume",
 		},
 		"example with too many characters": {
 			provided: "beegfs://some.domain.com/lots/of/characters/lots/of/characters/lots/of/characters/" +

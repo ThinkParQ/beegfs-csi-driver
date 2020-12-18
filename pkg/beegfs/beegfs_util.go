@@ -46,12 +46,12 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 	return structUrl.Host, structUrl.Path, nil
 }
 
-// beegfsCtlExec executes arbitrary beegfs-ctl commands like "sudo /opt/beegfs/sbin/beegfs-ctl --arg1 --arg2=value". It returns
-// the stdout and stderr at a high verbosity, and it returns stdout as a string (as well as any potential errors).
+// beegfsCtlExec executes arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and
+// stderr when running at a high verbosity and returns stdout as a string (as well as any potential errors).
+// beegfsCtlExec fails if beegfs-ctl is not on the PATH.
 func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
-	args = append([]string{"/opt/beegfs/sbin/beegfs-ctl"}, args...)
-	cmd := exec.Command("sudo", args...) // use sudo in case we are not root but have sudo priveleges
+	cmd := exec.Command("beegfs-ctl", args...)
 	glog.Infof("Executing command: %s", cmd.Args)
 
 	var stdoutBuffer bytes.Buffer
@@ -61,11 +61,45 @@ func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error)
 
 	err = cmd.Run()
 	stdOutString := stdoutBuffer.String()
-	stderrString := stderrBuffer.String()
+	stdErrString := stderrBuffer.String()
+	if err != nil {
+		fmt.Println(err.Error())
+		if strings.Contains(stdErrString, "does not exist") {
+			err = newCtlNotExistError(stdOutString, stdErrString)
+		} else if strings.Contains(stdErrString, "exists already") {
+			err = newCtlExistError(stdOutString, stdErrString)
+		} else {
+			err = fmt.Errorf("beegfs-ctl failed: %w", err)
+		}
+	}
 	glog.V(5).Infof(stdOutString)
-	glog.V(5).Infof(stderrString)
+	glog.V(5).Infof(stdErrString)
 
 	return stdOutString, err
+}
+
+// ctlNotExistError indicates that beegfs-ctl failed to stat or modify an entry that does not exist.
+type ctlNotExistError struct {
+	stdOutString string
+	stdErrString string
+}
+func newCtlNotExistError(stdOutString, stdErrString string) ctlNotExistError {
+	return ctlNotExistError{stdOutString: stdOutString, stdErrString: stdErrString}
+}
+func (err ctlNotExistError) Error() string{
+	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
+}
+
+// ctlExistError indicates the beegfs-ctl failed to create an entry that already exists.
+type ctlExistError struct {
+	stdOutString string
+	stdErrString string
+}
+func newCtlExistError(stdOutString, stdErrString string) ctlExistError {
+	return ctlExistError{stdOutString: stdOutString, stdErrString: stdErrString}
+}
+func (err ctlExistError) Error() string{
+	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
 }
 
 // writeClientFiles writes a beegfs-client.conf file and optionally a connInterfacesFile, a connNetFilterFile, and a
@@ -267,7 +301,7 @@ func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 	mountPath = path.Join(mountDirPath, "mount")                   // See writeClientFiles for context.
 
 	// Decide whether or not to unmount BeeGFS filesystem by checking whether it is bind mounted somewhere else. We
-	//cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../volume1/mount is the
+	// cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../volume1/mount is the
 	// initial mount point but .../volume1/mount/volume1 is the directory we bind mount). beegfsMounter.GetRefs() is
 	// incapable of discovering this.
 	mounter := mount.New("")
@@ -276,7 +310,10 @@ func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 		return err
 	}
 	for _, entry := range allMounts {
-		if entry.Device == "beegfs_nodev" && entry.Path != mountPath {
+		// Our container mounts the host's root filesystem at /host (like /:/host), so a file system might appear to be
+		// mounted at both /path/to/file/system and /host/path/to/file/system. These duplicates are NOT bind mounts, so
+		// we use !strings.Contains() instead of entry.Path != mountPath below.
+		if entry.Device == "beegfs_nodev" && !strings.Contains(entry.Path, mountPath) {
 			for _, opt := range entry.Opts {
 				if strings.Contains(opt, clientConfPath) {
 					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
@@ -321,17 +358,13 @@ func cleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 // that doesn't validate if it was passed a valid port vs. some other string. If the port is already listed returns
 // false, if the port is not listed returns true.
 func isUDPPortAvailable(port string) (available bool, err error) {
-	// Use sudo in case we are not root but have sudo privileges.
-	cmd, err := exec.Command("sudo", "netstat", "-lu").Output()
-
+	cmd, err := exec.Command("netstat", "-lu").Output()
 	if err != nil {
 		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu", err, port)
 	}
-
 	if strings.Contains(string(cmd), port) {
 		return false, nil
 	}
-
 	return true, err
 }
 
