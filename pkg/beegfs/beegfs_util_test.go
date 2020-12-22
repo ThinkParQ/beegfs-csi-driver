@@ -35,8 +35,8 @@ connTcpOnlyFilterFile = /testvol/connTcpOnlyFilterFile
 
 func TestNewBeegfsUrl(t *testing.T) {
 	tests := map[string]struct {
-		scheme, host, path string
-		want               string
+		host, path string
+		want       string
 	}{
 		"basic ip example": {
 			host: "127.0.0.1",
@@ -55,6 +55,66 @@ func TestNewBeegfsUrl(t *testing.T) {
 			got := newBeegfsUrl(tc.host, tc.path)
 			if tc.want != got {
 				t.Fatalf("expected: %s, got: %s", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestParseBeegfsUrl(t *testing.T) {
+	tests := map[string]struct {
+		rawUrl             string
+		wantHost, wantPath string
+		wantErr            bool
+	}{
+		"basic ip example": {
+			rawUrl:   "beegfs://127.0.0.1/path/to/volume",
+			wantHost: "127.0.0.1",
+			wantPath: "/path/to/volume",
+			wantErr:  false,
+		},
+		"basic FQDN example": {
+			rawUrl:   "beegfs://some.domain.com/path/to/volume",
+			wantHost: "some.domain.com",
+			wantPath: "/path/to/volume",
+			wantErr:  false,
+		},
+		"invalid URL example": {
+			rawUrl:   "beegfs:// some.domain.com/ path/to/volume",
+			wantHost: "",
+			wantPath: "",
+			wantErr:  true,
+		},
+		"invalid https example": {
+			rawUrl:   "https://some.domain.com/path/to/volume",
+			wantHost: "",
+			wantPath: "",
+			wantErr:  true,
+		},
+		"invalid empty string example": {
+			rawUrl:   "",
+			wantHost: "",
+			wantPath: "",
+			wantErr:  true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotHost, gotPath, err := parseBeegfsUrl(tc.rawUrl)
+			if tc.wantHost != gotHost {
+				t.Fatalf("expected host: %s, got host: %s", tc.wantHost, gotHost)
+			}
+
+			if tc.wantPath != gotPath {
+				t.Fatalf("expected path: %s, got path: %s", tc.wantPath, gotPath)
+			}
+
+			if tc.wantErr == true && err == nil {
+				t.Fatalf("expected an error to occur for invalid URL: %s", tc.rawUrl)
+			}
+
+			if tc.wantErr == false && err != nil {
+				t.Fatalf("expected no error to occur: %v", err)
 			}
 		})
 	}
