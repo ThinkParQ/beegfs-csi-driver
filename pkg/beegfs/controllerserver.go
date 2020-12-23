@@ -17,7 +17,6 @@ limitations under the License.
 package beegfs
 
 import (
-	"errors"
 	"fmt"
 	"path"
 
@@ -47,6 +46,7 @@ var (
 )
 
 type controllerServer struct {
+	ctlExec          beegfsCtlExecutorInterface
 	caps             []*csi.ControllerServiceCapability
 	nodeID           string
 	pluginConfig     pluginConfig
@@ -58,6 +58,7 @@ func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfi
 		return &controllerServer{caps: getControllerServiceCapabilities(nil), nodeID: nodeID}
 	}
 	return &controllerServer{
+		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
 			[]csi.ControllerServiceCapability_RPC_Type{
 				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
@@ -130,34 +131,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.Unavailable, "%v", err)
 	}
 
-	// Check if volume already exists.
-	_, err = beegfsCtlExec(clientConfPath, []string{"--unmounted", "--getentryinfo", volDirPathBeegfsRoot})
-	if errors.As(err, &ctlNotExistError{}) {
-		// We can't find the volume so we need to create one.
-		glog.Infof("Volume %s does not exist under directory %s on BeeGFS instance %s", req.GetName(), volDirBasePathBeegfsRoot,
-			sysMgmtdHost)
-
-		// Create parent directories if necessary.
-		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
-		dirsToMake := []string{volDirPathBeegfsRoot}
-		for dir := path.Dir(volDirPathBeegfsRoot); dir != "/"; { // path.Dir() returns "." if there is no parent.
-			dirsToMake = append([]string{dir}, dirsToMake...) // Prepend so the more general path comes first.
-			dir = path.Dir(dir)
-		}
-		// Starting with the most general path, create all directories required to eventually create mountDirPath.
-		for _, dir := range dirsToMake {
-			_, err := beegfsCtlExec(clientConfPath, []string{"--unmounted", "--createdir", dir})
-			if err != nil && !errors.As(err, &ctlExistError{}) {
-				// We can't create the volume.
-				return nil, status.Errorf(codes.Internal, "cannot create directory with path %s on filesystem "+
-					"%s", dir, sysMgmtdHost)
-			}
-		}
-	} else if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	} else {
-		glog.Infof("Volume %s already exists under directory %s on BeeGFS instance %s", req.GetName(),
-			volDirBasePathBeegfsRoot, sysMgmtdHost)
+	if err = cs.ctlExec.CreateVolume(req.GetName(), sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot, volDirBasePathBeegfsRoot); err != nil {
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	// Clean up configuration files.
