@@ -20,13 +20,12 @@ import (
 	"os"
 	"path"
 
-	"golang.org/x/net/context"
-	"k8s.io/utils/mount"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/utils/mount"
 )
 
 var (
@@ -41,16 +40,17 @@ type nodeServer struct {
 	maxVolumesPerNode int64
 	pluginConfig      pluginConfig
 	confTemplatePath  string
+	mounter           mount.Interface
 }
 
-func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64, pluginConfig pluginConfig,
-	confTemplatePath string) *nodeServer {
+func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64, pluginConfig pluginConfig, confTemplatePath string) *nodeServer {
 	return &nodeServer{
 		nodeID:            nodeId,
 		ephemeral:         ephemeral,
 		maxVolumesPerNode: maxVolumesPerNode,
 		pluginConfig:      pluginConfig,
 		confTemplatePath:  confTemplatePath,
+		mounter:           mount.New(""),
 	}
 }
 
@@ -81,11 +81,10 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	volDirPath = path.Clean(path.Join(mountPath, volDirPathBeegfsRoot))
 	remountPath = req.GetTargetPath() // We bind mount wherever the CO tells us to.
 
-	mounter := mount.New("")
 	// Check to make sure file system is not already bind mounted
 	// Use mount.IsNotMountPoint because mounter.IsLikelyNotMountPoint can't detect bind mounts
 	var notMnt bool
-	notMnt, err = mount.IsNotMountPoint(mounter, remountPath)
+	notMnt, err = mount.IsNotMountPoint(ns.mounter, remountPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
@@ -105,7 +104,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	// Bind mount volDirPath onto TargetPath
 	opts := []string{"bind"}
-	err = mounter.Mount(volDirPath, remountPath, "beegfs", opts)
+	err = ns.mounter.Mount(volDirPath, remountPath, "beegfs", opts)
 	if err != nil {
 		glog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(),
@@ -123,12 +122,17 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		err         error
 	)
 
-	// TODO(webere): Check arguments
+	// Check arguments
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Missing volume ID")
+	}
+	if len(req.GetTargetPath()) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Missing target path")
+	}
 
 	remountPath = req.GetTargetPath()
 
-	mounter := mount.New("")
-	err = mount.CleanupMountPoint(remountPath, mounter, true)
+	err = mount.CleanupMountPoint(remountPath, ns.mounter, true)
 	if err != nil {
 		glog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to unmount %s", req.GetTargetPath())
@@ -182,7 +186,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "%v", err)
 	}
-	err = mountIfNecessary(mountDirPath)
+	err = mountIfNecessary(mountDirPath, ns.mounter)
 	if err != nil {
 		glog.Error(err)
 		return nil, status.Errorf(codes.Internal, "Failed to mount filesystem %s to %s", sysMgmtdHost, mountDirPath)
@@ -209,7 +213,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 	mountDirPath = req.GetStagingTargetPath() // We are mounted wherever the CO told us to.
 
-	err = unmountAndCleanUpIfNecessary(mountDirPath, false) // The CO will clean up mountDirPath.
+	err = unmountAndCleanUpIfNecessary(mountDirPath, false, ns.mounter) // The CO will clean up mountDirPath.
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "failed to clean up %s: %v", mountDirPath, err)
 	}

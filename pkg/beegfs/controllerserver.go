@@ -20,12 +20,12 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
+	"k8s.io/utils/mount"
 )
 
 var (
@@ -51,6 +51,7 @@ type controllerServer struct {
 	nodeID           string
 	pluginConfig     pluginConfig
 	confTemplatePath string
+	mounter          mount.Interface
 }
 
 func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfig, confTemplatePath string) *controllerServer {
@@ -66,6 +67,7 @@ func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfi
 		nodeID:           nodeID,
 		pluginConfig:     pluginConfig,
 		confTemplatePath: confTemplatePath,
+		mounter:          mount.New(""),
 	}
 }
 
@@ -187,7 +189,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	if err != nil {
 		return nil, status.Errorf(codes.Unavailable, "%v", err)
 	}
-	err = mountIfNecessary(mountDirPath)
+	err = mountIfNecessary(mountDirPath, cs.mounter)
 	if err != nil {
 		glog.Error(err)
 		return nil, status.Errorf(codes.Internal, "Failed to mount filesystem %s to %s", sysMgmtdHost, mountDirPath)
@@ -202,7 +204,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Unmount BeeGFS and clean up configuration files.
-	if err = unmountAndCleanUpIfNecessary(mountDirPath, true); err != nil {
+	if err = unmountAndCleanUpIfNecessary(mountDirPath, true, cs.mounter); err != nil {
 		glog.Error(err)
 		return nil, status.Errorf(codes.Internal, "Failed to unmount filesystem %s", sysMgmtdHost)
 	}
@@ -309,6 +311,10 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi
 
 func (cs *controllerServer) validateControllerServiceRequest(c csi.ControllerServiceCapability_RPC_Type) error {
 	return status.Error(codes.Unimplemented, "")
+}
+
+func (cs *controllerServer) ControllerGetVolume(ctx context.Context, in *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
 }
 
 func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_Type) []*csi.ControllerServiceCapability {
