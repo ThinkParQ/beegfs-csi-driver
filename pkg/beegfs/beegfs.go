@@ -60,9 +60,7 @@ var (
 	vendorVersion = "dev"
 
 	beegfsVolumes map[string]beegfsVolume
-)
 
-const (
 	// Directory where data for volumes and snapshots are persisted.
 	// This can be ephemeral within the container or persisted if
 	// backed by a Pod volume.
@@ -106,7 +104,8 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 	glog.Infof("Driver: %v ", driverName)
 	glog.Infof("Version: %s", vendorVersion)
 
-	return &beegfs{
+	var driver beegfs
+	driver = beegfs{
 		name:              driverName,
 		version:           vendorVersion,
 		nodeID:            nodeID,
@@ -115,15 +114,16 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 		maxVolumesPerNode: maxVolumesPerNode,
 		pluginConfig:      pluginConfig,
 		confTemplatePath:  templateClientConfFile,
-	}, nil
+	}
+	// Create GRPC servers
+	driver.ids = NewIdentityServer(driver.name, driver.version)
+	driver.ns = NewNodeServer(driver.nodeID, driver.ephemeral, driver.maxVolumesPerNode, driver.pluginConfig, driver.confTemplatePath)
+	driver.cs = NewControllerServer(driver.ephemeral, driver.nodeID, driver.pluginConfig, driver.confTemplatePath)
+
+	return &driver, nil
 }
 
 func (b *beegfs) Run() {
-	// Create GRPC servers
-	b.ids = NewIdentityServer(b.name, b.version)
-	b.ns = NewNodeServer(b.nodeID, b.ephemeral, b.maxVolumesPerNode, b.pluginConfig, b.confTemplatePath)
-	b.cs = NewControllerServer(b.ephemeral, b.nodeID, b.pluginConfig, b.confTemplatePath)
-
 	s := NewNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()

@@ -186,7 +186,7 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config pluginConfig) (retu
 //                                                                                 +-------+-------+
 //                                                                                 |               |
 //                                                                           beegfsSubdir1/   beegfsSubdir2/...
-func mountIfNecessary(mountDirPath string) (err error) {
+func mountIfNecessary(mountDirPath string, mounter mount.Interface) (err error) {
 	var (
 		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
 		// functions for consistency before refactoring.
@@ -199,7 +199,6 @@ func mountIfNecessary(mountDirPath string) (err error) {
 	mountPath = path.Join(mountDirPath, "mount")
 	mountOpts := []string{"rw", "relatime", "cfgFile=" + clientConfPath}
 
-	mounter := mount.New("/bin/mount")
 	// Check to make sure file system is not already mounted.
 	notMnt, err := mounter.IsLikelyNotMountPoint(mountPath)
 	if err != nil {
@@ -232,7 +231,7 @@ func mountIfNecessary(mountDirPath string) (err error) {
 // all files under mountDirPath. unmountAndCleanUpIfNecessary also deletes mountDirPath if rmDir is set to true.
 // unmountAndCleanUpIfNecessary deletes unmountANDCleanUpIfNecessary quietly continues WITHOUT error if the BeeGFS
 // filesystem is not mounted.
-func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
+func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool, mounter mount.Interface) (err error) {
 	var (
 		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
 		// functions for consistency before refactoring.
@@ -247,7 +246,6 @@ func unmountAndCleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 	// cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../volume1/mount is the
 	// initial mount point but .../volume1/mount/volume1 is the directory we bind mount). beegfsMounter.GetRefs() is
 	// incapable of discovering this.
-	mounter := mount.New("")
 	allMounts, err := mounter.List()
 	if err != nil {
 		return err
@@ -303,7 +301,7 @@ func cleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 func isUDPPortAvailable(port string) (available bool, err error) {
 	cmd, err := exec.Command("netstat", "-lu").Output()
 	if err != nil {
-		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu", err, port)
+		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu. Verify netstat is installed", err, port)
 	}
 	if strings.Contains(string(cmd), port) {
 		return false, nil
