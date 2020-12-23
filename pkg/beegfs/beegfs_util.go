@@ -1,7 +1,6 @@
 package beegfs
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
@@ -44,62 +43,6 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 	}
 	// TODO(webere) more checks for bad values
 	return structUrl.Host, structUrl.Path, nil
-}
-
-// beegfsCtlExec executes arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and
-// stderr when running at a high verbosity and returns stdout as a string (as well as any potential errors).
-// beegfsCtlExec fails if beegfs-ctl is not on the PATH.
-func beegfsCtlExec(cfgFilePath string, args []string) (stdOut string, err error) {
-	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
-	cmd := exec.Command("beegfs-ctl", args...)
-	glog.Infof("Executing command: %s", cmd.Args)
-
-	var stdoutBuffer bytes.Buffer
-	var stderrBuffer bytes.Buffer
-	cmd.Stdout = &stdoutBuffer
-	cmd.Stderr = &stderrBuffer
-
-	err = cmd.Run()
-	stdOutString := stdoutBuffer.String()
-	stdErrString := stderrBuffer.String()
-	if err != nil {
-		fmt.Println(err.Error())
-		if strings.Contains(stdErrString, "does not exist") {
-			err = newCtlNotExistError(stdOutString, stdErrString)
-		} else if strings.Contains(stdErrString, "exists already") {
-			err = newCtlExistError(stdOutString, stdErrString)
-		} else {
-			err = fmt.Errorf("beegfs-ctl failed: %w", err)
-		}
-	}
-	glog.V(5).Infof(stdOutString)
-	glog.V(5).Infof(stdErrString)
-
-	return stdOutString, err
-}
-
-// ctlNotExistError indicates that beegfs-ctl failed to stat or modify an entry that does not exist.
-type ctlNotExistError struct {
-	stdOutString string
-	stdErrString string
-}
-func newCtlNotExistError(stdOutString, stdErrString string) ctlNotExistError {
-	return ctlNotExistError{stdOutString: stdOutString, stdErrString: stdErrString}
-}
-func (err ctlNotExistError) Error() string{
-	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
-}
-
-// ctlExistError indicates the beegfs-ctl failed to create an entry that already exists.
-type ctlExistError struct {
-	stdOutString string
-	stdErrString string
-}
-func newCtlExistError(stdOutString, stdErrString string) ctlExistError {
-	return ctlExistError{stdOutString: stdOutString, stdErrString: stdErrString}
-}
-func (err ctlExistError) Error() string{
-	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
 }
 
 // writeClientFiles writes a beegfs-client.conf file and optionally a connInterfacesFile, a connNetFilterFile, and a
