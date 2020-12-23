@@ -133,7 +133,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.Unavailable, "%v", err)
 	}
 
-	if err = cs.ctlExec.CreateVolume(req.GetName(), sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot, volDirBasePathBeegfsRoot); err != nil {
+	if err = cs.ctlExec.createDirectory(sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot); err != nil {
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
