@@ -309,10 +309,6 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
-func (cs *controllerServer) validateControllerServiceRequest(c csi.ControllerServiceCapability_RPC_Type) error {
-	return status.Error(codes.Unimplemented, "")
-}
-
 func (cs *controllerServer) ControllerGetVolume(ctx context.Context, in *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
