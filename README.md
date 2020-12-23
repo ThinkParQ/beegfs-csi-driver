@@ -44,7 +44,9 @@ Optionally set REGISTRY_NAME or IMAGE_TAGS:
 #   Change 'docker.netapp.com/k8scsi'.
 #   Change 'devBranchName-canary'.
 #   $ docker login docker.netapp.com 
-env REGISTRY_NAME=docker.netapp.com/k8scsi IMAGE_TAGS=devBranchName-canary make push
+# REGISTRY_NAME and IMAGE_TAGS must be specified as make arguments.
+# REGISTRY_NAME and IMAGE_TAGS cannot be pulled from the environment.
+make REGISTRY_NAME=docker.netapp.com/k8scsi IMAGE_TAGS=devBranchName-canary push
 ```
 
 ## Deploying the plugin to Kubernetes

@@ -19,10 +19,22 @@ CMDS ?= beegfsplugin
 all: build
 
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its
-# own container image and include it in a different image. We build chwrap any time we build the beegfsplugin container
-# so the container can include chwrap.
+# own container image and include it in a different image. This build-% recipe mirrors an analogous recipe in
+# release-tools/buildmake and allows us to explicitly build the binary specified by %.
+build-%: check-go-version-go
+	# Commands are taken directly from build.make build-%.
+	mkdir -p bin
+	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch suffix; do \
+		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags \
+		'$(FULL_LDFLAGS)' -o "./bin/$*$$suffix" ./cmd/$*); then \
+			echo "Building $* for GOOS=$$os GOARCH=$$arch failed, see error(s) above."; \
+			exit 1; \
+		fi; \
+	done
 
-# Additional prerequisites and the recipe for build-chwrap, container, and push are defined in release-tools/build.make.
+# The beegfsplugin container requires chwrap to be built and included, so we build it anytime container or push are
+# made. Additional prerequisites and the recipes for container and push are defined in release-tools/build.make. A
+# different workaround will likely be required for multiarch builds.
 container: build-chwrap
 push: container  # not explicitly executed in release-tools/build.make
 
