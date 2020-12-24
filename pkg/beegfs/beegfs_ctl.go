@@ -11,19 +11,25 @@ import (
 	"github.com/golang/glog"
 )
 
+// beegfsCtlExecutorInterface abstracts beegfs-ctl so tests can run without access to a beegfs-ctl binary or a BeeGFS
+// file system.
 type beegfsCtlExecutorInterface interface {
-	CreateVolume(volName, sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot, volDirBasePathBeegfsRoot string) error
+	createDirectory(sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot string) error
 }
 
+// beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
 type beegfsCtlExecutor struct{}
 
-func (ctlExec *beegfsCtlExecutor) CreateVolume(volName, sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot, volDirBasePathBeegfsRoot string) error {
+// createDirectory uses a "beegfs-ctl --createdir" command to create the directory specified by volDirPathBeegfsRoot on
+// the BeeGFS file system specified by sysMgmtdHost. The beegfs-ctl command requires a beegfs-client.conf path at
+// clientConfPath for successful execution. createDirectory returns an error if it cannot create the directory, but
+// does not return an error if the directory already exists.
+func (ctlExec *beegfsCtlExecutor) createDirectory(sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot string) error {
 	// Check if volume already exists.
 	_, err := ctlExec.execute(clientConfPath, []string{"--unmounted", "--getentryinfo", volDirPathBeegfsRoot})
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
-		glog.Infof("Volume %s does not exist under directory %s on BeeGFS instance %s", volName, volDirBasePathBeegfsRoot,
-			sysMgmtdHost)
+		glog.Infof("Directory %s does not exist on BeeGFS instance %s", volDirPathBeegfsRoot, sysMgmtdHost)
 
 		// Create parent directories if necessary.
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
@@ -37,23 +43,22 @@ func (ctlExec *beegfsCtlExecutor) CreateVolume(volName, sysMgmtdHost, clientConf
 			_, err := ctlExec.execute(clientConfPath, []string{"--unmounted", "--createdir", dir})
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
-				return fmt.Errorf("cannot create directory with path %s on filesystem %s", dir, sysMgmtdHost)
+				return fmt.Errorf("cannot create directory %s on BeeGFS instance %s", dir, sysMgmtdHost)
 			}
 		}
 	} else if err != nil {
 		return err
 	} else {
-		glog.Infof("Volume %s already exists under directory %s on BeeGFS instance %s", volName,
-			volDirBasePathBeegfsRoot, sysMgmtdHost)
+		glog.Infof("Directory %s already exists on BeeGFS instance %s", volDirPathBeegfsRoot, sysMgmtdHost)
 	}
 	return nil
 }
 
-// beegfsCtlExec executes arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and
-// stderr when running at a high verbosity and returns stdout as a string (as well as any potential errors).
-// beegfsCtlExec fails if beegfs-ctl is not on the PATH.
-func (*beegfsCtlExecutor) execute(cfgFilePath string, args []string) (stdOut string, err error) {
-	args = append([]string{fmt.Sprintf("--cfgFile=%s", cfgFilePath)}, args...)
+// execute runs arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and stderr
+// when running at a high verbosity and returns stdout as a string (as well as any potential errors). execute fails if
+// beegfs-ctl is not on the PATH.
+func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut string, err error) {
+	args = append([]string{fmt.Sprintf("--cfgFile=%s", clientConfPath)}, args...)
 	cmd := exec.Command("beegfs-ctl", args...)
 	glog.Infof("Executing command: %s", cmd.Args)
 
@@ -107,8 +112,9 @@ func (err ctlExistError) Error() string {
 	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
 }
 
+// fakeBeeGFSCtlExecutor is a mock implementation of beegfsCtlExecutorInterface useful for testing.
 type fakeBeegfsCtlExecutor struct{}
 
-func (*fakeBeegfsCtlExecutor) CreateVolume(volName, sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot, volDirBasePathBeegfsRoot string) error {
+func (*fakeBeegfsCtlExecutor) createDirectory(sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot string) error {
 	return nil
 }
