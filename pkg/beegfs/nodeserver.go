@@ -50,7 +50,7 @@ func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64, plugi
 		maxVolumesPerNode: maxVolumesPerNode,
 		pluginConfig:      pluginConfig,
 		confTemplatePath:  confTemplatePath,
-		mounter:           mount.New(""),
+		mounter:           nil,
 	}
 }
 

@@ -19,6 +19,8 @@ package beegfs
 import (
 	"errors"
 	"fmt"
+	"k8s.io/utils/mount"
+
 	"github.com/golang/glog"
 )
 
@@ -121,6 +123,13 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 }
 
 func (b *beegfs) Run() {
+	if b.cs.mounter == nil {
+		b.cs.mounter = mount.New("")
+	}
+	if b.ns.mounter == nil {
+		b.ns.mounter = mount.New("")
+	}
+
 	s := NewNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()
