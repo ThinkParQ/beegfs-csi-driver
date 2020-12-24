@@ -2,6 +2,7 @@ package beegfs
 
 import (
 	"path"
+	"reflect"
 	"testing"
 
 	"github.com/spf13/afero"
@@ -133,6 +134,45 @@ func TestWriteClientFiles(t *testing.T) {
 	if wantConnTcpOnlyFilterFile != string(got) {
 		t.Errorf("connTcpOnlyFilterFile does not match; expected:\n%vgot:\n%v",
 			wantConnTcpOnlyFilterFile, string(got))
+	}
+}
+
+func TestSquashConfigForSysMgmtdHost(t *testing.T) {
+	defaultConfig := *newBeegfsConfig()
+	defaultConfig.ConnInterfaces = []string{"ib0"}
+	fileSystemSpecificBeegfsConfig := *newBeegfsConfig()
+	fileSystemSpecificBeegfsConfig.ConnInterfaces = []string{"ib1"}
+	testConfig := pluginConfig{
+		DefaultConfig: defaultConfig,
+		FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+			{
+				SysMgmtdHost: "127.0.0.1",
+				Config:       fileSystemSpecificBeegfsConfig,
+			},
+		},
+	}
+
+	tests := map[string]struct {
+		sysMgmtdHost string
+		want         beegfsConfig
+	}{
+		"not matching sysMgmtdHost": {
+			sysMgmtdHost: "127.0.0.0",
+			want:         defaultConfig,
+		},
+		"matching sysMgmtdHost": {
+			sysMgmtdHost: "127.0.0.1",
+			want:         fileSystemSpecificBeegfsConfig,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := squashConfigForSysMgmtdHost(tc.sysMgmtdHost, testConfig)
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Fatalf("expected beegfsConfig: %v, got beegfsConfig: %v", tc.want, got)
+			}
+		})
 	}
 }
 
