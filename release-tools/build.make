@@ -20,8 +20,7 @@
 
 # This is the default. It can be overridden in the main Makefile after
 # including build.make.
-#REGISTRY_NAME=quay.io/k8scsi
-REGISTRY_NAME ?= 
+REGISTRY_NAME?=quay.io/k8scsi
 
 # Can be set to -mod=vendor to ensure that the "vendor" directory is used.
 GOFLAGS_VENDOR=
@@ -37,7 +36,7 @@ REV=$(shell git describe --long --tags --match='v*' --dirty 2>/dev/null || git r
 
 # A space-separated list of image tags under which the current build is to be pushed.
 # Determined dynamically.
-IMAGE_TAGS ?=
+IMAGE_TAGS=
 
 # A "canary" image gets built if the current commit is the head of the remote "master" branch.
 # That branch does not exist when building some other branch in TravisCI.
@@ -70,13 +69,17 @@ endif
 # toolchain.
 BUILD_PLATFORMS =
 
+# Add go ldflags using LDFLAGS at the time of compilation.
+IMPORTPATH_LDFLAGS = -X main.version=$(REV) 
+EXT_LDFLAGS = -extldflags "-static"
+LDFLAGS = 
+FULL_LDFLAGS = $(LDFLAGS) $(IMPORTPATH_LDFLAGS) $(EXT_LDFLAGS)
 # This builds each command (= the sub-directories of ./cmd) for the target platform(s)
 # defined by BUILD_PLATFORMS.
-$(CMDS:%=build-%): build-%:
-build-%: check-go-version-go
+$(CMDS:%=build-%): build-%: check-go-version-go
 	mkdir -p bin
 	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch suffix; do \
-		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags '-X main.version=$(REV) -extldflags "-static"' -o "./bin/$*$$suffix" ./cmd/$*); then \
+		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags '$(FULL_LDFLAGS)' -o "./bin/$*$$suffix" ./cmd/$*); then \
 			echo "Building $* for GOOS=$$os GOARCH=$$arch failed, see error(s) above."; \
 			exit 1; \
 		fi; \
