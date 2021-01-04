@@ -160,7 +160,7 @@ func writeClientFiles(sysMgmtdHost, mountDirPath, confTemplatePath string, overr
 	return clientConfPath, mountPath, nil
 }
 
-// squashConfigForSysMgmtdHost takes a pluginConfig, which MAY have FileSystemSpecificConfigs and a sysMgmtdHost. If
+// squashConfigForSysMgmtdHost takes a sysMgmtdHost and pluginConfig, which MAY have FileSystemSpecificConfigs. If
 // the pluginConfig contains overrides for the provided sysMgmtdHost, squashConfigForSysMgmtdHost combines them with
 // the DefaultConfig (giving preference to the appropriate fileSystemSpecificConfig). Otherwise, it returns the
 // DefaultConfig.
