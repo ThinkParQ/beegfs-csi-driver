@@ -1,0 +1,20 @@
+# Use this file for an out-of-the-box deployment to kube-system (assuming working access to k8s.gcr.io).
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kube-system
+bases:
+  - ../base
+images:
+  - name: beegfsplugin
+    newName: netapp/beegfsplugin
+    newTag: v1.0
+  - name: csi-provisioner
+    newName: k8s.gcr.io/sig-storage/csi-provisioner
+    newTag: v2.0.2
+  - name: livenessprobe
+    newName: k8s.gcr.io/sig-storage/livenessprobe
+    newTag: v2.1.0
+  - name: csi-node-driver-registrar
+    newName: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newTag: v2.0.1

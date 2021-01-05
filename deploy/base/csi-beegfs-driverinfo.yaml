@@ -1,8 +1,9 @@
-apiVersion: storage.k8s.io/v1beta1
+apiVersion: storage.k8s.io/v1
 kind: CSIDriver
 metadata:
   name: beegfs.csi.netapp.com
 spec:
+  attachRequired: false
   # Supports persistent and ephemeral inline volumes.
   volumeLifecycleModes:
   - Persistent

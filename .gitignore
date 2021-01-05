@@ -1,3 +1,4 @@
 /bin
 .idea/
 ignored/
+deploy/dev/kustomization.yaml

@@ -7,6 +7,9 @@
 #
 # This is useful for testing with csi-sanity or csc.
 
+# TODO(webere): Fix (if necessary) and test this file. We may need to kustomize a socat container into the controller
+# pod and deploy another on an arbitrary node.
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -45,7 +48,7 @@ spec:
             topologyKey: kubernetes.io/hostname
       containers:
         - name: socat
-          image: alpine/socat:1.0.3
+          image: socat
           args:
             - tcp-listen:10000,fork,reuseaddr
             - unix-connect:/csi/csi.sock

@@ -1,0 +1,30 @@
+# This file is a template for dev deployments. Do NOT make local changes to this file unless they would apply
+# to all developers (e.g. the addition of a new resource).
+
+# Copy this file to deploy/dev/kustomization.yaml and define any custom configuration required for your dev deployment.
+# deploy/dev/kustomization.yaml is .gitignored and is safe to modify. When deploy/dev/kustomization-template.yaml
+# changes, consider incorporating the changes into your local deploy/dev/kustomization.yaml.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../base
+resources:
+  - csi-beegfs-testing.yaml
+namespace: default
+images:
+  - name: beegfsplugin
+    newName: docker.repo.eng.netapp.com/user/beegfsplugin
+    newTag: latest
+  - name: csi-provisioner
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
+    newTag: v2.0.2
+  - name: livenessprobe
+    newName: docker.repo.eng.netapp.com/sig-storage/livenessprobe
+    newTag: v2.1.0
+  - name: csi-node-driver-registrar
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
+    newTag: v2.0.1
+  - name: socat
+    newName: docker.repo.eng.netapp.com/alpine/socat
+    newTag: 1.0.3

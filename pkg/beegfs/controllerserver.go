@@ -52,9 +52,10 @@ type controllerServer struct {
 	pluginConfig     pluginConfig
 	confTemplatePath string
 	mounter          mount.Interface
+	dataDir          string
 }
 
-func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfig, confTemplatePath string) *controllerServer {
+func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfig, confTemplatePath, dataDir string) *controllerServer {
 	if ephemeral {
 		return &controllerServer{caps: getControllerServiceCapabilities(nil), nodeID: nodeID}
 	}
@@ -68,6 +69,7 @@ func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfi
 		pluginConfig:     pluginConfig,
 		confTemplatePath: confTemplatePath,
 		mounter:          mount.New(""),
+		dataDir:          dataDir,
 	}
 }
 
@@ -123,7 +125,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	glog.Infof("Generated ID %s for volume %s", volumeID, volName)
 
 	// Write configuration files but do not mount BeeGFS.
-	mountDirPath = path.Join(dataRoot, sanitizedVolumeID) // e.g. /dataRoot/127.0.0.1_scratch_vol1
+	mountDirPath = path.Join(cs.dataDir, sanitizedVolumeID) // e.g. /dataRoot/127.0.0.1_scratch_vol1
 	if err = fs.MkdirAll(mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -180,7 +182,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	sanitizedVolumeID = sanitizeVolumeID(volumeID)
 
 	// Write configuration files and mount BeeGFS.
-	mountDirPath = path.Join(dataRoot, sanitizedVolumeID) // /dataRoot/127.0.0.1_scratch_vol1
+	mountDirPath = path.Join(cs.dataDir, sanitizedVolumeID) // /dataRoot/127.0.0.1_scratch_vol1
 	if err := fs.MkdirAll(mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

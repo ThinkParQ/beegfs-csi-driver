@@ -8,8 +8,9 @@ This repository hosts the CSI BeeGFS driver and all of its build and dependent c
 - Access to terminal with `kubectl` installed
 
 ## Deployment
-Deployment varies depending on the Kubernetes version your cluster is running:
-- [Deployment for Kubernetes 1.17 and later](docs/deploy-1.17-and-later.md)
+Deployment can be customized depending on your environment and goals:
+- [Deployment](docs/deployment.md)
+- [Developer deployment](docs/developer-deployment.md)
 
 ## Examples
 The following examples assume that the CSI BeeGFS driver has been deployed and validated:
@@ -47,16 +48,6 @@ Optionally set REGISTRY_NAME or IMAGE_TAGS:
 # REGISTRY_NAME and IMAGE_TAGS must be specified as make arguments.
 # REGISTRY_NAME and IMAGE_TAGS cannot be pulled from the environment.
 make REGISTRY_NAME=docker.netapp.com/k8scsi IMAGE_TAGS=devBranchName-canary push
-```
-
-## Deploying the plugin to Kubernetes
-
-```shell
-# Prerequisite(s):
-#   Change 'docker.netapp.com/k8scsi'.
-#   Change 'devBranchName-canary'.
-#   Configure '~/.kube/config'.
-env BEEGFSPLUGIN_REGISTRY=docker.netapp.com/k8scsi BEEGFSPLUGIN_TAG=devBranchName-canary deploy/kubernetes-latest/deploy.sh
 ```
 
 ## Community, discussion, contribution, and support

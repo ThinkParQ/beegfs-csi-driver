@@ -1,3 +1,5 @@
+# TODO(webere): Delete or update this file.
+
 ## Deployment
 The easiest way to test the BeeGFS driver is to run the `deploy.sh` script for the Kubernetes version used by
 the cluster as shown below for Kubernetes 1.17. This creates the deployment that is maintained specifically for that
@@ -151,7 +153,7 @@ Events:
 ```
 
 ## Confirm BeeGFS driver works
-The BeeGFS driver is configured to create new volumes under `/csi-data-dir` inside the beegfs container that is specified in the plugin StatefulSet found [here](../deploy/kubernetes-1.17/beegfs/csi-beegfs-plugin.yaml).  This path persist as long as the StatefulSet pod is up and running.
+The BeeGFS driver is configured to create new volumes under `/csi-data-dir` inside the beegfs container that is specified in the plugin StatefulSet found [here](../deploy/kubernetes-1.17/beegfs/csi-beegfs-node.yaml).  This path persist as long as the StatefulSet pod is up and running.
 
 A file written in a properly mounted BeeGFS volume inside an application should show up inside the BeeGFS container.  The following steps confirms that BeeGFS is working properly.  First, create a file from the application pod as shown:
 

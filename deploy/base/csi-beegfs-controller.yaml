@@ -1,0 +1,76 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  serviceName: "csi-beegfs-controller"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-beegfs-controller
+  template:
+    metadata:
+      labels:
+        app: csi-beegfs-controller
+    spec:
+      serviceAccountName: csi-beegfs-controller-sa
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: Exists
+      containers:
+        - name: csi-provisioner
+          image: csi-provisioner  # kustomized
+          args:
+            - -v=5
+            - --csi-address=/csi/csi.sock
+            - --feature-gates=Topology=true  # TODO(webere): evaluate this option
+            - --volume-name-uuid-length=8
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+        - name: beegfs
+          image: beegfsplugin  # kustomized
+          args:
+            - --drivername=beegfs.csi.netapp.com
+            - --nodeid=$(KUBE_NODE_NAME)
+            - --endpoint=unix://csi/csi.sock
+            - --templatefile=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - --csdatadir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN"]  # SYS_ADMIN is required to run the mount command.
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /host
+              name: host-dir
+              readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+            - mountPath: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+              name: plugin-dir
+      volumes:
+        # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
+        - hostPath:
+            path: /
+            type: Directory
+          name: host-dir
+        # The controller service stores client configuration files in this directory. This is the same directory the
+        # node service (csi-beegfs-node.yaml) creates its socket inside.
+        - hostPath:
+            path: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+            type: DirectoryOrCreate
+          name: plugin-dir
+        - emptyDir: { }
+          name: socket-dir

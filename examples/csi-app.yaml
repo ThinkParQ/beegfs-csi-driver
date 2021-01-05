@@ -1,16 +1,23 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: my-csi-app
+  name: csi-beegfs-app
 spec:
   containers:
-    - name: my-frontend
-      image: busybox
+    - name: csi-beegfs-app
+      image: alpine:latest
       volumeMounts:
       - mountPath: "/data"
-        name: my-csi-volume
-      command: [ "sleep", "1000000" ]
+        name: csi-beegfs-volume
+      # Create a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.
+      # Sleep to demonstrate the container runs successfully.
+      command: [ "ash", "-c", 'touch "/data/touched-by-${POD_UUID}" && sleep 10000']
+      env:
+        - name: POD_UUID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
   volumes:
-    - name: my-csi-volume
+    - name: csi-beegfs-volume
       persistentVolumeClaim:
-        claimName: csi-pvc # defined in csi-pvc.yaml
+        claimName: csi-beegfs-pvc  # defined in csi-pvc.yaml

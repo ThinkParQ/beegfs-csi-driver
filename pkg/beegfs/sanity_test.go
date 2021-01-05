@@ -15,7 +15,7 @@ func TestSanity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dataRoot = path.Join(sanityDir, "csi-data-dir")
+	csDataDirPath := path.Join(sanityDir, "csi-data-dir")
 	endpoint := "unix://" + sanityDir + "/beegfscsi.sock"
 	confTemplatePath := path.Join(sanityDir, "beegfs-client.conf")
 
@@ -24,8 +24,8 @@ func TestSanity(t *testing.T) {
 	}
 
 	// Create and run the driver
-	driver, err := NewBeegfsDriver("testDriver", "testID", endpoint, "",
-		confTemplatePath, false, 100, "v0.1")
+	driver, err := NewBeegfsDriver("testDriver", "testID", endpoint, "", confTemplatePath,
+		csDataDirPath, "v0.1", false, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
