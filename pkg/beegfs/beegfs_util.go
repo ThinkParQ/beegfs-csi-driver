@@ -22,7 +22,7 @@ import (
 var fs = afero.NewOsFs()
 var fsutil = afero.Afero{Fs: fs}
 
-// newBeegfsUrl converts a hostname or IP address and path into a URL with the format beegfs://host/path.
+// newBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path.
 func newBeegfsUrl(host string, path string) string {
 	structURL := url.URL{
 		Scheme: "beegfs",
@@ -32,7 +32,7 @@ func newBeegfsUrl(host string, path string) string {
 	return structURL.String()
 }
 
-// parseBeegfsUrl parses a URL and returns a sysMgmtdHost and path
+// parseBeegfsUrl parses a URL with the format beegfs://host/path and returns the sysMgmtdHost and path.
 func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error) {
 	var structUrl *url.URL
 	if structUrl, err = url.Parse(rawUrl); err != nil {
