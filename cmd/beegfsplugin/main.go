@@ -40,7 +40,9 @@ var (
 	ephemeral = flag.Bool("ephemeral", false, "publish volumes in ephemeral mode even if "+
 		"kubelet did not ask for it (only needed for Kubernetes 1.15)")
 	maxVolumesPerNode = flag.Int64("maxvolumespernode", 0, "limit of volumes per node")
-	showVersion       = flag.Bool("version", false, "Show version.")
+	csDataDir         = flag.String("csdatadir", "/tmp/beegfs-csi-data-dir", "path to directory the "+
+		"controller service uses to store client configuration files and mount file systems")
+	showVersion = flag.Bool("version", false, "Show version.")
 	// Set by the build process
 	version = ""
 )
@@ -64,8 +66,8 @@ func main() {
 }
 
 func handle() {
-	driver, err := beegfs.NewBeegfsDriver(*driverName, *nodeID, *endpoint, *configFile, *templateFile, *ephemeral,
-		*maxVolumesPerNode, version)
+	driver, err := beegfs.NewBeegfsDriver(*driverName, *nodeID, *endpoint, *configFile, *templateFile, *csDataDir,
+		version, *ephemeral, *maxVolumesPerNode)
 	if err != nil {
 		fmt.Printf("Failed to initialize driver: %s", err.Error())
 		os.Exit(1)

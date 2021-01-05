@@ -19,8 +19,6 @@ package beegfs
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
-
 	"github.com/golang/glog"
 )
 
@@ -38,6 +36,7 @@ type beegfs struct {
 	maxVolumesPerNode int64
 	pluginConfig      pluginConfig
 	confTemplatePath  string
+	csDataDir         string // directory controller service uses to create BeeGFS config files and mount file systems
 
 	ids *identityServer
 	ns  *nodeServer
@@ -60,11 +59,6 @@ var (
 	vendorVersion = "dev"
 
 	beegfsVolumes map[string]beegfsVolume
-
-	// Directory where data for volumes and snapshots are persisted.
-	// This can be ephemeral within the container or persisted if
-	// backed by a Pod volume.
-	dataRoot = "/csi-data-dir"
 )
 
 func init() {
@@ -72,7 +66,8 @@ func init() {
 	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts)
 }
 
-func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientConfFile string, ephemeral bool, maxVolumesPerNode int64, version string) (*beegfs, error) {
+func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientConfFile, csDataDir, version string,
+	ephemeral bool, maxVolumesPerNode int64) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -97,8 +92,8 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 		}
 	}
 
-	if err := fs.MkdirAll(dataRoot, 0750); err != nil {
-		return nil, fmt.Errorf("failed to create dataRoot: %v", err)
+	if err := fs.MkdirAll(csDataDir, 0750); err != nil {
+		return nil, fmt.Errorf("failed to create csDataDir: %v", err)
 	}
 
 	glog.Infof("Driver: %v ", driverName)
@@ -114,11 +109,13 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 		maxVolumesPerNode: maxVolumesPerNode,
 		pluginConfig:      pluginConfig,
 		confTemplatePath:  templateClientConfFile,
+		csDataDir:         csDataDir,
 	}
+
 	// Create GRPC servers
 	driver.ids = NewIdentityServer(driver.name, driver.version)
 	driver.ns = NewNodeServer(driver.nodeID, driver.ephemeral, driver.maxVolumesPerNode, driver.pluginConfig, driver.confTemplatePath)
-	driver.cs = NewControllerServer(driver.ephemeral, driver.nodeID, driver.pluginConfig, driver.confTemplatePath)
+	driver.cs = NewControllerServer(driver.ephemeral, driver.nodeID, driver.pluginConfig, driver.confTemplatePath, driver.csDataDir)
 
 	return &driver, nil
 }
@@ -134,31 +131,4 @@ func getVolumeByID(volumeID string) (beegfsVolume, error) {
 		return beegfsVol, nil
 	}
 	return beegfsVolume{}, fmt.Errorf("volume id %s does not exist in the volumes list", volumeID)
-}
-
-func getVolumeByName(volName string) (beegfsVolume, error) {
-	for _, beegfsVol := range beegfsVolumes {
-		if beegfsVol.VolName == volName {
-			return beegfsVol, nil
-		}
-	}
-	return beegfsVolume{}, fmt.Errorf("volume name %s does not exist in the volumes list", volName)
-}
-
-// getVolumePath returns the canonical path for beegfs volume
-func getVolumePath(volID string) string {
-	return filepath.Join(dataRoot, volID)
-}
-
-// updateVolume updates the existing beegfs volume.
-func updateBeegfsVolume(volID string, volume beegfsVolume) error {
-	glog.V(4).Infof("updating beegfs volume: %s", volID)
-
-	if _, err := getVolumeByID(volID); err != nil {
-		return err
-	}
-
-	// todo(eastburj): persist volume updates (in case the process restarts)
-	beegfsVolumes[volID] = volume
-	return nil
 }

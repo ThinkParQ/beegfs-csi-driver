@@ -1,0 +1,112 @@
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-node
+spec:
+  selector:
+    matchLabels:
+      app: csi-beegfs-node
+  template:
+    metadata:
+      labels:
+        app: csi-beegfs-node
+    spec:
+      containers:
+        - name: node-driver-registrar
+          image: csi-node-driver-registrar  # kustomized
+          args:
+            - --v=5
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
+          securityContext:
+            # This is necessary only for systems with SELinux, where
+            # non-privileged sidecar containers cannot access unix domain socket
+            # created by privileged CSI driver container.
+            privileged: true
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          volumeMounts:
+          - mountPath: /csi
+            name: socket-dir
+          - mountPath: /registration
+            name: registration-dir
+        - name: beegfs
+          image: beegfsplugin  # kustomized
+          args:
+            - --drivername=beegfs.csi.netapp.com
+            - --nodeid=$(KUBE_NODE_NAME)
+            - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
+            - --templatefile=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true  # Privileged is required for bidirectional mount propagation and to run the mount command.
+          ports:
+          - containerPort: 9898
+            name: healthz
+            protocol: TCP
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 2
+          volumeMounts:
+            - mountPath: /host
+              name: host-dir
+              readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+            - mountPath: /var/lib/kubelet/pods
+              mountPropagation: Bidirectional
+              name: pods-mount-dir
+            - mountPath: /var/lib/kubelet/plugins
+              mountPropagation: Bidirectional
+              name: plugins-mount-dir
+            - mountPath: /csi
+              name: socket-dir
+        - name: liveness-probe
+          volumeMounts:
+          - mountPath: /csi
+            name: socket-dir
+          image: livenessprobe  # kustomized
+          args:
+          - --csi-address=/csi/csi.sock
+          - --health-port=9898
+
+      volumes:
+        # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
+        - hostPath:
+            path: /
+            type: Directory
+          name: host-dir
+        # Kubernetes mounts pod volumes at locations like
+        # /var/lib/kubelet/pods/########-####-####-####-############/volumes/kubernetes.io~csi/pvc-########/mount.
+        - hostPath:
+            path: /var/lib/kubelet/pods
+            type: DirectoryOrCreate
+          name: pods-mount-dir
+        # Kubernetes mounts global volumes at locations like
+        # /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-########/globalmount.
+        - hostPath:
+            path: /var/lib/kubelet/plugins
+            type: DirectoryOrCreate
+          name: plugins-mount-dir
+        - hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+          name: registration-dir
+        # The node services creates its socket in this directory. This is the same directory the controller service
+        # (csi-beegfs-controller.yaml) stores client configuration files inside.
+        - hostPath:
+            path: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+            type: DirectoryOrCreate
+          name: socket-dir

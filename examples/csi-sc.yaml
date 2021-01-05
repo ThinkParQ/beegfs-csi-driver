@@ -4,9 +4,8 @@ metadata:
   name: csi-beegfs-sc
 provisioner: beegfs.csi.netapp.com
 parameters:
-  beegfsConf/sysMgmtdHost: 10.113.72.217
-  beegfsConf/sysMountSanityCheckMS: "60000"
-  volDirBasePath: scratch 
+  sysMgmtdHost: localhost
+  volDirBasePath: k8s-volumes
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: false
