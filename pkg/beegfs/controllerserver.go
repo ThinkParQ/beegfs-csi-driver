@@ -68,8 +68,8 @@ func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfi
 		nodeID:           nodeID,
 		pluginConfig:     pluginConfig,
 		confTemplatePath: confTemplatePath,
-		mounter:          mount.New(""),
 		dataDir:          dataDir,
+		mounter:          nil,
 	}
 }
 
