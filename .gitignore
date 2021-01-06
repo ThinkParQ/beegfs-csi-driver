@@ -1,4 +1,5 @@
 /bin
+*.swp
 .idea/
 ignored/
 deploy/dev/kustomization.yaml
