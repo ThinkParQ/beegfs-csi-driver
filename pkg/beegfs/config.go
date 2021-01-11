@@ -2,9 +2,18 @@ package beegfs
 
 import (
 	"fmt"
+	"github.com/golang/glog"
+	"net"
+	"regexp"
 
 	"gopkg.in/yaml.v2"
 )
+
+var illegalBeegfsConfOptions = []string{
+	"sysMgmtdHost",
+	"connClientPortUDP",
+	"connPortShift",
+}
 
 // beegfsConfig contains all of the custom configuration (above and beyond whatever is in the beegfs-client.conf file)
 // associated with a single BeeGFS file system EXCEPT for sysMgmtdHost, which is stored separately.
@@ -91,7 +100,59 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 		}
 	}
 
+	if err := newPluginConfig.validateConfig(); err != nil {
+		return pluginConfig{}, err
+	}
+	newPluginConfig.stripConfig()
+
 	return newPluginConfig, nil
+}
+
+func (plConfig *pluginConfig) validateConfig() error {
+	beegfsConfigs := []beegfsConfig{plConfig.DefaultConfig}
+	// this regex is used to determine whether a given string is a domain name
+	domainRegex := regexp.MustCompile("^(?:[_a-z0-9](?:[_a-z0-9-]{0,61}[a-z0-9]\\.)|(?:[0-9]+/[0-9]{2})\\.)+(?:[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?$")
+	for _, config := range plConfig.FileSystemSpecificConfigs {
+		// sysMgmtdHost can be localhost, an IP address, or a domain name. if it is none of these, return an error
+		if config.SysMgmtdHost != "localhost" && net.ParseIP(config.SysMgmtdHost) == nil &&
+			!domainRegex.MatchString(config.SysMgmtdHost) {
+			return fmt.Errorf("invalid SysMgmtdHost %s", config.SysMgmtdHost)
+		}
+		beegfsConfigs = append(beegfsConfigs, config.Config)
+	}
+
+	for _, config := range beegfsConfigs {
+		for _, filter := range config.ConnNetFilter {
+			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
+				return fmt.Errorf("invalid ConnNetFilter %s", filter)
+			}
+		}
+		for _, filter := range config.ConnTcpOnlyFilter {
+			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
+				return fmt.Errorf("invalid ConnTCPOnlyFilter %s", filter)
+			}
+		}
+	}
+
+	return nil
+}
+
+// stripConfig removes any illegal beegfsConf options from the plugin configuration, logging a warning if any are found.
+// See deployment.md for the list of illegal options.
+func (plConfig *pluginConfig) stripConfig() {
+	beegfsConfigs := []beegfsConfig{plConfig.DefaultConfig}
+	for _, config := range plConfig.FileSystemSpecificConfigs {
+		beegfsConfigs = append(beegfsConfigs, config.Config)
+	}
+	for _, config := range beegfsConfigs {
+		for _, illegalOption := range illegalBeegfsConfOptions {
+			if val, present := config.BeegfsClientConf[illegalOption]; present {
+				glog.Warningf("Warning: illegal beegfs configuration option %s=%s found. Removing from config.\n",
+					illegalOption, val)
+				delete(config.BeegfsClientConf, illegalOption)
+			}
+		}
+	}
 }
 
 // overwriteFileSystemSpecificConfigs looks for FileSystemSpecificConfigs in writeTo and writeFrom with the same

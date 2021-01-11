@@ -382,12 +382,13 @@ parameter falls under determines its level of support in the driver.
 
 ### No Effect
 
-These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) and
+These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or are determined dynamically and
 have no effect when specified in the beeGFSClientConf configuration section.
 
 * sysMgmtdHost (specified in a *fileSystemSpecificConfigs[i]* or by the volume
   definition itself)
 * connClientPortUDP (semi-random to allow multiple filesystem mounts)
+* connPortShift
 
 ### Unsupported
 
