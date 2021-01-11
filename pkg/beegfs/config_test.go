@@ -1,6 +1,7 @@
 package beegfs
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -116,6 +117,115 @@ func TestParseConfig(t *testing.T) {
 				t.Fatalf("expected: %v, got: %v", tc.want, got)
 			}
 		})
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	basicConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := map[string]struct {
+		expectedError error
+		config        pluginConfig
+	}{
+		"basic config passes validation": {
+			nil,
+			basicConfig,
+		},
+		"sysMgmtdHost with domain name": {
+			nil,
+			pluginConfig{
+				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "subdomain.somewebsite.com",
+					},
+				},
+			},
+		},
+		"invalid sysMgmtdHost": {
+			fmt.Errorf("invalid SysMgmtdHost testinvalid"),
+			pluginConfig{
+				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "testinvalid",
+					},
+				},
+			},
+		},
+		"invalid connNetFilter": {
+			fmt.Errorf("invalid ConnNetFilter testinvalid"),
+			pluginConfig{
+				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							ConnNetFilter: []string{"testinvalid"},
+						},
+					},
+				},
+			},
+		},
+		"invalid ConnTCPOnlyFilter": {
+			fmt.Errorf("invalid ConnTCPOnlyFilter testinvalid"),
+			pluginConfig{
+				DefaultConfig: beegfsConfig{
+					ConnTcpOnlyFilter: []string{"127.0.0.0", "testinvalid"},
+				},
+				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+					},
+				},
+			},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := tc.config.validateConfig()
+			if (err != nil && tc.expectedError == nil) || (err == nil && tc.expectedError != nil) ||
+				(err != nil && tc.expectedError != nil && err.Error() != tc.expectedError.Error()) {
+				t.Fatalf("expected error: %v, got: %v", tc.expectedError, err)
+			}
+		})
+	}
+}
+
+// Verifies that stripping a config removes any illegal options
+func TestStripIllegalConfig(t *testing.T) {
+	originalConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	modifiedConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// introduce an illegal option in the default and filesystem configs
+	modifiedConfig.DefaultConfig.BeegfsClientConf[illegalBeegfsConfOptions[0]] = "illegaldefaultkey"
+	modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[illegalBeegfsConfOptions[0]] = "illegalfskey"
+	modifiedConfig.stripConfig()
+	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
+		t.Fatalf("stripConfig() did not strip correctly. Original: %v, Stripped: %s",
+			originalConfig, modifiedConfig)
+	}
+}
+
+// Verifies that stripping a config with no illegal options does nothing to the config
+func TestStripCleanConfig(t *testing.T) {
+	originalConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	modifiedConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	modifiedConfig.stripConfig()
+	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
+		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %s",
+			originalConfig, modifiedConfig)
 	}
 }
 
