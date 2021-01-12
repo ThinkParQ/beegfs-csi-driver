@@ -75,19 +75,15 @@ func writeClientFiles(sysMgmtdHost, mountDirPath, confTemplatePath string, overr
 		return nil
 	}
 
-	// TODO(webere): consider a more efficient/effective way of deciding on a UDP port
+	// TODO(eastburj): patch BeeGFS to support setting connClientPortUDP to zero
 	// TODO(webere): document that connClientPortUDP is NOT a supported option (maybe a range?)
-	// randomly select a UDP port to use for this volume mount
+	// select a UDP port to use for this volume mount
 	var connClientPortUDP string
-	for i := 49152; i < 65535; i++ {
-		available, err := isUDPPortAvailable(strconv.Itoa(i))
-		if err != nil {
-			return "", "", err
-		} else if available == true {
-			connClientPortUDP = strconv.Itoa(i)
-			break
-		}
+	port, err := getEphemeralPortUDP()
+	if err != nil {
+		return "", "", err
 	}
+	connClientPortUDP = strconv.Itoa(port)
 
 	// TODO (webere): consider loading the template globally only once
 	var clientConfBytes []byte
@@ -295,18 +291,29 @@ func cleanUpIfNecessary(mountDirPath string, rmDir bool) (err error) {
 	return nil
 }
 
-// isUDPPortAvailable checks if a port is already listed in "sudo netstat -lu". This is a rudimentary implementation
-// that doesn't validate if it was passed a valid port vs. some other string. If the port is already listed returns
-// false, if the port is not listed returns true.
-func isUDPPortAvailable(port string) (available bool, err error) {
-	cmd, err := exec.Command("netstat", "-lu").Output()
+// getEphemeralPortUDP either returns an error or the system-assigned ephemeral port of a temporary UDP/IPv4 socket bound to INADDR_ANY.
+// Note: This only exists because BeeGFS does not support setting connClientPortUDP to zero.
+// Warning: Other processes on the host may bind the port returned before BeeGFS binds it.  Calling this method in a retry loop may mitigate that issue.  Ideally, BeeGFS itself should be patched to support binding to port zero.
+// Note: "nc", "ss", and "kill" must run from the perspective of the host, i.e. chwrap'ed, not the container. "bash", "grep", and "awk" may optionally run from the perspective of the container.
+func getEphemeralPortUDP() (port int, err error) {
+	// Breakdown of the one-liner below:
+	//   Run "nc" (nmap-netcat) as a background process that binds a UDP/IPv4 socket to INADDR_ANY port 0.
+	//   Capture the pid.
+	//   Run "ss" (iproute2) until it discovers the new socket with matching pid.
+	//   Run "awk" twice to parse the system-assigned ephemeral port.
+	//   Kill the "nc" background process.
+	args := []string{"-c", "nc -4lup 0 &P=$!;false;while [ 0 -ne $? ];do L=$(ss -lunp|grep ,pid=$P,);done;awk '{print $4}' <<<$L|awk -F: '{print $NF}';kill $P"}
+	out, err := exec.Command("bash", args...).Output()
 	if err != nil {
-		return false, fmt.Errorf("error '%s' checking if UDP port %s is available with netstat -lu. Verify netstat is installed", err, port)
+		return 0, err
 	}
-	if strings.Contains(string(cmd), port) {
-		return false, nil
+	a := string(out)
+	a = strings.Trim(a, "\n")
+	i, err := strconv.Atoi(a)
+	if err != nil {
+		return 0, err
 	}
-	return true, err
+	return i, nil
 }
 
 // sanitizeVolumeID takes a volumeID like beegfs://127.0.0.1/scratch/vol1 and returns a string like

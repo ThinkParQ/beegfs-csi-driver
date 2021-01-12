@@ -11,7 +11,14 @@ RUN apk add util-linux
 # Allow this container to call specifically linked binaries when the host filesystem is mounted under /host.
 COPY ${binary} /netapp/beegfsplugin
 COPY ${chwrap} /netapp/chwrap
-RUN ln -s /netapp/chwrap /netapp/beegfs-ctl && ln -s /netapp/chwrap /netapp/netstat
+RUN \
+ln -s /netapp/chwrap /netapp/beegfs-ctl && \
+ln -s /netapp/chwrap /netapp/bash && \
+ln -s /netapp/chwrap /netapp/nc && \
+ln -s /netapp/chwrap /netapp/ss && \
+ln -s /netapp/chwrap /netapp/kill && \
+true
+
 # Call chwrap linked binaries before container installed binaries.
 ENV PATH "/netapp:/$PATH"
 
