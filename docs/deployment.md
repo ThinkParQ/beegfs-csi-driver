@@ -8,7 +8,9 @@ The following packages MUST be installed on any Kubernetes node (master OR
 worker) that runs a component of the driver:
 * beegfs-client-dkms
 * beegfs-helperd (enabled and running under systemd)
-* netstat
+* bash
+* nc (nmap-netcat)
+* ss (iproute2)
 
 ## Kubernetes Deployment
 For a completely out-of-the-box deployment, verify you have kubectl access to a 
@@ -385,9 +387,15 @@ parameter falls under determines its level of support in the driver.
 These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or are determined dynamically and
 have no effect when specified in the beeGFSClientConf configuration section.
 
-* sysMgmtdHost (specified in a *fileSystemSpecificConfigs[i]* or by the volume
-  definition itself)
-* connClientPortUDP (semi-random to allow multiple filesystem mounts)
+* sysMgmtdHost (This is specified in a *fileSystemSpecificConfigs[i]* or by the
+  volume definition itself.)
+* connClientPortUDP (An ephemeral port, obtained by binding to port 0, allows
+  multiple filesystem mounts.
+  On Linux the selected ephemeral port is constrained by the values of
+  [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html?highlight=proc#ip-variables).
+  [Ensure that firewalls allow UDP traffic](https://www.beegfs.io/wiki/NetworkTuning#hn_59ca4f8bbb_4)
+  between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver
+  nodes.)
 * connPortShift
 
 ### Unsupported
@@ -435,3 +443,4 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * tuneUseGlobalAppendLocks
 * tuneUseGlobalFileLocks
 * sysACLsEnabled
+

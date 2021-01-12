@@ -236,6 +236,14 @@ func TestSquashConfigForSysMgmtdHost(t *testing.T) {
 	}
 }
 
+func TestGetEphemeralPortUDP(t *testing.T) {
+	_, err := getEphemeralPortUDP()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+}
+
 func TestSanitizeVolumeID(t *testing.T) {
 	tests := map[string]struct {
 		provided string

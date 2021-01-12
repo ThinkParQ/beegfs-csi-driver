@@ -29,7 +29,7 @@ make
 ## Building the containers
 
 ```shell
-make containers
+make container
 ```
 
 ## Building and pushing the containers
