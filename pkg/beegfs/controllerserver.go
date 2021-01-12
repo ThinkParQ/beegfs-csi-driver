@@ -78,19 +78,6 @@ func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfi
 // mkdir because it needs to be able to use beegfs-ctl to set stripe patterns, etc. anyway.
 // TODO(webere): This function returns quite a few errors with no valid GRPC error codes
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		sysMgmtdHost             string // IP address or hostname of BeeGFS mgmtd service
-		volDirBasePathBeegfsRoot string // absolute path to BeeGFS parent directory rooted at BeeGFS root (e.g. /parent)
-		volDirPathBeegfsRoot     string // absolute path to BeeGFS directory rooted at BeeGFS root (e.g. /parent/volume)
-		volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
-		sanitizedVolumeID        string // volumeID with beegfs:// and all other /s removed
-		mountDirPath             string // absolute path to directory containing configuration files and mount point
-		clientConfPath           string // absolute path to beegfs-client.conf; usually /mountDirPath/clientConfPath
-		err                      error
-	)
-
 	// Check arguments.
 	volName := req.GetName()
 	if len(volName) == 0 {
@@ -107,108 +94,78 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if len(reqParams) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Request parameters not provided")
 	}
-	var ok bool
-	sysMgmtdHost, ok = reqParams[sysMgmtdHostKey]
+	sysMgmtdHost, ok := reqParams[sysMgmtdHostKey]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", sysMgmtdHostKey)
 	}
-	volDirBasePathBeegfsRoot, ok = reqParams[volDirBasePathKey]
+	volDirBasePathBeegfsRoot, ok := reqParams[volDirBasePathKey]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", volDirBasePathKey)
 	}
-	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot)) // see description above
+	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
 
-	// The new BeeGFS directory has the name provided by the CO for the volume (e.g. /parent/pvc-some-uuid).
-	volDirPathBeegfsRoot = path.Join(volDirBasePathBeegfsRoot, volName)
-	volumeID = newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot)
-	sanitizedVolumeID = sanitizeVolumeID(volumeID)
-	glog.Infof("Generated ID %s for volume %s", volumeID, volName)
+	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
 
 	// Write configuration files but do not mount BeeGFS.
-	mountDirPath = path.Join(cs.dataDir, sanitizedVolumeID) // e.g. /dataRoot/127.0.0.1_scratch_vol1
-	if err = fs.MkdirAll(mountDirPath, 0750); err != nil {
+	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	beegfsConfig := squashConfigForSysMgmtdHost(sysMgmtdHost, cs.pluginConfig)
-	clientConfPath, _, err = writeClientFiles(sysMgmtdHost, mountDirPath, cs.confTemplatePath, beegfsConfig)
-	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "%v", err)
+	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
-	if err = cs.ctlExec.createDirectory(sysMgmtdHost, clientConfPath, volDirPathBeegfsRoot); err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+	if err := cs.ctlExec.createDirectoryForVolume(vol); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// Clean up configuration files.
-	if err = cleanUpIfNecessary(mountDirPath, true); err != nil {
-		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to clean up configuration files %s", sysMgmtdHost)
+	if err := cleanUpIfNecessary(vol, true); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
-			VolumeId: volumeID,
+			VolumeId: vol.volumeID,
 		},
 	}, nil
 }
 
-// DeleteVolume uses deletes the directory referenced in the volumeID from the BeeGFS file system referenced in the
+// DeleteVolume deletes the directory referenced in the volumeID from the BeeGFS file system referenced in the
 // volumeID.
 func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		sysMgmtdHost         string // IP address or hostname of BeeGFS mgmtd service
-		volDirPathBeegfsRoot string // absolute path to BeeGFS directory rooted at BeeGFS root (e.g. /parent/volume)
-		volDirPath           string // absolute path to BeeGFS directory (e.g. .../mount/parent/volume)
-		volumeID             string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
-		sanitizedVolumeID    string // volumeID with beegfs:// and all other /s removed
-		mountDirPath         string // absolute path to directory containing configuration files and mount point
-		mountPath            string // absolute path to mount point
-		err                  error
-	)
-
 	// Check arguments.
-	volumeID = req.GetVolumeId()
+	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	sysMgmtdHost, volDirPathBeegfsRoot, err = parseBeegfsUrl(volumeID)
+	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		glog.Error(err)
-		return nil, status.Errorf(codes.InvalidArgument, "Could not parse VolumeID %s", volumeID)
-	}
-	sanitizedVolumeID = sanitizeVolumeID(volumeID)
-
-	// Write configuration files and mount BeeGFS.
-	mountDirPath = path.Join(cs.dataDir, sanitizedVolumeID) // /dataRoot/127.0.0.1_scratch_vol1
-	if err := fs.MkdirAll(mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	beegfsConfig := squashConfigForSysMgmtdHost(sysMgmtdHost, cs.pluginConfig)
-	_, mountPath, err = writeClientFiles(sysMgmtdHost, mountDirPath, cs.confTemplatePath, beegfsConfig)
-	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "%v", err)
+
+	// Write configuration files and mount BeeGFS.
+	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	err = mountIfNecessary(mountDirPath, cs.mounter)
-	if err != nil {
-		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to mount filesystem %s to %s", sysMgmtdHost, mountDirPath)
+	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	volDirPath = path.Join(mountPath, volDirPathBeegfsRoot)
+	if err := mountIfNecessary(vol, cs.mounter); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	// Delete volume from mounted BeeGFS.
-	glog.Infof("Removing %s from filesystem %s", volDirPath, sysMgmtdHost)
-	if err = fs.RemoveAll(volDirPath); err != nil {
+	glog.Infof("Removing %s from filesystem %s", vol.volDirPath, vol.sysMgmtdHost)
+	if err = fs.RemoveAll(vol.volDirPath); err != nil {
 		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to remove %s from filesystem %s", volDirPathBeegfsRoot, sysMgmtdHost)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// Unmount BeeGFS and clean up configuration files.
-	if err = unmountAndCleanUpIfNecessary(mountDirPath, true, cs.mounter); err != nil {
+	if err = unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
 		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to unmount filesystem %s", sysMgmtdHost)
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -330,4 +287,23 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	}
 
 	return csc
+}
+
+// (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context
+// of the controller service. (*controllerServer) newBeegfsVolume selects the mountDirPath and passes the controller
+//service's pluginConfig.
+func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName string) beegfsVolume {
+	volDirPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, volName)
+	// This volumeID construction duplicates the one further down in the stack. We do it anyway to generate an
+	// appropriate mountDirPath.
+	volumeID := newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot)
+	mountDirPath := path.Join(cs.dataDir, sanitizeVolumeID(volumeID)) // e.g. /dataDir/127.0.0.1_scratch_pvc-12345678
+	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, cs.pluginConfig)
+}
+
+// (*controllerServer) newBeegfsVolumeFromID is a wrapper around newBeegfsVolumeFromID that makes it easier to call in
+// the context of the controller service. (*controllerServer) newBeegfsVolumeFromID selects the mountDirPath and passes
+// the controller service's pluginConfig.
+func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume, error) {
+	return newBeegfsVolumeFromID(cs.dataDir, volumeID, cs.pluginConfig)
 }

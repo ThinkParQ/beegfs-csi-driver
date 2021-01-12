@@ -125,14 +125,16 @@ func TestWriteClientFiles(t *testing.T) {
 	fsutil = afero.Afero{Fs: fs}
 	confTemplateDirPath := "/etc/beegfs"
 	confTemplatePath := path.Join(confTemplateDirPath, "beegfs-client.conf")
-	confDirPath := "/testvol"
+	mountDirPath := "/testvol"
 	sysMgmtdHost := "127.0.0.1"
-	testConfig := beegfsConfig{
-		ConnInterfaces:    []string{"ib0"},
-		ConnNetFilter:     []string{"127.0.0.0/24"},
-		ConnTcpOnlyFilter: []string{"127.0.0.0"},
-		BeegfsClientConf: map[string]string{
-			"connMgmtdPortTCP": "8000",
+	testConfig := pluginConfig{
+		DefaultConfig: beegfsConfig{
+			ConnInterfaces:    []string{"ib0"},
+			ConnNetFilter:     []string{"127.0.0.0/24"},
+			ConnTcpOnlyFilter: []string{"127.0.0.0"},
+			BeegfsClientConf: map[string]string{
+				"connMgmtdPortTCP": "8000",
+			},
 		},
 	}
 	wantConnInterfacesFile := "ib0\n"          // desired connInterfacesFile contents
@@ -148,16 +150,17 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	// set up conf directory in memory-mapped filesystem
-	if err := fs.Mkdir(confDirPath, 0755); err != nil {
+	if err := fs.Mkdir(mountDirPath, 0755); err != nil {
 		t.Fatalf("failed to set up new configuration directory: %v", err)
 	}
 
-	if _, _, err := writeClientFiles(sysMgmtdHost, confDirPath, confTemplatePath, testConfig); err != nil {
+	vol := newBeegfsVolume(mountDirPath, sysMgmtdHost, "test", testConfig)
+	if err := writeClientFiles(vol, confTemplatePath); err != nil {
 		t.Fatalf("expected no error to occur: %v", err)
 	}
 
 	// check written beegfs-client.conf
-	got, err := fsutil.ReadFile(path.Join(confDirPath, "beegfs-client.conf"))
+	got, err := fsutil.ReadFile(vol.clientConfPath)
 	if err != nil {
 		t.Errorf("could not read output beegfs-client.conf")
 	}
@@ -167,7 +170,7 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	// check written connInterfacesFile
-	got, err = fsutil.ReadFile(path.Join(confDirPath, "connInterfacesFile"))
+	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connInterfacesFile"))
 	if err != nil {
 		t.Errorf("could not read output connInterfacesFile")
 	}
@@ -177,7 +180,7 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	// check written connNetFilterFile
-	got, err = fsutil.ReadFile(path.Join(confDirPath, "connNetFilterFile"))
+	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connNetFilterFile"))
 	if err != nil {
 		t.Errorf("could not read output connNetFilterFile")
 	}
@@ -187,7 +190,7 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	// check written connTcpOnlyFilterFile
-	got, err = fsutil.ReadFile(path.Join(confDirPath, "connTcpOnlyFilterFile"))
+	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connTcpOnlyFilterFile"))
 	if err != nil {
 		t.Errorf("could not read output connInterfacesFile")
 	}
