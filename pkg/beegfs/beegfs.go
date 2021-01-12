@@ -19,9 +19,10 @@ package beegfs
 import (
 	"errors"
 	"fmt"
-	"k8s.io/utils/mount"
+	"path"
 
 	"github.com/golang/glog"
+	"k8s.io/utils/mount"
 )
 
 const (
@@ -45,16 +46,41 @@ type beegfs struct {
 	cs  *controllerServer
 }
 
-// TODO(webere): Determine whether or not we can throw this away.
+// beegfsVolume contains any distinguishing information about a BeeGFS "volume" (directory) and its parent BeeGFS file
+// system that may be required by an RPC call. Not all RPC calls require all parameters, but beegfsVolumes should be
+// constructed with all parameters to eliminate the need to check whether a parameter has been set. All paths are
+// absolute but are rooted from either the host or BeeGFS. Path variables rooted from the host have the suffix Path.
+// Path variables rooted from BeeGFS have the suffix PathBeegfsRoot.
+//
+// From the host's perspective (file or directory names in "") (all variable names represent absolute paths):
+//    /
+//    |-- ...
+//        |-- mountDirPath
+//            |-- "beegfs-client.conf" (clientConfPath)
+//            |-- "connInterfacesFile"
+//            |-- "connNetFilterFile"
+//            |-- "connTcpOnlyFilterFile"
+//            |-- "mount" (mountPath)
+//                |-- ...
+//                    |-- volDirBasePath
+//                        |-- volDirPath (same as volDirPathBeegfsRoot)
+//
+// From the perspective of the BeeGFS file system (all variable names represent absolute paths):
+//    /
+//    |-- ...
+//        |-- volDirBasePathBeegfsRoot
+//            |-- volDirPathBeegfsRoot (same as volDirPath)
 type beegfsVolume struct {
-	VolName string `json:"volName"`
-	VolID   string `json:"volID"`
-	VolSize int64  `json:"volSize"`
-	VolPath string `json:"volPath"`
-	//	VolAccessType accessType `json:"volAccessType"`
-	ParentVolID  string `json:"parentVolID,omitempty"`
-	ParentSnapID string `json:"parentSnapID,omitempty"`
-	Ephemeral    bool   `json:"ephemeral"`
+	config                   beegfsConfig
+	clientConfPath           string // absolute path to beegfs-client.conf from host root (e.g. .../mountDirPath/beegfs-client.conf)
+	mountDirPath             string // absolute path to directory containing configuration files and mount point from node root
+	mountPath                string // absolute path to mount point from host root (e.g. .../mountDirPath/mount)
+	sysMgmtdHost             string // IP address or hostname of BeeGFS mgmtd service
+	volDirBasePathBeegfsRoot string // absolute path to BeeGFS parent directory from BeeGFS root (e.g. /parent)
+	volDirBasePath           string // absolute path to BeeGFS parent directory from host root (e.g. ../mountDirPath/mount/parent)
+	volDirPathBeegfsRoot     string // absolute path to BeeGFS directory from BeeGFS root (e.g. /parent/volume)
+	volDirPath               string // absolute path to BeeGFS directory from host root (e.g. .../mountDirPath/mount/parent/volume)
+	volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
 }
 
 var (
@@ -133,6 +159,35 @@ func (b *beegfs) Run() {
 	s := NewNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()
+}
+
+// newBeeGFSVolume creates a beegfsVolume from parameters.
+func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pluginConfig pluginConfig) beegfsVolume {
+	// These parameters must be constructed outside of the struct literal.
+	mountPath := path.Join(mountDirPath, "mount")
+	volDirPath := path.Join(mountPath, volDirPathBeegfsRoot)
+
+	return beegfsVolume{
+		config:                   squashConfigForSysMgmtdHost(sysMgmtdHost, pluginConfig),
+		clientConfPath:           path.Join(mountDirPath, "beegfs-client.conf"),
+		mountDirPath:             mountDirPath,
+		mountPath:                mountPath,
+		sysMgmtdHost:             sysMgmtdHost,
+		volDirBasePathBeegfsRoot: path.Dir(volDirPathBeegfsRoot),
+		volDirBasePath:           path.Dir(volDirPath),
+		volDirPathBeegfsRoot:     volDirPathBeegfsRoot,
+		volDirPath:               volDirPath,
+		volumeID:                 newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot),
+	}
+}
+
+// newBeeGFSVolume creates a beegfsVolume from a volumeID.
+func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig pluginConfig) (beegfsVolume, error) {
+	sysMgmtdHost, volDirPathBeegfsRoot, err := parseBeegfsUrl(volumeID)
+	if err != nil {
+		return beegfsVolume{}, err
+	}
+	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, pluginConfig), nil
 }
 
 func getVolumeByID(volumeID string) (beegfsVolume, error) {

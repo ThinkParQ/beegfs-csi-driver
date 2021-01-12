@@ -18,7 +18,6 @@ package beegfs
 
 import (
 	"os"
-	"path"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -55,40 +54,33 @@ func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64, plugi
 }
 
 func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		volDirPathBeegfsRoot string // absolute path to BeeGFS directory rooted at BeeGFS root (e.g. /parent/volume)
-		volDirPath           string // absolute path to BeeGFS directory (e.g. .../mount/parent/volume)
-		mountPath            string // absolute path to mount point
-		remountPath          string // absolute path to bind mount point
-		err                  error
-	)
-
-	// Check arguments
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	// Check arguments.
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
+	}
+	stagingTargetPath := req.GetStagingTargetPath()
+	if len(stagingTargetPath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
+	}
+	targetPath := req.GetTargetPath()
+	if len(targetPath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
-	_, volDirPathBeegfsRoot, err = parseBeegfsUrl(req.GetVolumeId())
+	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not parse VolumeID %s", req.GetVolumeId())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-
-	// File system is staged at StagingTargetPath/mount
-	mountPath = path.Join(req.GetStagingTargetPath(), "mount")
-	// Volume to be mounted into pod is staged at StagingTargetPath/beegfs/some/relative/path
-	volDirPath = path.Clean(path.Join(mountPath, volDirPathBeegfsRoot))
-	remountPath = req.GetTargetPath() // We bind mount wherever the CO tells us to.
 
 	// Check to make sure file system is not already bind mounted
 	// Use mount.IsNotMountPoint because mounter.IsLikelyNotMountPoint can't detect bind mounts
 	var notMnt bool
-	notMnt, err = mount.IsNotMountPoint(ns.mounter, remountPath)
+	notMnt, err = mount.IsNotMountPoint(ns.mounter, targetPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
-			if err = fs.MkdirAll(remountPath, 0750); err != nil {
+			if err = fs.MkdirAll(targetPath, 0750); err != nil {
 				return nil, status.Error(codes.Internal, err.Error())
 			}
 			notMnt = true
@@ -96,7 +88,6 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
-
 	if !notMnt {
 		// The filesystem is already mounted. There is nothing to do.
 		return &csi.NodePublishVolumeResponse{}, nil
@@ -104,7 +95,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	// Bind mount volDirPath onto TargetPath
 	opts := []string{"bind"}
-	err = ns.mounter.Mount(volDirPath, remountPath, "beegfs", opts)
+	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
 		glog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(),
@@ -115,107 +106,80 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 }
 
 func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		remountPath string // absolute path to bind mount point
-		err         error
-	)
-
-	// Check arguments
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Missing volume ID")
+	// Check arguments.
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
-	if len(req.GetTargetPath()) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Missing target path")
+	targetPath := req.GetTargetPath()
+	if len(targetPath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
-	remountPath = req.GetTargetPath()
-
-	err = mount.CleanupMountPoint(remountPath, ns.mounter, true)
-	if err != nil {
-		glog.Error(err.Error())
-		return nil, status.Errorf(codes.Internal, "failed to unmount %s", req.GetTargetPath())
+	if err := mount.CleanupMountPoint(targetPath, ns.mounter, true); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		sysMgmtdHost string // IP address or hostname of BeeGFS mgmtd service
-		mountDirPath string // absolute path to directory containing configuration files and mount point
-		err          error
-	)
-
-	// Check arguments
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	// Check arguments.
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
-	sysMgmtdHost, _, err = parseBeegfsUrl(req.GetVolumeId())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Failed to parse VolumeID %s", req.GetVolumeId())
-	}
-	if len(req.GetStagingTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+	stagingTargetPath := req.GetStagingTargetPath()
+	if len(stagingTargetPath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
 	}
 	if req.GetVolumeCapability() == nil {
-		return nil, status.Error(codes.InvalidArgument, "Volume Capability missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Volume capability missing in request")
 	}
 
-	mountDirPath = req.GetStagingTargetPath() // We mount wherever the CO tells us to.
+	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	// TODO(jmccormi): Check and return all possible NodeStageVolume errors.
 	// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 
-	// Ensure CO has already created StagingTargetPath.
-	_, err = fs.Stat(req.GetStagingTargetPath())
+	// Ensure mountDirPath already exists (CO should have created req.StagingTargetPath).
+	_, err = fs.Stat(vol.mountDirPath)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "failed to stat the staging target directory for %s: %v",
-			err, req.GetStagingTargetPath())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	// Write configuration files and mount BeeGFS.
-	// TODO(webere): Consider creating a single abstracting function.
-	if err := fs.MkdirAll(mountDirPath, 0750); err != nil {
+	if err := writeClientFiles(vol, ns.confTemplatePath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	beegfsConfig := squashConfigForSysMgmtdHost(sysMgmtdHost, ns.pluginConfig)
-	_, _, err = writeClientFiles(sysMgmtdHost, mountDirPath, ns.confTemplatePath, beegfsConfig)
-	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "%v", err)
-	}
-	err = mountIfNecessary(mountDirPath, ns.mounter)
-	if err != nil {
-		glog.Error(err)
-		return nil, status.Errorf(codes.Internal, "Failed to mount filesystem %s to %s", sysMgmtdHost, mountDirPath)
+	if err := mountIfNecessary(vol, ns.mounter); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
 func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	var (
-		// Effort has gone into maintaining consistent terminology for these various paths. Check other RPCs and
-		// functions for consistency before refactoring.
-		mountDirPath string // absolute path to directory containing configuration files and mount point
-		err          error
-	)
-
-	// Check arguments
-	if len(req.GetVolumeId()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	// Check arguments.
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
-	if len(req.GetStagingTargetPath()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+	stagingTargetPath := req.GetStagingTargetPath()
+	if len(stagingTargetPath) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
 	}
 
-	mountDirPath = req.GetStagingTargetPath() // We are mounted wherever the CO told us to.
-
-	err = unmountAndCleanUpIfNecessary(mountDirPath, false, ns.mounter) // The CO will clean up mountDirPath.
+	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "failed to clean up %s: %v", mountDirPath, err)
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = unmountAndCleanUpIfNecessary(vol, false, ns.mounter) // The CO will clean up mountDirPath.
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil

@@ -392,7 +392,7 @@ have no effect when specified in the beeGFSClientConf configuration section.
 * connClientPortUDP (An ephemeral port, obtained by binding to port 0, allows
   multiple filesystem mounts.
   On Linux the selected ephemeral port is constrained by the values of
-  [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html?highlight=proc#ip-variables).
+  [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).
   [Ensure that firewalls allow UDP traffic](https://www.beegfs.io/wiki/NetworkTuning#hn_59ca4f8bbb_4)
   between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver
   nodes.)
