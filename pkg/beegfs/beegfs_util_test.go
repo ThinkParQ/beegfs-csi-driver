@@ -3,12 +3,13 @@ package beegfs
 import (
 	"path"
 	"reflect"
+	"regexp"
 	"testing"
 
 	"github.com/spf13/afero"
 )
 
-// included here as a constant for formatting reasons (string literal looks better with no indentation involved)
+// This is included here as a constant for formatting reasons (literal looks better with no indentation involved).
 const TestWriteClientFilesTemplate = `# A minimal configuration file that allows connInterfaces, connNetFilter, 
 # connTcpOnlyFilter, and one arbitrary override.
 sysMgmtdHost          =
@@ -20,7 +21,8 @@ connNetFilterFile     =
 connTcpOnlyFilterFile =
 `
 
-// do not remove extra newline at end of file; go-ini writes one that we must match
+// Do not remove extra newline at end of file. go-ini writes one that we must match.
+// We cannot predict what connClientUDPPort will be chosen, so tests shouldn't actually check that line.
 const TestWriteClientFilesBeegfsClientConf = `# A minimal configuration file that allows connInterfaces, connNetFilter,
 # connTcpOnlyFilter, and one arbitrary override.
 sysMgmtdHost          = 127.0.0.1
@@ -164,9 +166,13 @@ func TestWriteClientFiles(t *testing.T) {
 	if err != nil {
 		t.Errorf("could not read output beegfs-client.conf")
 	}
-	if TestWriteClientFilesBeegfsClientConf != string(got) {
+	// We cannot predict what connClientUDPPort will be chosen, so we don't check that line.
+	udpExpression := regexp.MustCompile(`connClientPortUDP\s*=\s\d*\n`)
+	wantString := udpExpression.ReplaceAllString(TestWriteClientFilesBeegfsClientConf, "")
+	gotString := udpExpression.ReplaceAllString(string(got), "")
+	if wantString != gotString {
 		t.Errorf("beegfs-client.conf does not match; expected:\n%vgot:\n%v",
-			TestWriteClientFilesBeegfsClientConf, string(got))
+			wantString, gotString)
 	}
 
 	// check written connInterfacesFile
