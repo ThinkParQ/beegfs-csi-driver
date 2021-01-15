@@ -250,7 +250,6 @@ func TestGetEphemeralPortUDP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 }
 
 func TestSanitizeVolumeID(t *testing.T) {

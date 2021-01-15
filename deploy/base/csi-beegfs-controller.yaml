@@ -24,6 +24,7 @@ spec:
               - matchExpressions:
                   - key: node-role.kubernetes.io/master
                     operator: Exists
+      hostNetwork: true # required to find an available connClientPortUDP on the host.
       containers:
         - name: csi-provisioner
           image: csi-provisioner  # kustomized
