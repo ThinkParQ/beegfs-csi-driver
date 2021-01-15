@@ -1,22 +1,18 @@
 FROM alpine:3.12
 
 LABEL maintainers="NetApp"
-LABEL description="BeeGFS Driver"
+LABEL description="BeeGFS CSI Driver"
 ARG binary=./bin/beegfsplugin
 ARG chwrap=./bin/chwrap
-
-# Add util-linux to get a new version of losetup.
-RUN apk add util-linux
 
 # Allow this container to call specifically linked binaries when the host filesystem is mounted under /host.
 COPY ${binary} /netapp/beegfsplugin
 COPY ${chwrap} /netapp/chwrap
+# add util-linux to get a new version of losetup.
+# chwrap beegfs-ctl to avoid BeeGFS distribution licensing. 
 RUN \
+apk add util-linux && \
 ln -s /netapp/chwrap /netapp/beegfs-ctl && \
-ln -s /netapp/chwrap /netapp/bash && \
-ln -s /netapp/chwrap /netapp/nc && \
-ln -s /netapp/chwrap /netapp/ss && \
-ln -s /netapp/chwrap /netapp/kill && \
 true
 
 # Call chwrap linked binaries before container installed binaries.

@@ -4,14 +4,16 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"gopkg.in/ini.v1"
 	"k8s.io/utils/mount"
@@ -256,26 +258,30 @@ func cleanUpIfNecessary(vol beegfsVolume, rmDir bool) (err error) {
 // getEphemeralPortUDP either returns an error or the system-assigned ephemeral port of a temporary UDP/IPv4 socket bound to INADDR_ANY.
 // Note: This only exists because BeeGFS does not support setting connClientPortUDP to zero.
 // Warning: Other processes on the host may bind the port returned before BeeGFS binds it.  Calling this method in a retry loop may mitigate that issue.  Ideally, BeeGFS itself should be patched to support binding to port zero.
-// Note: "nc", "ss", and "kill" must run from the perspective of the host, i.e. chwrap'ed, not the container. "bash", "grep", and "awk" may optionally run from the perspective of the container.
 func getEphemeralPortUDP() (port int, err error) {
-	// Breakdown of the one-liner below:
-	//   Run "nc" (nmap-netcat) as a background process that binds a UDP/IPv4 socket to INADDR_ANY port 0.
-	//   Capture the pid.
-	//   Run "ss" (iproute2) until it discovers the new socket with matching pid.
-	//   Run "awk" twice to parse the system-assigned ephemeral port.
-	//   Kill the "nc" background process.
-	args := []string{"-c", "nc -4lup 0 &P=$!;false;while [ 0 -ne $? ];do L=$(ss -lunp|grep ,pid=$P,);done;awk '{print $4}' <<<$L|awk -F: '{print $NF}';kill $P"}
-	out, err := exec.Command("bash", args...).Output()
+	conn, err := net.ListenPacket("udp4", "")
+	err = errors.WithStack(err)
 	if err != nil {
 		return 0, err
 	}
-	a := string(out)
-	a = strings.Trim(a, "\n")
-	i, err := strconv.Atoi(a)
+	defer func() {
+		closeErr := conn.Close()
+		closeErr = errors.WithStack(closeErr)
+		if closeErr != nil {
+			if err != nil {
+				err = multierror.Append(err, closeErr)
+			} else {
+				err = closeErr
+			}
+		}
+	}()
+	lAddr := conn.LocalAddr()
+	lUDPAddr, err := net.ResolveUDPAddr(lAddr.Network(), lAddr.String())
+	err = errors.WithStack(err)
 	if err != nil {
 		return 0, err
 	}
-	return i, nil
+	return lUDPAddr.Port, nil
 }
 
 // sanitizeVolumeID takes a volumeID like beegfs://127.0.0.1/scratch/vol1 and returns a string like

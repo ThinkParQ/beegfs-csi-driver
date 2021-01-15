@@ -15,6 +15,10 @@ github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
+# github.com/hashicorp/errwrap v1.0.0
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.1.0
+github.com/hashicorp/go-multierror
 # github.com/kubernetes-csi/csi-lib-utils v0.3.0
 github.com/kubernetes-csi/csi-lib-utils/protosanitizer
 # github.com/kubernetes-csi/csi-test v1.1.1
@@ -59,6 +63,8 @@ github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
 github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
 # github.com/spf13/afero v1.2.2
 github.com/spf13/afero
 github.com/spf13/afero/mem

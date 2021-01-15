@@ -8,9 +8,6 @@ The following packages MUST be installed on any Kubernetes node (master OR
 worker) that runs a component of the driver:
 * beegfs-client-dkms
 * beegfs-helperd (enabled and running under systemd)
-* bash
-* nc (nmap-netcat)
-* ss (iproute2)
 
 ## Kubernetes Deployment
 For a completely out-of-the-box deployment, verify you have kubectl access to a 
