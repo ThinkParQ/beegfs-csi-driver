@@ -15,6 +15,7 @@ import (
 // file system.
 type beegfsCtlExecutorInterface interface {
 	createDirectoryForVolume(vol beegfsVolume) error
+	statDirectoryForVolume(vol beegfsVolume) (string, error)
 }
 
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
@@ -25,7 +26,7 @@ type beegfsCtlExecutor struct{}
 // if it cannot create the directory, but does not return an error if the directory already exists.
 func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
 	// Check if volume already exists.
-	_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
+	_, err := ctlExec.statDirectoryForVolume(vol)
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
 		glog.Infof("Directory %s does not exist on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
@@ -51,6 +52,12 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 		glog.Infof("Directory %s already exists on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
 	}
 	return nil
+}
+
+// statDirectoryForVolume returns the information output by "beegfs-ctl --getintryinfo" as a string, or an empty string
+// and an error if the stat fails.
+func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
+	return ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
 }
 
 // execute runs arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and stderr
@@ -116,4 +123,8 @@ type fakeBeegfsCtlExecutor struct{}
 
 func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
 	return nil
+}
+
+func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
+	return "", nil
 }
