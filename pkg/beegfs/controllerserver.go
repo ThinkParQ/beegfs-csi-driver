@@ -17,6 +17,7 @@ limitations under the License.
 package beegfs
 
 import (
+	"errors"
 	"fmt"
 	"path"
 
@@ -107,6 +108,12 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
 
 	// Write configuration files but do not mount BeeGFS.
+	defer func() {
+		// Failure to clean up is an internal problem. The CO only cares whether or not we created the volume.
+		if err := cleanUpIfNecessary(vol, true); err != nil {
+			glog.Warningf("failed to clean up configuration directory: %v", err)
+		}
+	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -115,11 +122,6 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	if err := cs.ctlExec.createDirectoryForVolume(vol); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	// Clean up configuration files.
-	if err := cleanUpIfNecessary(vol, true); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -145,6 +147,12 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Write configuration files and mount BeeGFS.
+	defer func() {
+		// Failure to clean up is an internal problem. The CO only cares whether or not we deleted the volume.
+		if err := unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
+			glog.Warningf("failed to clean up configuration directory: %v", err)
+		}
+	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -158,12 +166,6 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	// Delete volume from mounted BeeGFS.
 	glog.Infof("Removing %s from filesystem %s", vol.volDirPath, vol.sysMgmtdHost)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
-		glog.Error(err)
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-
-	// Unmount BeeGFS and clean up configuration files.
-	if err = unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
 		glog.Error(err)
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -187,18 +189,40 @@ func (cs *controllerServer) ControllerGetCapabilities(ctx context.Context, req *
 }
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
+	// Check arguments.
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
 	}
-
 	volCaps := req.GetVolumeCapabilities()
 	if len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
-	if _, err := getVolumeByID(volumeID); err != nil {
-		return nil, status.Error(codes.NotFound, volumeID)
+	vol, err := cs.newBeegfsVolumeFromID(volumeID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Write configuration files but do not mount BeeGFS.
+	defer func() {
+		// Failure to clean up is an internal problem. The CO only cares whether or not the volume exists.
+		if err := cleanUpIfNecessary(vol, true); err != nil {
+			glog.Warningf("failed to clean up configuration directory: %v", err)
+		}
+	}()
+	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if _, err := cs.ctlExec.statDirectoryForVolume(vol); err != nil {
+		if errors.As(err, &ctlNotExistError{}) {
+			return nil, status.Error(codes.NotFound, vol.volumeID)
+		}
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	confirmed := cs.isValidVolumeCapabilities(volCaps)
