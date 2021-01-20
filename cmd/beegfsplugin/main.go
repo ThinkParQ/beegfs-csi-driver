@@ -31,18 +31,14 @@ func init() {
 }
 
 var (
-	endpoint     = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	driverName   = flag.String("drivername", "beegfs.csi.netapp.com", "name of the driver")
-	nodeID       = flag.String("nodeid", "", "node id")
-	configFile   = flag.String("configfile", "", "path to plugin configuration file")
-	templateFile = flag.String("templatefile", "/etc/beegfs/beegfs-client.conf", "path to "+
-		"template beegfs-client.conf file")
-	ephemeral = flag.Bool("ephemeral", false, "publish volumes in ephemeral mode even if "+
-		"kubelet did not ask for it (only needed for Kubernetes 1.15)")
-	maxVolumesPerNode = flag.Int64("maxvolumespernode", 0, "limit of volumes per node")
-	csDataDir         = flag.String("csdatadir", "/tmp/beegfs-csi-data-dir", "path to directory the "+
-		"controller service uses to store client configuration files and mount file systems")
-	showVersion = flag.Bool("version", false, "Show version.")
+	configPath             = flag.String("config-path", "", "path to plugin configuration file")
+	csDataDir              = flag.String("cs-data-dir", "/tmp/beegfs-csi-data-dir", "path to directory the controller service uses to store client configuration files and mount file systems")
+	driverName             = flag.String("driver-name", "beegfs.csi.netapp.com", "name of the driver")
+	endpoint               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	nodeID                 = flag.String("node-id", "", "node id")
+	showVersion            = flag.Bool("version", false, "Show version.")
+	clientConfTemplatePath = flag.String("client-conf-template-path", "/etc/beegfs/beegfs-client.conf", "path to template beegfs-client.conf")
+
 	// Set by the build process
 	version = ""
 )
@@ -56,18 +52,12 @@ func main() {
 		return
 	}
 
-	if *ephemeral {
-		fmt.Fprintln(os.Stderr, "Deprecation warning: The ephemeral flag is deprecated and should only be used "+
-			"when deploying on Kubernetes 1.15. It will be removed in the future.")
-	}
-
 	handle()
 	os.Exit(0)
 }
 
 func handle() {
-	driver, err := beegfs.NewBeegfsDriver(*driverName, *nodeID, *endpoint, *configFile, *templateFile, *csDataDir,
-		version, *ephemeral, *maxVolumesPerNode)
+	driver, err := beegfs.NewBeegfsDriver(*configPath, *csDataDir, *driverName, *endpoint, *nodeID, *clientConfTemplatePath, version)
 	if err != nil {
 		fmt.Printf("Failed to initialize driver: %s", err.Error())
 		os.Exit(1)

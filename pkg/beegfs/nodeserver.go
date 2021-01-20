@@ -34,22 +34,18 @@ var (
 )
 
 type nodeServer struct {
-	nodeID            string
-	ephemeral         bool
-	maxVolumesPerNode int64
-	pluginConfig      pluginConfig
-	confTemplatePath  string
-	mounter           mount.Interface
+	nodeID                 string
+	pluginConfig           pluginConfig
+	clientConfTemplatePath string
+	mounter                mount.Interface
 }
 
-func NewNodeServer(nodeId string, ephemeral bool, maxVolumesPerNode int64, pluginConfig pluginConfig, confTemplatePath string) *nodeServer {
+func NewNodeServer(nodeId string, pluginConfig pluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
-		nodeID:            nodeId,
-		ephemeral:         ephemeral,
-		maxVolumesPerNode: maxVolumesPerNode,
-		pluginConfig:      pluginConfig,
-		confTemplatePath:  confTemplatePath,
-		mounter:           nil,
+		nodeID:                 nodeId,
+		pluginConfig:           pluginConfig,
+		clientConfTemplatePath: clientConfTemplatePath,
+		mounter:                nil,
 	}
 }
 
@@ -151,7 +147,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Write configuration files and mount BeeGFS.
-	if err := writeClientFiles(vol, ns.confTemplatePath); err != nil {
+	if err := writeClientFiles(vol, ns.clientConfTemplatePath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := mountIfNecessary(vol, ns.mounter); err != nil {

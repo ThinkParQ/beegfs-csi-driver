@@ -38,10 +38,10 @@ spec:
         - name: beegfs
           image: beegfsplugin  # kustomized
           args:
-            - --drivername=beegfs.csi.netapp.com
-            - --nodeid=$(KUBE_NODE_NAME)
+            - --driver-name=beegfs.csi.netapp.com
+            - --node-id=$(KUBE_NODE_NAME)
             - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
-            - --templatefile=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
           env:
             - name: KUBE_NODE_NAME
               valueFrom:

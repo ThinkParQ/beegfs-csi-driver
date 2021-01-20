@@ -47,30 +47,27 @@ var (
 )
 
 type controllerServer struct {
-	ctlExec          beegfsCtlExecutorInterface
-	caps             []*csi.ControllerServiceCapability
-	nodeID           string
-	pluginConfig     pluginConfig
-	confTemplatePath string
-	mounter          mount.Interface
-	dataDir          string
+	ctlExec                beegfsCtlExecutorInterface
+	caps                   []*csi.ControllerServiceCapability
+	nodeID                 string
+	pluginConfig           pluginConfig
+	clientConfTemplatePath string
+	mounter                mount.Interface
+	csDataDir              string
 }
 
-func NewControllerServer(ephemeral bool, nodeID string, pluginConfig pluginConfig, confTemplatePath, dataDir string) *controllerServer {
-	if ephemeral {
-		return &controllerServer{caps: getControllerServiceCapabilities(nil), nodeID: nodeID}
-	}
+func NewControllerServer(nodeID string, pluginConfig pluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
 			[]csi.ControllerServiceCapability_RPC_Type{
 				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 			}),
-		nodeID:           nodeID,
-		pluginConfig:     pluginConfig,
-		confTemplatePath: confTemplatePath,
-		dataDir:          dataDir,
-		mounter:          nil,
+		nodeID:                 nodeID,
+		pluginConfig:           pluginConfig,
+		clientConfTemplatePath: clientConfTemplatePath,
+		csDataDir:              csDataDir,
+		mounter:                nil,
 	}
 }
 
@@ -117,7 +114,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
@@ -156,7 +153,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := mountIfNecessary(vol, cs.mounter); err != nil {
@@ -214,7 +211,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if err := writeClientFiles(vol, cs.confTemplatePath); err != nil {
+	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -321,7 +318,7 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 	// This volumeID construction duplicates the one further down in the stack. We do it anyway to generate an
 	// appropriate mountDirPath.
 	volumeID := newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot)
-	mountDirPath := path.Join(cs.dataDir, sanitizeVolumeID(volumeID)) // e.g. /dataDir/127.0.0.1_scratch_pvc-12345678
+	mountDirPath := path.Join(cs.csDataDir, sanitizeVolumeID(volumeID)) // e.g. /csDataDir/127.0.0.1_scratch_pvc-12345678
 	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, cs.pluginConfig)
 }
 
@@ -329,5 +326,5 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 // the context of the controller service. (*controllerServer) newBeegfsVolumeFromID selects the mountDirPath and passes
 // the controller service's pluginConfig.
 func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume, error) {
-	return newBeegfsVolumeFromID(cs.dataDir, volumeID, cs.pluginConfig)
+	return newBeegfsVolumeFromID(cs.csDataDir, volumeID, cs.pluginConfig)
 }
