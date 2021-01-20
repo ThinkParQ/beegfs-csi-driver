@@ -39,11 +39,11 @@ spec:
         - name: beegfs
           image: beegfsplugin  # kustomized
           args:
-            - --drivername=beegfs.csi.netapp.com
-            - --nodeid=$(KUBE_NODE_NAME)
+            - --driver-name=beegfs.csi.netapp.com
+            - --node-id=$(KUBE_NODE_NAME)
             - --endpoint=unix://csi/csi.sock
-            - --templatefile=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
-            - --csdatadir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
+            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - --cs-data-dir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
           securityContext:
             capabilities:
               add: ["SYS_ADMIN"]  # SYS_ADMIN is required to run the mount command.

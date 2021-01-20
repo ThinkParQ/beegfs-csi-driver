@@ -31,15 +31,13 @@ const (
 )
 
 type beegfs struct {
-	name              string
-	nodeID            string
-	version           string
-	endpoint          string
-	ephemeral         bool
-	maxVolumesPerNode int64
-	pluginConfig      pluginConfig
-	confTemplatePath  string
-	csDataDir         string // directory controller service uses to create BeeGFS config files and mount file systems
+	driverName             string
+	nodeID                 string
+	version                string
+	endpoint               string
+	pluginConfig           pluginConfig
+	clientConfTemplatePath string
+	csDataDir              string // directory controller service uses to create BeeGFS config files and mount file systems
 
 	ids *identityServer
 	ns  *nodeServer
@@ -85,17 +83,9 @@ type beegfsVolume struct {
 
 var (
 	vendorVersion = "dev"
-
-	beegfsVolumes map[string]beegfsVolume
 )
 
-func init() {
-	beegfsVolumes = map[string]beegfsVolume{}
-	// todo(eastburj): load beegfsVolumes from a persistent location (in case the process restarts)
-}
-
-func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientConfFile, csDataDir, version string,
-	ephemeral bool, maxVolumesPerNode int64) (*beegfs, error) {
+func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath, version string) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -112,9 +102,9 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 	}
 
 	var pluginConfig pluginConfig
-	if configFile != "" {
+	if configPath != "" {
 		var err error
-		pluginConfig, err = parseConfigFromFile(configFile, nodeID)
+		pluginConfig, err = parseConfigFromFile(configPath, nodeID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to handle configuration file: %v", err)
 		}
@@ -129,21 +119,19 @@ func NewBeegfsDriver(driverName, nodeID, endpoint, configFile, templateClientCon
 
 	var driver beegfs
 	driver = beegfs{
-		name:              driverName,
-		version:           vendorVersion,
-		nodeID:            nodeID,
-		endpoint:          endpoint,
-		ephemeral:         ephemeral,
-		maxVolumesPerNode: maxVolumesPerNode,
-		pluginConfig:      pluginConfig,
-		confTemplatePath:  templateClientConfFile,
-		csDataDir:         csDataDir,
+		driverName:             driverName,
+		version:                vendorVersion,
+		nodeID:                 nodeID,
+		endpoint:               endpoint,
+		pluginConfig:           pluginConfig,
+		clientConfTemplatePath: clientConfTemplatePath,
+		csDataDir:              csDataDir,
 	}
 
 	// Create GRPC servers
-	driver.ids = NewIdentityServer(driver.name, driver.version)
-	driver.ns = NewNodeServer(driver.nodeID, driver.ephemeral, driver.maxVolumesPerNode, driver.pluginConfig, driver.confTemplatePath)
-	driver.cs = NewControllerServer(driver.ephemeral, driver.nodeID, driver.pluginConfig, driver.confTemplatePath, driver.csDataDir)
+	driver.ids = NewIdentityServer(driver.driverName, driver.version)
+	driver.ns = NewNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
+	driver.cs = NewControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir)
 
 	return &driver, nil
 }
@@ -188,11 +176,4 @@ func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig pluginCon
 		return beegfsVolume{}, err
 	}
 	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, pluginConfig), nil
-}
-
-func getVolumeByID(volumeID string) (beegfsVolume, error) {
-	if beegfsVol, ok := beegfsVolumes[volumeID]; ok {
-		return beegfsVol, nil
-	}
-	return beegfsVolume{}, fmt.Errorf("volume id %s does not exist in the volumes list", volumeID)
 }

@@ -17,15 +17,14 @@ func TestSanity(t *testing.T) {
 	}
 	csDataDirPath := path.Join(sanityDir, "csi-data-dir")
 	endpoint := "unix://" + sanityDir + "/beegfscsi.sock"
-	confTemplatePath := path.Join(sanityDir, "beegfs-client.conf")
+	clientConfTemplatePath := path.Join(sanityDir, "beegfs-client.conf")
 
-	if err := fsutil.WriteFile(confTemplatePath, []byte(TestWriteClientFilesTemplate), 0644); err != nil {
+	if err := fsutil.WriteFile(clientConfTemplatePath, []byte(TestWriteClientFilesTemplate), 0644); err != nil {
 		t.Fatalf("failed to write template beegfs-client.conf: %v", err)
 	}
 
 	// Create and run the driver
-	driver, err := NewBeegfsDriver("testDriver", "testID", endpoint, "", confTemplatePath,
-		csDataDirPath, "v0.1", false, 100)
+	driver, err := NewBeegfsDriver("", csDataDirPath, "testDriver", endpoint, "testID", clientConfTemplatePath, "v0.1")
 	if err != nil {
 		t.Fatal(err)
 	}
