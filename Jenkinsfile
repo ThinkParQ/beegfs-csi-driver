@@ -15,7 +15,7 @@ def hubProjectVersion = projectVersion
 def uniqueImageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch-0005
 def imageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch
 if (env.BRANCH_NAME.matches('(master)|(release-.+)')) {
-    imageTag = "docker.repo.eng.netapp.com/global/apheleia/${imageName}/v${projectVersion}"  // e.g. .../global/apheleia/beegfsplugin:v1.0
+    imageTag = "docker.repo.eng.netapp.com/global/apheleia/${imageName}:v${projectVersion}"  // e.g. .../global/apheleia/beegfsplugin:v1.0
 }
 
 pipeline {
