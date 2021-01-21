@@ -326,5 +326,6 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 // the context of the controller service. (*controllerServer) newBeegfsVolumeFromID selects the mountDirPath and passes
 // the controller service's pluginConfig.
 func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume, error) {
-	return newBeegfsVolumeFromID(cs.csDataDir, volumeID, cs.pluginConfig)
+	mountDirPath := path.Join(cs.csDataDir, sanitizeVolumeID(volumeID)) // e.g. /csDataDir/127.0.0.1_scratch_pvc-12345678
+	return newBeegfsVolumeFromID(mountDirPath, volumeID, cs.pluginConfig)
 }
