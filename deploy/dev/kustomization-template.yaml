@@ -28,3 +28,6 @@ images:
   - name: socat
     newName: docker.repo.eng.netapp.com/alpine/socat
     newTag: 1.0.3
+patchesStrategicMerge:
+  - csi-beegfs-controller.yaml
+  - csi-beegfs-node.yaml
