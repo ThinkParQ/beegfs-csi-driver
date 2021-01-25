@@ -1,11 +1,11 @@
-# CSI BeeGFS Driver
+# BeeGFS CSI Driver
 
-This repository hosts the CSI BeeGFS driver and all of its build and dependent configuration files to deploy the driver.
+This repository hosts the BeeGFS CSI Driver and all of its build and dependent configuration files to deploy the driver.
 
 ## Prerequisite(s)
-- Kubernetes cluster
-- Running version 1.17 or later
-- Access to terminal with `kubectl` installed
+- Kubernetes, 1.17 or later, cluster with BeeGFS client software installed
+- Access to terminal with `kubectl` and BeeGFS client software installed
+- BeeGFS file system(s) accesible from the Kubernetes cluster and the terminal
 
 ## Deployment
 Deployment can be customized depending on your environment and goals:
@@ -13,11 +13,7 @@ Deployment can be customized depending on your environment and goals:
 - [Developer deployment](docs/developer-deployment.md)
 
 ## Examples
-The following examples assume that the CSI BeeGFS driver has been deployed and validated:
-- Volume snapshots
-  - [Kubernetes 1.17 and later](docs/example-snapshots-1.17-and-later.md)
-  - [Kubernetes 1.16 and earlier](docs/example-snapshots-pre-1.17.md)
-- [Inline ephemeral volumes](docs/example-ephemeral.md)
+After the driver is deployed and validated you can try some of the provided [examples](examples/README.md).
 
 ## Building the binaries
 If you want to build the driver yourself, you can do so with the following command from the root directory:

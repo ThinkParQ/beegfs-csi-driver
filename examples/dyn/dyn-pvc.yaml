@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: project-01-scratch
+  name: csi-beegfs-dyn-pvc
 spec:
   accessModes:
   - ReadWriteMany
   resources:
-    requests: 
+    requests:
       storage: 100Gi
-  storageClassName: beegfs-scratch
+  storageClassName: csi-beegfs-dyn-sc # defined in dyn-sc.yaml

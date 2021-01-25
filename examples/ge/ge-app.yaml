@@ -1,0 +1,33 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: csi-beegfs-ge-app
+spec:
+  containers:
+    - name: csi-beegfs-ge-app
+      image: alpine:latest
+      volumeMounts:
+      - mountPath: "/mnt/ge"
+        name: csi-beegfs-ge-volume
+      # The "command":
+      #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.
+      #   - Sleeps to demonstrate the container runs successfully.
+      # Confirm that the pod has access to BeeGFS:
+      #   -> kubectl exec csi-beegfs-ge-app -- ls /mnt/ge
+      command: [ "ash", "-c", 'touch "/mnt/ge/touched-by-${POD_UUID}" && sleep 7d']
+      env:
+        - name: POD_UUID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+  volumes:
+    - name: csi-beegfs-ge-volume
+      ephemeral:
+        volumeClaimTemplate: # similar to ../dyn/dyn-pvc.yaml
+          spec:
+            accessModes:
+            - ReadWriteMany
+            resources:
+              requests:
+                storage: 100Gi
+            storageClassName: csi-beegfs-ge-sc # defined in ge-sc.yaml

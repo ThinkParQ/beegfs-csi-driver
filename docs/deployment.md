@@ -68,43 +68,46 @@ Storage
 storage-node [ID: 1]: reachable at storage.some.fdqn.or.ip:8003 (protocol: TCP)
 ```
 
-Modify *examples/csi-sc.yaml* such that *sysMgmtdHost* is set to an appropriate 
-value (e.g. *mgmtd.some.fqdn.or.ip* in the output above).
+Modify *examples/dyn/dyn-sc.yaml* such that *parameters*:
+- *sysMgmtdHost* is set to an appropriate value (e.g. *mgmtd.some.fqdn.or.ip* in
+the output above)
+- *volDirBasePath* contains a k8s cluster *name* that is unique to this k8s
+cluster among all k8s clusters accessing this BeeGFS file system.
 
 From the project directory, deploy the application files found in the 
-*examples/* directory, including a storage class, a PVC, and a pod which mounts 
-a volume using the BeeGFS driver:
+*examples/dyn/* directory, including a storage class, a PVC, and a pod which
+mounts a volume using the BeeGFS CSI driver:
 
 ```bash
--> kubectl apply -f examples/csi-sc.yaml -f examples/csi-pvc.yaml -f examples/csi-app.yaml
-storageclass.storage.k8s.io/csi-beegfs-sc created
-persistentvolumeclaim/csi-beegfs-pvc created
-pod/csi-beegfs-app created
+-> kubectl apply -f examples/dyn
+storageclass.storage.k8s.io/csi-beegfs-dyn-sc created
+persistentvolumeclaim/csi-beegfs-dyn-pvc created
+pod/csi-beegfs-dyn-app created
 ```
 
 Validate that the components deployed successfully:
 
 ```shell
--> kubectl get sc csi-beegfs-sc
-NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-csi-beegfs-sc   beegfs.csi.netapp.com   Delete          Immediate           false                  61s
+-> kubectl get sc csi-beegfs-dyn-sc
+NAME                PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+csi-beegfs-dyn-sc   beegfs.csi.netapp.com   Delete          Immediate           false                  61s
 
 
--> kubectl get pvc csi-beegfs-pvc
-NAME             STATUS   VOLUME         CAPACITY   ACCESS MODES   STORAGECLASS    AGE
-csi-beegfs-pvc   Bound    pvc-7621fab2   100Gi      RWX            csi-beegfs-sc   84s
+-> kubectl get pvc csi-beegfs-dyn-pvc
+NAME                 STATUS   VOLUME         CAPACITY   ACCESS MODES   STORAGECLASS        AGE
+csi-beegfs-dyn-pvc   Bound    pvc-7621fab2   100Gi      RWX            csi-beegfs-dyn-sc   84s
 
--> kubectl get pod csi-beegfs-app
-NAME             READY   STATUS    RESTARTS   AGE
-csi-beegfs-app   1/1     Running   0          93s
+-> kubectl get pod csi-beegfs-dyn-app
+NAME                 READY   STATUS    RESTARTS   AGE
+csi-beegfs-dyn-app   1/1     Running   0          93s
 ```
 
-Finally, inspect the application pod *csi-beegfs-app* which mounts a BeeGFS 
+Finally, inspect the application pod *csi-beegfs-dyn-app* which mounts a BeeGFS 
 volume:
 
 ```bash
--> kubectl describe pod csi-beegfs-app
-Name:         csi-beegfs-app
+-> kubectl describe pod csi-beegfs-dyn-app
+Name:         csi-beegfs-dyn-app
 Namespace:    default
 Priority:     0
 Node:         node3/10.193.161.165
@@ -126,7 +129,7 @@ Containers:
     Command:
       ash
       -c
-      touch "/data/touched-by-${POD_UUID}" && sleep 10000
+      touch "/mnt/dyn/touched-by-${POD_UUID}" && sleep 7d
     State:          Running
       Started:      Tue, 05 Jan 2021 09:30:00 -0600
     Ready:          True
@@ -134,7 +137,7 @@ Containers:
     Environment:
       POD_UUID:   (v1:metadata.uid)
     Mounts:
-      /data from csi-beegfs-volume (rw)
+      /mnt/dyn from csi-beegfs-dyn-volume (rw)
       /var/run/secrets/kubernetes.io/serviceaccount from default-token-bsr5d (ro)
 Conditions:
   Type              Status
@@ -143,9 +146,9 @@ Conditions:
   ContainersReady   True 
   PodScheduled      True 
 Volumes:
-  csi-beegfs-volume:
+  csi-beegfs-dyn-volume:
     Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
-    ClaimName:  csi-beegfs-pvc
+    ClaimName:  csi-beegfs-dyn-pvc
     ReadOnly:   false
   default-token-bsr5d:
     Type:        Secret (a volume populated by a Secret)
@@ -158,19 +161,19 @@ Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
 Events:
   Type    Reason     Age   From               Message
   ----    ------     ----  ----               -------
-  Normal  Scheduled  20s   default-scheduler  Successfully assigned default/csi-beegfs-app to node3
+  Normal  Scheduled  20s   default-scheduler  Successfully assigned default/csi-beegfs-dyn-app to node3
   Normal  Pulling    18s   kubelet            Pulling image "alpine:latest"
   Normal  Pulled     17s   kubelet            Successfully pulled image "alpine:latest" in 711.793082ms
-  Normal  Created    17s   kubelet            Created container csi-beegfs-app
-  Normal  Started    17s   kubelet            Started container csi-beegfs-app
+  Normal  Created    17s   kubelet            Created container csi-beegfs-dyn-app
+  Normal  Started    17s   kubelet            Started container csi-beegfs-dyn-app
 ```
 
-*csi-beegfs-app* is configured to create a file inside its own */data* 
+*csi-beegfs-dyn-app* is configured to create a file inside its own */mnt/dyn* 
 directory called *touched-by-<pod_uuid>*. Confirm that this file exists within 
 the pod:
 
 ```bash
--> kubectl exec csi-beegfs-app -- ls /data
+-> kubectl exec csi-beegfs-dyn-app -- ls /mnt/dyn
 touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
 ``` 
 
@@ -182,7 +185,7 @@ worker node:
 
 ```bash
 -> ssh root@10.193.161.165
--> ls /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-7621fab2/globalmount/mount/k8s-volumes/pvc-7621fab2/
+-> ls /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-7621fab2/globalmount/mount/k8s/my-cluster-name/pvc-7621fab2/
 touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
 -> ls /var/lib/kubelet/pods/9154aace-65a3-495d-8266-38eb0b564ddd/volumes/kubernetes.io~csi/pvc-7621fab2/mount/
 touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
@@ -192,7 +195,7 @@ Finally, verify that the file exists on the BeeGFS file system from a
 workstation that can access it.
 
 ```bash
-ls /mnt/beegfs/k8s-volumes/pvc-7621fab2/
+ls /mnt/beegfs/k8s/my-cluster-name/pvc-7621fab2/
 touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
 ```
 
