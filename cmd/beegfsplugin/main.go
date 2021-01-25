@@ -22,8 +22,7 @@ import (
 	"os"
 	"path"
 
-	// todo(eastburj): change module name to the correct github repository and consider supporting multiple go.mod, remove hostpath from the project, or update all corresponding imports in hostpath
-	beegfs "github.com/kubernetes-csi/csi-driver-host-path/pkg/beegfs"
+	beegfs "github.com/netapp/beegfs-csi-driver/pkg/beegfs"
 )
 
 func init() {
