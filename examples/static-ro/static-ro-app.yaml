@@ -1,0 +1,23 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: csi-beegfs-static-ro-app
+spec:
+  containers:
+    - name: csi-beegfs-static-ro-app
+      image: alpine:latest
+      volumeMounts:
+      - mountPath: "/mnt/static-ro"
+        name: csi-beegfs-static-ro-volume 
+      # The "command":
+      #   - Sleeps to demonstrate the container runs successfully.
+      # Confirm that the pod has read-only access to BeeGFS:
+      #   -> kubectl exec -it csi-beegfs-static-ro-app -- ash
+      #   -> touch /mnt/static-ro/file # This should fail to write the file
+      command: [ "ash", "-c", 'sleep 7d']
+  volumes:
+    - name: csi-beegfs-static-ro-volume
+      persistentVolumeClaim:
+        claimName: csi-beegfs-static-ro-pvc # defined in static-ro-pvc.yaml
+        # Note: The PV and PVC "spec.accessModes" do not enforce read-only access.
+        readOnly: true

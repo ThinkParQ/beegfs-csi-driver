@@ -1,0 +1,41 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: csi-beegfs-all-app
+spec:
+  containers:
+    - name: csi-beegfs-all-app
+      image: alpine:latest
+      volumeMounts:
+      - mountPath: "/mnt/dyn"
+        name: csi-beegfs-dyn-volume
+      - mountPath: "/mnt/static"
+        name: csi-beegfs-static-volume 
+      - mountPath: "/mnt/static-ro"
+        name: csi-beegfs-static-ro-volume 
+      # Replace "name" with a unique k8s cluster name to disambiguate files touched by pods with UUIDs that collide among separate k8s clusters.
+      # The "command":
+      #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.
+      #   - Sleeps to demonstrate the container runs successfully.
+      # Confirm that the pod has access to BeeGFS:
+      #   -> kubectl exec -it csi-beegfs-all-app -- ash
+      #   -> ls /mnt/dyn
+      #   -> ls /mnt/static 
+      #   -> ls /mnt/static-ro
+      command: [ "ash", "-c", 'touch "/mnt/dyn/touched-by-${POD_UUID}" "/mnt/static/touched-by-k8s-name-${POD_UUID}" && sleep 7d']
+      env:
+        - name: POD_UUID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+  volumes:
+    - name: csi-beegfs-dyn-volume
+      persistentVolumeClaim:
+        claimName: csi-beegfs-dyn-pvc # defined in dyn-pvc.yaml
+    - name: csi-beegfs-static-volume
+      persistentVolumeClaim:
+        claimName: csi-beegfs-static-pvc # defined in static-pvc.yaml
+    - name: csi-beegfs-static-ro-volume
+      persistentVolumeClaim:
+        claimName: csi-beegfs-static-ro-pvc # defined in static-ro-pvc.yaml
+        readOnly: true

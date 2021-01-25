@@ -1,0 +1,13 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: csi-beegfs-dyn-sc
+provisioner: beegfs.csi.netapp.com
+parameters:
+  # Replace "localhost" with the IP address or hostname of the BeeGFS management daemon.
+  sysMgmtdHost: localhost
+  # Replace "name" with a unique k8s cluster name to prevent multiple k8s clusters from dynamically provisioning volumes at the same BeeGFS path.
+  volDirBasePath: k8s/name/dyn
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: false

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: csi-beegfs-static-ro-pv
+spec:
+  accessModes:
+  - ReadOnlyMany
+  # spec.capacity[storage] is required and must satisfy the PVC spec.resources.requests.storage to bind to the PVC.
+  # The value specified is otherwise meaningless, albeit required, in the context of pods "readOnly" mounting a statically provisioned volume.
+  capacity:
+    storage: 5Gi
+  persistentVolumeReclaimPolicy: Retain
+  csi:
+    driver: beegfs.csi.netapp.com
+    # Replace "localhost" with the IP address or hostname of the BeeGFS management daemon.
+    # "all" k8s clusters may share access to statically provisioned volumes.
+    # Ensure that the directory, e.g. "k8s/all/static-ro", exists on BeeGFS.  The driver will not create the directory.
+    volumeHandle: beegfs://localhost/k8s/all/static-ro

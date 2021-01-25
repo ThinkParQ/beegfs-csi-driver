@@ -1,0 +1,26 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: csi-beegfs-dyn-app
+spec:
+  containers:
+    - name: csi-beegfs-dyn-app
+      image: alpine:latest
+      volumeMounts:
+      - mountPath: "/mnt/dyn"
+        name: csi-beegfs-dyn-volume
+      # The "command":
+      #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.
+      #   - Sleeps to demonstrate the container runs successfully.
+      # Confirm that the pod has access to BeeGFS:
+      #   -> kubectl exec csi-beegfs-dyn-app -- ls /mnt/dyn
+      command: [ "ash", "-c", 'touch "/mnt/dyn/touched-by-${POD_UUID}" && sleep 7d']
+      env:
+        - name: POD_UUID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+  volumes:
+    - name: csi-beegfs-dyn-volume
+      persistentVolumeClaim:
+        claimName: csi-beegfs-dyn-pvc # defined in dyn-pvc.yaml
