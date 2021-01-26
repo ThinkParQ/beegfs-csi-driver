@@ -1,4 +1,4 @@
-module github.com/kubernetes-csi/csi-driver-host-path
+module github.com/netapp/beegfs-csi-driver
 
 go 1.12
 
