@@ -33,7 +33,11 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES')
             }
             steps {
-                sh 'make test'
+                // release-tools always uses a container named k8s-shellcheck in its test. Make sure each node is only
+                // using this tag for one build at a time.
+                lock(resource: "k8s-shellcheck-${env.NODE_NAME}") {
+                    sh 'make test'
+                }
             }
         }
         stage('Build Container') {
