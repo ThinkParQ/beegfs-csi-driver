@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"github.com/golang/glog"
-	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
+	"go.uber.org/multierr"
 	"gopkg.in/ini.v1"
 	"k8s.io/utils/mount"
 )
@@ -260,16 +260,15 @@ func cleanUpIfNecessary(vol beegfsVolume, rmDir bool) (err error) {
 // Warning: Other processes on the host may bind the port returned before BeeGFS binds it.  Calling this method in a retry loop may mitigate that issue.  Ideally, BeeGFS itself should be patched to support binding to port zero.
 func getEphemeralPortUDP() (port int, err error) {
 	conn, err := net.ListenPacket("udp4", "")
-	err = errors.WithStack(err)
 	if err != nil {
+		err = errors.WithStack(err)
 		return 0, err
 	}
 	defer func() {
-		closeErr := conn.Close()
-		closeErr = errors.WithStack(closeErr)
-		if closeErr != nil {
+		if closeErr := conn.Close(); closeErr != nil {
+			closeErr = errors.WithStack(closeErr)
 			if err != nil {
-				err = multierror.Append(err, closeErr)
+				err = multierr.Append(err, closeErr)
 			} else {
 				err = closeErr
 			}
@@ -277,8 +276,8 @@ func getEphemeralPortUDP() (port int, err error) {
 	}()
 	lAddr := conn.LocalAddr()
 	lUDPAddr, err := net.ResolveUDPAddr(lAddr.Network(), lAddr.String())
-	err = errors.WithStack(err)
 	if err != nil {
+		err = errors.WithStack(err)
 		return 0, err
 	}
 	return lUDPAddr.Port, nil
