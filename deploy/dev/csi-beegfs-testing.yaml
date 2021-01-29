@@ -44,7 +44,7 @@ spec:
               - key: app
                 operator: In
                 values:
-                - csi-beegfsplugin
+                - csi-beegfs-controller
             topologyKey: kubernetes.io/hostname
       containers:
         - name: socat

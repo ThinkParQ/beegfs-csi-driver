@@ -15,7 +15,7 @@
 # Modified from kubernetes-csi/csi-driver-hostpath Makefile. Modifications detailed in comments.
 # https://github.com/kubernetes-csi/csi-driver-host-path/blob/b927e98e08bda8e27651245797d8e5f91761abb2/Makefile
 
-CMDS ?= beegfsplugin
+CMDS ?= beegfs-csi-driver
 all: build
 
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its
@@ -32,8 +32,8 @@ build-%: check-go-version-go
 		fi; \
 	done
 
-# The beegfsplugin container requires chwrap to be built and included, so we build it anytime container or push are
-# made. Additional prerequisites and the recipes for container and push are defined in release-tools/build.make. A
+# The beegfs-csi-driver container requires chwrap to be built and included, so we build it anytime container or push
+# are made. Additional prerequisites and the recipes for container and push are defined in release-tools/build.make. A
 # different workaround will likely be required for multiarch builds.
 container: build-chwrap
 push: container  # not explicitly executed in release-tools/build.make

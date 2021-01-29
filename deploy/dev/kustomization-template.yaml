@@ -13,8 +13,8 @@ resources:
   - csi-beegfs-testing.yaml
 namespace: default
 images:
-  - name: beegfsplugin
-    newName: docker.repo.eng.netapp.com/user/beegfsplugin
+  - name: beegfs-csi-driver
+    newName: docker.repo.eng.netapp.com/user/beegfs-csi-driver
     newTag: latest
   - name: csi-provisioner
     newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner

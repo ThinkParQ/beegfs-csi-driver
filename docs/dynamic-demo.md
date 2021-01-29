@@ -6,15 +6,15 @@
        
         go get github.com/rexray/gocsi
         
-* The CSI_ENDPOINT environment  variable is set to appropriate socket.
+* The CSI_ENDPOINT environment variable is set to appropriate socket.
 
-        # default in cmd/beegfsplugin/main.go
+        # default in cmd/beegfs-csi-driver/main.go
         export CSI_ENDPOINT="unix:///tmp/csi.sock"
         
 * The CSI is running.
 
         # node id has no particular significant for this demo
-        bin/beegfsplugin --nodeid node1
+        bin/beegfs-csi-driver --node-id node1 --cs-data-dir=/tmp/csdatadir -vvvvv
         
 * A BeeGFS filesystem exists with sysMgmtdHost=10.113.72.217 (substitute your own value).
 

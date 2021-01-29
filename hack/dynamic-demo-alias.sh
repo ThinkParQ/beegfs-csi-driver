@@ -5,7 +5,7 @@
 # NOTE: ../docs/beegfs/dynamic-demo.md is OUT OF DATE! These commands work, but they are not reflected correctly in
 # dynamic-demo.md.
 
-# Run the plugin like "sudo bin/beegfsplugin --node-id node1 --csdatadir=/tmp/csdatadir".
+# Run the plugin like "sudo bin/beegfs-csi-driver --node-id node1 --cs-data-dir=/tmp/csdatadir -vvvvv".
 
 # Set SYS_MGMTD_HOST in the environment or default to a BeeGFS file system running on localhost. This change applies
 # at alias time (not at run time).
