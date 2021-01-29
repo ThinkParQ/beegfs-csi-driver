@@ -2,7 +2,7 @@
 Copy deploy/dev/kustomization-template.yaml to deploy/dev/kustomization.yaml 
 and edit it as necessary. deploy/dev/kustomization.yaml is .gitignored, so your 
 local changes won't be (and shouldn't be) included in Git commits. For example:
-* Change images\[beegfsplugin\].newTag to whatever tag you are building and 
+* Change images\[beegfs-csi-driver\].newTag to whatever tag you are building and 
   pushing.
 * Change images\[].newName to include whatever repo you can pull from.
 * Change namespace to whatever makes sense.

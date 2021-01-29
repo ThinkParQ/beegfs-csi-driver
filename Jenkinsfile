@@ -4,18 +4,18 @@ if (env.BRANCH_NAME.matches('release-.+')) {
 }
 def paddedBuildNumber = env.BUILD_NUMBER.padLeft(4, '0')
 
-def imageName = 'beegfsplugin'  // release-tools gives significance to the name of the /cmd/beegfsplugin directory.
-def releaseToolsImageTag = 'beegfsplugin:latest'  // The "make container" method in build.make uses this tag.
+def imageName = 'beegfs-csi-driver'  // release-tools gives significance to the name of the /cmd/beegfs-csi-driver directory.
+def releaseToolsImageTag = 'beegfs-csi-driver:latest'  // The "make container" method in build.make uses this tag.
 
 def hubProjectName = 'esg-beegfs-csi-driver'
 def hubProjectVersion = projectVersion
 
 // We do NOT rely on release-tools tagging mechanism for internal builds because it does not provide mechanisms for
 // overwriting image tags, etc.
-def uniqueImageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch-0005
-def imageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch
+def uniqueImageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
+def imageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 if (env.BRANCH_NAME.matches('(master)|(release-.+)')) {
-    imageTag = "docker.repo.eng.netapp.com/global/apheleia/${imageName}:v${projectVersion}"  // e.g. .../global/apheleia/beegfsplugin:v1.0
+    imageTag = "docker.repo.eng.netapp.com/global/apheleia/${imageName}:v${projectVersion}"  // e.g. .../global/apheleia/beegfs-csi-driver:v1.0
 }
 
 pipeline {
@@ -43,14 +43,14 @@ pipeline {
         stage('Build Container') {
             steps {
                 // release-tools always builds the container with the same releaseToolsImageTag
-                // (e.g. beegfsplugin:latest). Make sure each node is only using this tag for one build at a time.
+                // (e.g. beegfs-csi-driver:latest). Make sure each node is only using this tag for one build at a time.
                 lock(resource: "${releaseToolsImageTag}-${env.NODE_NAME}") {
                     sh """
                         set +e  # don't exit on failure
                         make container
                         RETURN_CODE=\$?  # remember return code
                         docker tag ${releaseToolsImageTag} ${uniqueImageTag}
-                        docker rmi beegfsplugin:latest  # clean up before releasing lock
+                        docker rmi ${imageName}:latest  # clean up before releasing lock
                         exit \$RETURN_CODE
                     """
                 }
