@@ -8,3 +8,9 @@ spec:
       containers:
         - name: beegfs
           imagePullPolicy: Always
+          args:
+            - --driver-name=beegfs.csi.netapp.com
+            - --node-id=$(KUBE_NODE_NAME)
+            - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
+            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - -v=5

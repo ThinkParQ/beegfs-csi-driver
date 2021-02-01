@@ -57,12 +57,20 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 	stagingTargetPath := req.GetStagingTargetPath()
 	if len(stagingTargetPath) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Staging target path not provided")
 	}
 	targetPath := req.GetTargetPath()
 	if len(targetPath) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
+	volCap := req.GetVolumeCapability()
+	if volCap == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
+	}
+	if valid, reason := isValidVolumeCapability(volCap); !valid {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume capability not supported: %s", reason)
+	}
+	readOnly := req.GetReadonly()
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
@@ -90,8 +98,13 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
-	// Bind mount volDirPath onto TargetPath
+	// Bind mount volDirPath onto TargetPath.
 	opts := []string{"bind"}
+	if readOnly {
+		// TODO(webere): When the driver runs in a container (as is standard in a K8s deployment), the bind mount
+		// appears read only within that container, but not outside the container (on the host or in another pod).
+		opts = append(opts, "ro")
+	}
 	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
@@ -110,7 +123,7 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 	}
 	targetPath := req.GetTargetPath()
 	if len(targetPath) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
 	glog.V(LogDebug).Infof("Cleaning up mount point %s", targetPath)
@@ -128,10 +141,14 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 	stagingTargetPath := req.GetStagingTargetPath()
 	if len(stagingTargetPath) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Staging target path not provided")
 	}
-	if req.GetVolumeCapability() == nil {
-		return nil, status.Error(codes.InvalidArgument, "Volume capability missing in request")
+	volCap := req.GetVolumeCapability()
+	if volCap == nil {
+		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
+	}
+	if valid, reason := isValidVolumeCapability(volCap); !valid {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume capability not supported: %s", reason)
 	}
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
@@ -150,7 +167,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	// Write configuration files and mount BeeGFS.
 	if err := writeClientFiles(vol, ns.clientConfTemplatePath); err != nil {
-		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", ns.clientConfTemplatePath, vol, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := mountIfNecessary(vol, ns.mounter); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -167,7 +184,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	}
 	stagingTargetPath := req.GetStagingTargetPath()
 	if len(stagingTargetPath) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Staging target path missing in request")
+		return nil, status.Error(codes.InvalidArgument, "Staging target path not provided")
 	}
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)

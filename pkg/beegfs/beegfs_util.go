@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
@@ -291,4 +292,21 @@ func sanitizeVolumeID(volumeID string) string {
 		return fmt.Sprintf("%x", sha1.Sum([]byte(volumeID)))
 	}
 	return sanitizedVolumeID
+}
+
+// isValidVolumeCapability is a helper function used to call isValidVolumeCapabilities on a single VolumeCapability.
+func isValidVolumeCapability(volCap *csi.VolumeCapability) (valid bool, reason string) {
+	return isValidVolumeCapabilities([]*csi.VolumeCapability{volCap})
+}
+
+// isValidVolumeCapabilities checks a slice of VolumeCapabilities for support. If it finds an incompatible
+// VolumeCapability, it returns false and a reason for the incompatibility.
+func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) (valid bool, reason string) {
+	// Our volumes support all access modes. Block volumes are not supported.
+	for _, c := range volCaps {
+		if c.GetMount() == nil || c.GetBlock() != nil {
+			return false, "access_type must be MountVolume"
+		}
+	}
+	return true, ""
 }

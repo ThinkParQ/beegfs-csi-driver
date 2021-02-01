@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/spf13/afero"
 )
 
@@ -282,6 +283,70 @@ func TestSanitizeVolumeID(t *testing.T) {
 			got := sanitizeVolumeID(tc.provided)
 			if tc.want != got {
 				t.Fatalf("expected: %s, got: %s", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestIsValidVolumeCapabilities(t *testing.T) {
+	tests := map[string]struct {
+		caps      []*csi.VolumeCapability
+		wantValid bool
+	}{
+		"single supported capability": {
+			caps: []*csi.VolumeCapability{
+				{
+					AccessMode: &csi.VolumeCapability_AccessMode{ // all access modes are supported
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+					},
+					AccessType: &csi.VolumeCapability_Mount{ // mount is supported
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+				},
+			},
+			wantValid: true,
+		},
+		"multiple supported capabilities": {
+			caps: []*csi.VolumeCapability{
+				{
+					AccessMode: &csi.VolumeCapability_AccessMode{ // all access modes are supported
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+					},
+					AccessType: &csi.VolumeCapability_Mount{ // mount is supported
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+				},
+				{
+					AccessMode: &csi.VolumeCapability_AccessMode{ // all access modes are supported
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+					},
+					AccessType: &csi.VolumeCapability_Mount{ // mount is supported
+						Mount: &csi.VolumeCapability_MountVolume{},
+					},
+				},
+			},
+			wantValid: true,
+		},
+		"unsupported capability": {
+			caps: []*csi.VolumeCapability{
+				&csi.VolumeCapability{
+					AccessMode: &csi.VolumeCapability_AccessMode{ // all access modes are supported
+						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
+					},
+					AccessType: &csi.VolumeCapability_Block{ // block is not supported
+						Block: &csi.VolumeCapability_BlockVolume{},
+					},
+				},
+			},
+			wantValid: false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			gotValid, reason := isValidVolumeCapabilities(tc.caps)
+			if tc.wantValid != gotValid {
+				t.Fatalf("expected: %t, got: %t, reason: %s", tc.wantValid, gotValid, reason)
 			}
 		})
 	}

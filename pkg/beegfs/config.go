@@ -1,10 +1,10 @@
 package beegfs
 
 import (
-	"github.com/golang/glog"
 	"net"
 	"regexp"
 
+	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
