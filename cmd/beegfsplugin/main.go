@@ -19,6 +19,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/golang/glog"
+	"k8s.io/klog/v2"
 	"os"
 	"path"
 
@@ -26,7 +28,9 @@ import (
 )
 
 func init() {
-	flag.Set("logtostderr", "true")
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		glog.Fatalf("Failed to set glog flag logtostderr=true: %v", err.Error())
+	}
 }
 
 var (
@@ -45,6 +49,24 @@ var (
 func main() {
 	flag.Parse()
 
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+
+	// This block is almost identical to https://github.com/kubernetes/klog/blob/v2.5.0/examples/coexist_glog/coexist_glog.go
+	// The only modification is to the first if statement, so we only modify it if we are using a non-default value
+	// todo(jbostian): determine if we need to flag this as a derivative work
+	// Sync the glog and klog flags.
+	flag.CommandLine.VisitAll(func(f1 *flag.Flag) {
+		f2 := klogFlags.Lookup(f1.Name)
+		if f2 != nil && f1.Value.String() != f2.DefValue {
+			value := f1.Value.String()
+			if err := f2.Value.Set(value); err != nil {
+				glog.Fatalf("Failed to set klog flag %s to %s: %s", f2.Name, value, err.Error())
+			}
+		}
+	})
+	// end of code taken from klog example
+
 	if *showVersion {
 		baseName := path.Base(os.Args[0])
 		fmt.Println(baseName, version)
@@ -58,8 +80,7 @@ func main() {
 func handle() {
 	driver, err := beegfs.NewBeegfsDriver(*configPath, *csDataDir, *driverName, *endpoint, *nodeID, *clientConfTemplatePath, version)
 	if err != nil {
-		fmt.Printf("Failed to initialize driver: %s", err.Error())
-		os.Exit(1)
+		glog.Fatalf("Failed to initialize driver: %s", err.Error()) // exits with code 255
 	}
 	driver.Run()
 }

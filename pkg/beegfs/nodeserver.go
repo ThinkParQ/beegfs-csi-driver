@@ -76,8 +76,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	if err != nil {
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
+			glog.V(LogDebug).Infof("Making directories for mount point %s", targetPath)
 			if err = fs.MkdirAll(targetPath, 0750); err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
+				return nil, status.Errorf(codes.Internal, "failed making directories for mount point %s: %s", targetPath, err.Error())
 			}
 			notMnt = true
 		} else {
@@ -91,9 +92,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	// Bind mount volDirPath onto TargetPath
 	opts := []string{"bind"}
+	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
-		glog.Error(err.Error())
 		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(),
 			req.GetTargetPath(), err)
 	}
@@ -112,6 +113,7 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
+	glog.V(LogDebug).Infof("Cleaning up mount point %s", targetPath)
 	if err := mount.CleanupMountPoint(targetPath, ns.mounter, true); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -148,7 +150,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	// Write configuration files and mount BeeGFS.
 	if err := writeClientFiles(vol, ns.clientConfTemplatePath); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", ns.clientConfTemplatePath, vol, err.Error())
 	}
 	if err := mountIfNecessary(vol, ns.mounter); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())

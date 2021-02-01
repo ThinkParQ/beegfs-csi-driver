@@ -19,5 +19,6 @@ require (
 	google.golang.org/grpc v1.26.0
 	gopkg.in/ini.v1 v1.62.0
 	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/klog/v2 v2.0.0
 	k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 )

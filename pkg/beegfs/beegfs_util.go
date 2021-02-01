@@ -41,7 +41,7 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 		return "", "", err
 	}
 	if structUrl.Scheme != "beegfs" {
-		return "", "", fmt.Errorf("URL has incorrect scheme")
+		return "", "", errors.New("URL has incorrect scheme")
 	}
 	// TODO(webere) more checks for bad values
 	return structUrl.Host, structUrl.Path, nil
@@ -52,6 +52,7 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 // an existing beegfs-client.conf file at confTemplatePath and overriding its values with those specified in the
 // beegfsVolume's config. writeClientFiles assumes an empty directory has already been created at mountDirPath.
 func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
+	glog.V(LogDebug).Infof("Writing client files from %s to %s", confTemplatePath, vol.volumeID)
 	connInterfacesFilePath := path.Join(vol.mountDirPath, "connInterfacesFile")
 	connNetFilterFilePath := path.Join(vol.mountDirPath, "connNetFilterFile")
 	connTcpOnlyFilterFilePath := path.Join(vol.mountDirPath, "connTcpOnlyFilterFile")
@@ -63,7 +64,7 @@ func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
 		if iniFile.Section("").HasKey(key) {
 			iniFile.Section("").Key(key).SetValue(value)
 		} else {
-			return fmt.Errorf("%v not in template beegfs-client.conf file", key)
+			return errors.Errorf("%v not in template beegfs-client.conf file", key)
 		}
 		return nil
 	}
@@ -74,20 +75,18 @@ func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
 	var connClientPortUDP string
 	port, err := getEphemeralPortUDP()
 	if err != nil {
-		return err
+		return errors.WithMessage(err, "error selecting connClientPortUDP")
 	}
 	connClientPortUDP = strconv.Itoa(port)
 
 	// TODO (webere): consider loading the template globally only once
 	var clientConfBytes []byte
 	var clientConfINI *ini.File
-	clientConfBytes, err = fsutil.ReadFile(confTemplatePath)
-	if err != nil {
-		return fmt.Errorf("error loading beegfs-client.conf file at %s: %v", confTemplatePath, err)
+	if clientConfBytes, err = fsutil.ReadFile(confTemplatePath); err != nil {
+		return errors.Wrapf(err, "error loading beegfs-client.conf file at %s", confTemplatePath)
 	}
-	clientConfINI, err = ini.Load(clientConfBytes)
-	if err != nil {
-		return fmt.Errorf("error parsing template beegfs-client.conf file: %v", err)
+	if clientConfINI, err = ini.Load(clientConfBytes); err != nil {
+		return errors.Wrap(err, "error parsing template beegfs-client.conf file")
 	}
 	if err = setConfigValueIfKeyExists(clientConfINI, "sysMgmtdHost", vol.sysMgmtdHost); err != nil {
 		return err
@@ -103,47 +102,40 @@ func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
 
 	if len(vol.config.ConnInterfaces) != 0 {
 		connInterfacesFileContents := strings.Join(vol.config.ConnInterfaces, "\n") + "\n"
-		err := setConfigValueIfKeyExists(clientConfINI, "connInterfacesFile", connInterfacesFilePath)
-		if err != nil {
+		if err := setConfigValueIfKeyExists(clientConfINI, "connInterfacesFile", connInterfacesFilePath); err != nil {
 			return err
 		}
-		err = fsutil.WriteFile(connInterfacesFilePath, []byte(connInterfacesFileContents), 0644)
-		if err != nil {
-			return fmt.Errorf("error writing connInterfacesFile: %v", err)
+		if err = fsutil.WriteFile(connInterfacesFilePath, []byte(connInterfacesFileContents), 0644); err != nil {
+			return errors.Wrap(err, "error writing connInterfaces file")
 		}
 	}
 
 	if len(vol.config.ConnNetFilter) != 0 {
 		connNetFilterFileContents := strings.Join(vol.config.ConnNetFilter, "\n") + "\n"
-		err := setConfigValueIfKeyExists(clientConfINI, "connNetFilterFile", connNetFilterFilePath)
-		if err != nil {
+		if err := setConfigValueIfKeyExists(clientConfINI, "connNetFilterFile", connNetFilterFilePath); err != nil {
 			return err
 		}
-		err = fsutil.WriteFile(connNetFilterFilePath, []byte(connNetFilterFileContents), 0644)
-		if err != nil {
-			return fmt.Errorf("error writing connNetFilterFile: %v", err)
+		if err = fsutil.WriteFile(connNetFilterFilePath, []byte(connNetFilterFileContents), 0644); err != nil {
+			return errors.Wrap(err, "error writing connNetFilter file")
 		}
 	}
 
 	if len(vol.config.ConnTcpOnlyFilter) != 0 {
 		connTcpOnlyFilterFileContents := strings.Join(vol.config.ConnTcpOnlyFilter, "\n") + "\n"
-		err := setConfigValueIfKeyExists(clientConfINI, "connTcpOnlyFilterFile", connTcpOnlyFilterFilePath)
-		if err != nil {
+		if err := setConfigValueIfKeyExists(clientConfINI, "connTcpOnlyFilterFile", connTcpOnlyFilterFilePath); err != nil {
 			return err
 		}
-		err = fsutil.WriteFile(connTcpOnlyFilterFilePath, []byte(connTcpOnlyFilterFileContents), 0644)
-		if err != nil {
-			return fmt.Errorf("error writing connNetFilterFile: %v", err)
+		if err = fsutil.WriteFile(connTcpOnlyFilterFilePath, []byte(connTcpOnlyFilterFileContents), 0644); err != nil {
+			return errors.Wrap(err, "error writing connTcpOnlyFilter file")
 		}
 	}
 
-	clientConfFileHandle, err := fs.Create(vol.clientConfPath)
-	if err != nil {
-		return fmt.Errorf("error creating beegfs-client.conf file: %v", err)
+	var clientConfFileHandle afero.File
+	if clientConfFileHandle, err = fs.Create(vol.clientConfPath); err != nil {
+		return errors.Wrap(err, "error creating beegfs-client.conf file")
 	}
-	_, err = clientConfINI.WriteTo(clientConfFileHandle)
-	if err != nil {
-		return fmt.Errorf("error writing beegfs-client.conf file: %v", err)
+	if _, err = clientConfINI.WriteTo(clientConfFileHandle); err != nil {
+		return errors.Wrap(err, "error writing beegfs-client.conf file")
 	}
 
 	return nil
@@ -167,6 +159,7 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config pluginConfig) (retu
 // mountIfNecessary mounts a BeeGFS file system to vol.mountPath assuming configuration files have been written to
 // vol.mountDirPath by writeClientFiles.
 func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
+	glog.V(LogDebug).Infof("Mounting volume %s if necessary", vol.volumeID)
 	// TODO (webere): Support mount options
 	mountOpts := []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
 
@@ -176,22 +169,22 @@ func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
 		if os.IsNotExist(err) {
 			// the file system can't be mounted because the mount point hasn't been created
 			if err = os.Mkdir(vol.mountPath, 0750); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			notMnt = true
 		} else {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 
 	if !notMnt {
 		// The filesystem is already mounted. There is nothing to do.
-		return err
+		return errors.WithStack(err)
 	}
 
-	glog.Infof("Mounting BeeGFS to %s", vol.mountPath)
+	glog.V(LogDebug).Infof("Mounting BeeGFS to %s", vol.mountPath)
 	if err = mounter.Mount("beegfs_nodev", vol.mountPath, "beegfs", mountOpts); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -202,13 +195,14 @@ func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
 // all files under mountDirPath. unmountAndCleanUpIfNecessary also deletes mountDirPath if rmDir is set to true.
 // unmountAndCleanUpIfNecessary quietly continues WITHOUT error if the BeeGFS filesystem is not mounted.
 func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.Interface) (err error) {
+	glog.V(LogDebug).Infof("Unmounting volume %s and cleaning up if necessary", vol.volumeID)
 	// Decide whether or not to unmount BeeGFS filesystem by checking whether it is bind mounted somewhere else. We
 	// cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../volume1/mount is the
 	// initial mount point but .../volume1/mount/volume1 is the directory we bind mount). beegfsMounter.GetRefs() is
 	// incapable of discovering this.
 	allMounts, err := mounter.List()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error listing mounted filesystems")
 	}
 	for _, entry := range allMounts {
 		// Our container mounts the host's root filesystem at /host (like /:/host), so a file system might appear to be
@@ -218,7 +212,7 @@ func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.In
 			for _, opt := range entry.Opts {
 				if strings.Contains(opt, vol.clientConfPath) {
 					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
-					return fmt.Errorf("refused to unmount staged file system at %v while bind mounted at %v",
+					return errors.Errorf("refused to unmount staged file system at %v while bind mounted at %v",
 						vol.mountPath, entry.Path)
 				}
 			}
@@ -226,10 +220,10 @@ func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.In
 	}
 
 	if err = mount.CleanupMountPoint(vol.mountPath, mounter, false); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err = cleanUpIfNecessary(vol, rmDir); err != nil {
-		return err
+		return errors.WithMessagef(err, "error cleaning up volume %v", vol.volumeID)
 	}
 	return nil
 }
@@ -237,19 +231,20 @@ func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.In
 // cleanUpIfNecessary deletes all files associated with a beegfsVolume (in vol.mountDirPath) that is not mounted. It
 // also deletes vol.mountDirPath if rmDir is set to true.
 func cleanUpIfNecessary(vol beegfsVolume, rmDir bool) (err error) {
+	glog.V(LogDebug).Infof("Cleaning up volume %s if necessary", vol.volumeID)
 	if rmDir == false {
 		dir, err := ioutil.ReadDir(vol.mountDirPath)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		for _, d := range dir {
 			if err = fs.RemoveAll(path.Join(vol.mountDirPath, d.Name())); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 	} else {
 		if err = fs.RemoveAll(vol.mountDirPath); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 	return nil
