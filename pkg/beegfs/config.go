@@ -1,11 +1,11 @@
 package beegfs
 
 import (
-	"fmt"
 	"github.com/golang/glog"
 	"net"
 	"regexp"
 
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
@@ -72,10 +72,10 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 	// return immediately if an error occurs
 	rawConfigBytes, err := fsutil.ReadFile(path)
 	if err != nil {
-		return pluginConfig{}, fmt.Errorf("failed to read configuration file: %v", err)
+		return pluginConfig{}, errors.Wrap(err, "failed to read configuration file")
 	}
 	if err := yaml.UnmarshalStrict(rawConfigBytes, &rawConfig); err != nil {
-		return pluginConfig{}, fmt.Errorf("failed to unmarshal configuration file: %v", err)
+		return pluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
 
 	// start populating newPluginConfig using values directly from rawConfig
@@ -101,7 +101,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 	}
 
 	if err := newPluginConfig.validateConfig(); err != nil {
-		return pluginConfig{}, err
+		return pluginConfig{}, errors.WithMessage(err, "config validation failed")
 	}
 	newPluginConfig.stripConfig()
 
@@ -116,7 +116,7 @@ func (plConfig *pluginConfig) validateConfig() error {
 		// sysMgmtdHost can be localhost, an IP address, or a domain name. if it is none of these, return an error
 		if config.SysMgmtdHost != "localhost" && net.ParseIP(config.SysMgmtdHost) == nil &&
 			!domainRegex.MatchString(config.SysMgmtdHost) {
-			return fmt.Errorf("invalid SysMgmtdHost %s", config.SysMgmtdHost)
+			return errors.Errorf("invalid SysMgmtdHost %s", config.SysMgmtdHost)
 		}
 		beegfsConfigs = append(beegfsConfigs, config.Config)
 	}
@@ -124,12 +124,12 @@ func (plConfig *pluginConfig) validateConfig() error {
 	for _, config := range beegfsConfigs {
 		for _, filter := range config.ConnNetFilter {
 			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
-				return fmt.Errorf("invalid ConnNetFilter %s", filter)
+				return errors.Errorf("invalid ConnNetFilter %s", filter)
 			}
 		}
 		for _, filter := range config.ConnTcpOnlyFilter {
 			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
-				return fmt.Errorf("invalid ConnTCPOnlyFilter %s", filter)
+				return errors.Errorf("invalid ConnTCPOnlyFilter %s", filter)
 			}
 		}
 	}

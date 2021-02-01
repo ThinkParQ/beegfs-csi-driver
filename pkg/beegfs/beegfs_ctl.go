@@ -2,13 +2,13 @@ package beegfs
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"os/exec"
 	"path"
 	"strings"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 )
 
 // beegfsCtlExecutorInterface abstracts beegfs-ctl so tests can run without access to a beegfs-ctl binary or a BeeGFS
@@ -25,11 +25,12 @@ type beegfsCtlExecutor struct{}
 // vol.volDirPathBeegfsRoot on the BeeGFS file system specified by vol.sysMgmtdHost. createDirectory returns an error
 // if it cannot create the directory, but does not return an error if the directory already exists.
 func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
+	glog.V(LogDebug).Infof("Creating directory for volume %s", vol.volumeID)
 	// Check if volume already exists.
 	_, err := ctlExec.statDirectoryForVolume(vol)
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
-		glog.Infof("Directory %s does not exist on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+		glog.V(LogDebug).Infof("Directory %s does not exist on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
 
 		// Create parent directories if necessary.
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
@@ -43,18 +44,18 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", dir})
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
-				return fmt.Errorf("cannot create directory %s on BeeGFS instance %s", dir, vol.sysMgmtdHost)
+				return errors.Errorf("cannot create directory %s on BeeGFS instance %s", dir, vol.sysMgmtdHost)
 			}
 		}
 	} else if err != nil {
 		return err
 	} else {
-		glog.Infof("Directory %s already exists on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+		glog.V(LogDebug).Infof("Directory %s already exists on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
 	}
 	return nil
 }
 
-// statDirectoryForVolume returns the information output by "beegfs-ctl --getintryinfo" as a string, or an empty string
+// statDirectoryForVolume returns the information output by "beegfs-ctl --getentryinfo" as a string, or an empty string
 // and an error if the stat fails.
 func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
 	return ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
@@ -66,7 +67,7 @@ func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (stri
 func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", clientConfPath)}, args...)
 	cmd := exec.Command("beegfs-ctl", args...)
-	glog.Infof("Executing command: %s", cmd.Args)
+	glog.V(LogDebug).Infof("Executing command: %s", cmd.Args)
 
 	var stdoutBuffer bytes.Buffer
 	var stderrBuffer bytes.Buffer
@@ -77,17 +78,16 @@ func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut 
 	stdOutString := stdoutBuffer.String()
 	stdErrString := stderrBuffer.String()
 	if err != nil {
-		fmt.Println(err.Error())
 		if strings.Contains(stdErrString, "does not exist") {
-			err = newCtlNotExistError(stdOutString, stdErrString)
+			err = errors.WithStack(newCtlNotExistError(stdOutString, stdErrString))
 		} else if strings.Contains(stdErrString, "exists already") {
-			err = newCtlExistError(stdOutString, stdErrString)
+			err = errors.WithStack(newCtlExistError(stdOutString, stdErrString))
 		} else {
-			err = fmt.Errorf("beegfs-ctl failed: %w", err)
+			err = errors.Wrap(err, "beegfs-ctl failed")
 		}
 	}
-	glog.V(5).Infof(stdOutString)
-	glog.V(5).Infof(stdErrString)
+	glog.V(LogVerbose).Infof(stdOutString)
+	glog.V(LogVerbose).Infof(stdErrString)
 
 	return stdOutString, err
 }

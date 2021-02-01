@@ -17,12 +17,11 @@ limitations under the License.
 package beegfs
 
 import (
-	"errors"
-	"fmt"
 	"path"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -74,19 +73,18 @@ func NewControllerServer(nodeID string, pluginConfig pluginConfig, clientConfTem
 // CreateVolume generates a new volumeID and uses beegfs-ctl to create an associated directory at the proper location
 // on the referenced BeeGFS file system. CreateVolume uses beegfs-ctl instead of mounting the file system and using
 // mkdir because it needs to be able to use beegfs-ctl to set stripe patterns, etc. anyway.
-// TODO(webere): This function returns quite a few errors with no valid GRPC error codes
 func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	// Check arguments.
 	volName := req.GetName()
 	if len(volName) == 0 {
-		return nil, fmt.Errorf("Volume name not provided")
+		return nil, status.Error(codes.InvalidArgument, "Volume name not provided")
 	}
 	volCaps := req.GetVolumeCapabilities()
 	if len(volCaps) == 0 {
-		return nil, fmt.Errorf("Volume capabilities not provided")
+		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 	if !cs.isValidVolumeCapabilities(volCaps) {
-		return nil, fmt.Errorf("Volume capabilities not supported")
+		return nil, status.Errorf(codes.InvalidArgument, "Volume capabilities not supported: %v", volCaps)
 	}
 	reqParams := req.GetParameters()
 	if len(reqParams) == 0 {
@@ -100,6 +98,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", volDirBasePathKey)
 	}
+	glog.V(LogDebug).Infof("Cleaning up path %s", path.Join("/", volDirBasePathBeegfsRoot))
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
 
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
@@ -111,8 +110,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 			glog.Warningf("failed to clean up configuration directory: %v", err)
 		}
 	}()
+	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
 		return nil, status.Error(codes.Unavailable, err.Error())
@@ -150,21 +150,21 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 			glog.Warningf("failed to clean up configuration directory: %v", err)
 		}
 	}()
+	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
 	}
 	if err := mountIfNecessary(vol, cs.mounter); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error mounting %s: %s", vol.volumeID, err.Error())
 	}
 
 	// Delete volume from mounted BeeGFS.
-	glog.Infof("Removing %s from filesystem %s", vol.volDirPath, vol.sysMgmtdHost)
+	glog.V(LogDebug).Infof("Removing %s from filesystem %s", vol.volDirPath, vol.sysMgmtdHost)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
-		glog.Error(err)
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error removing volume %s: %s", vol.volDirPath, err.Error())
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -198,7 +198,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error creating beegfs volume with ID %s: %s", volumeID, err.Error())
 	}
 
 	// Write configuration files but do not mount BeeGFS.
@@ -208,11 +208,12 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 			glog.Warningf("failed to clean up configuration directory: %v", err)
 		}
 	}()
+	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
 	}
 
 	if _, err := cs.ctlExec.statDirectoryForVolume(vol); err != nil {
@@ -297,7 +298,7 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	var csc []*csi.ControllerServiceCapability
 
 	for _, cap := range cl {
-		glog.Infof("Enabling controller service capability: %v", cap.String())
+		glog.V(LogDebug).Infof("Enabling controller service capability: %v", cap.String())
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{

@@ -17,17 +17,19 @@ limitations under the License.
 package beegfs
 
 import (
-	"errors"
-	"fmt"
 	"path"
 
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"k8s.io/utils/mount"
 )
 
 const (
 	volDirBasePathKey = "volDirBasePath"
 	sysMgmtdHostKey   = "sysMgmtdHost"
+
+	LogDebug   = glog.Level(3) // This log level is used for most informational logs in RPCs and GRPC calls
+	LogVerbose = glog.Level(5) // This log level is used for only very repetitive logs such as the Probe GRPC call
 )
 
 type beegfs struct {
@@ -104,14 +106,13 @@ func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, client
 	var pluginConfig pluginConfig
 	if configPath != "" {
 		var err error
-		pluginConfig, err = parseConfigFromFile(configPath, nodeID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to handle configuration file: %v", err)
+		if pluginConfig, err = parseConfigFromFile(configPath, nodeID); err != nil {
+			return nil, errors.WithMessage(err, "failed to handle configuration file")
 		}
 	}
 
 	if err := fs.MkdirAll(csDataDir, 0750); err != nil {
-		return nil, fmt.Errorf("failed to create csDataDir: %v", err)
+		return nil, errors.Wrap(err, "failed to create csDataDir")
 	}
 
 	glog.Infof("Driver: %v ", driverName)

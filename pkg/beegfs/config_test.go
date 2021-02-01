@@ -1,10 +1,10 @@
 package beegfs
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
 
@@ -145,7 +145,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"invalid sysMgmtdHost": {
-			fmt.Errorf("invalid SysMgmtdHost testinvalid"),
+			errors.New("invalid SysMgmtdHost testinvalid"),
 			pluginConfig{
 				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
 					{
@@ -155,7 +155,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"invalid connNetFilter": {
-			fmt.Errorf("invalid ConnNetFilter testinvalid"),
+			errors.New("invalid ConnNetFilter testinvalid"),
 			pluginConfig{
 				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
 					{
@@ -168,7 +168,7 @@ func TestValidateConfig(t *testing.T) {
 			},
 		},
 		"invalid ConnTCPOnlyFilter": {
-			fmt.Errorf("invalid ConnTCPOnlyFilter testinvalid"),
+			errors.New("invalid ConnTCPOnlyFilter testinvalid"),
 			pluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnTcpOnlyFilter: []string{"127.0.0.0", "testinvalid"},

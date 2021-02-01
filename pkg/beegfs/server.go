@@ -17,7 +17,6 @@ limitations under the License.
 package beegfs
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -98,8 +98,13 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 
 	glog.Infof("Listening for connections on address: %#v", listener.Addr())
 
-	server.Serve(listener)
-
+	if err = server.Serve(listener); err != nil {
+		if err == grpc.ErrServerStopped {
+			glog.Info(err.Error())
+		} else {
+			glog.Fatal(err.Error())
+		}
+	}
 }
 
 func parseEndpoint(ep string) (string, string, error) {
@@ -109,17 +114,23 @@ func parseEndpoint(ep string) (string, string, error) {
 			return s[0], s[1], nil
 		}
 	}
-	return "", "", fmt.Errorf("Invalid endpoint: %v", ep)
+	return "", "", errors.Errorf("invalid endpoint: %v", ep)
 }
 
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	glog.V(3).Infof("GRPC call: %s", info.FullMethod)
-	glog.V(5).Infof("GRPC request: %+v", protosanitizer.StripSecrets(req))
+	logLevel := LogDebug
+	// this GRPC method is called very frequently. filter it out so it only appears at higher log levels
+	if info.FullMethod == "/csi.v1.Identity/Probe" {
+		logLevel = LogVerbose
+	}
+
+	glog.V(logLevel).Infof("GRPC call: %s", info.FullMethod)
+	glog.V(logLevel).Infof("GRPC request: %+v", protosanitizer.StripSecrets(req))
 	resp, err := handler(ctx, req)
 	if err != nil {
 		glog.Errorf("GRPC error: %v", err)
 	} else {
-		glog.V(5).Infof("GRPC response: %+v", protosanitizer.StripSecrets(resp))
+		glog.V(logLevel).Infof("GRPC response: %+v", protosanitizer.StripSecrets(resp))
 	}
 	return resp, err
 }
