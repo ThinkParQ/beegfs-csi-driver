@@ -1,3 +1,6 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 # Source this file to execute the complex commands in ../docs/beegfs/dynamic-demo.md without having to list out (or
 # copy and paste) all the parameters.
 

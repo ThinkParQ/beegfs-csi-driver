@@ -1,3 +1,6 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 # This file is a template for dev deployments. Do NOT make local changes to this file unless they would apply
 # to all developers (e.g. the addition of a new resource).
 

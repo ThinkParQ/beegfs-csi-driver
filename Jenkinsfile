@@ -1,3 +1,6 @@
+// Copyright 2021 NetApp, Inc. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0.
+
 projectVersion = '1.0'  // Increment this value when master branch refers to a different version.
 if (env.BRANCH_NAME.matches('release-.+')) {
     projectVersion = env.BRANCH_NAME.split('-')[1]  // A release branch carries its own version.

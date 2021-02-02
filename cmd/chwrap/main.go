@@ -1,10 +1,14 @@
+// https://github.com/NetApp/trident/blob/892e75d8ce216c9d024ce47ca5876ad89c08d312/chwrap/chwrap.go
+
 /*
  *  Copyright (c) 2020 NetApp
  *  All rights reserved
  */
 
-// Modified from NetApp Trident chwrap/main.go. Modifications detailed in comments.
-// https://github.com/NetApp/trident/blob/892e75d8ce216c9d024ce47ca5876ad89c08d312/chwrap/chwrap.go
+/*
+Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+*/
 
 package main
 

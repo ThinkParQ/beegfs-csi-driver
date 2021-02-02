@@ -5,8 +5,8 @@ This directory contains example k8s applications:
 |all/      |is a combination of multiple provisioning methods. Feature-gated methods k8s disables by default are excluded.|
 |dyn/      |dynamically provisions a persistent volume.  This is useful for persistent scratch space.|
 |ge/       |dynamically provisions a generic ephemeral `ge` volume.  This is useful for ephemeral scratch space.  Ensure kube-apiserver(s), kubelet(s), and kube-controller-manager(s) have `--feature-gates="...,GenericEphemeralVolume=true"`.|
-|static-ro/|statically provisions a persistent volume and mounts it read-only.  This is useful for reading shared data.|
 |static/   |statically provisions a persistent volume.  This is useful for shared data.|
+|static-ro/|statically provisions a persistent volume and mounts it read-only.  This is useful for reading shared data.|
 
 Usage: `kubectl apply -f ${EXAMPLE_DIRECTORY}`
 

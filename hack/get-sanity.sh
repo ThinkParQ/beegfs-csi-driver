@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 VERSION="v1.0.0-rc2"
 SANITYTGZ="csi-sanity-${VERSION}.linux.amd64.tar.gz"
 

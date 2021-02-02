@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+*/
+
 package beegfs
 
 import (
