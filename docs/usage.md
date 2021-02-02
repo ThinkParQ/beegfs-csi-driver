@@ -132,10 +132,9 @@ parameters are passed, the newly created subdirectory will have the same
 striping configuration as its parent. The following parameters have been tested 
 with the driver:
 
-* *numtargets*
-* *chunksize*
-* *pattern*
 * *storagepoolid*
+* *chunksize*
+* *numtargets*
 
 NOTE: The effects of unlisted configuration options are NOT tested with the
 driver. Contact your BeeGFS support representative for recommendations on
@@ -151,8 +150,9 @@ provisioner: beegfs.csi.netapp.com
 parameters:
   sysMgmtdHost: 10.113.72.217
   volDirBasePath: /path/to/parent/dir 
-  stripePattern/numtargets: "4"
-  stripePattern/chunksize: 1m
+  stripePattern/storagePoolID: "1"
+  stripePattern/chunkSize: 512k
+  stripePattern/numTargets: "4"
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: false

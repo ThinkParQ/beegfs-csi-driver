@@ -15,6 +15,7 @@ mkdir -p /tmp/kubelet/plugins/beegfs/volume1 /tmp/kubelet/pods/pod1 /tmp/kubelet
 
 alias csc='sudo -i csc -e /tmp/csi.sock -l info --with-request-logging --with-response-logging'
 alias createvolume="csc controller create-volume volume1 --cap MULTI_NODE_MULTI_WRITER,mount, --params sysMgmtdHost=${SYS_MGMTD_HOST},volDirBasePath=scratch"
+alias createvolumestripepattern="csc controller create-volume volume1 --cap MULTI_NODE_MULTI_WRITER,mount, --params sysMgmtdHost=${SYS_MGMTD_HOST},volDirBasePath=scratch,stripePattern/storagePoolID=2,stripePattern/chunkSize=1m,stripePattern/numTargets=2"
 alias nodestagevolume="csc node stage --staging-target-path=/tmp/kubelet/plugins/beegfs/volume1 --cap MULTI_NODE_MULTI_WRITER,mount, --vol-context=volDirBasePath=scratch beegfs://${SYS_MGMTD_HOST}/scratch/volume1"
 alias nodepublishvolume="csc node publish --staging-target-path=/tmp/kubelet/plugins/beegfs/volume1 --target-path=/tmp/kubelet/pods/pod1/volumes/volume1 --cap MULTI_NODE_MULTI_WRITER,mount, --vol-context=volDirBasePath=scratch beegfs://${SYS_MGMTD_HOST}/scratch/volume1"
 alias nodepublishvolumereadonly="csc node publish --staging-target-path=/tmp/kubelet/plugins/beegfs/volume1 --target-path=/tmp/kubelet/pods/pod1/volumes/volume1 --cap MULTI_NODE_MULTI_WRITER,mount, --vol-context=volDirBasePath=scratch --read-only beegfs://${SYS_MGMTD_HOST}/scratch/volume1"
