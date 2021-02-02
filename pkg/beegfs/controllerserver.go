@@ -33,16 +33,6 @@ var (
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
-
-	// TODO(jparnell) consider reader options
-	volumeCaps = []csi.VolumeCapability_AccessMode{
-		{
-			Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
-		},
-		{
-			Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
-		},
-	}
 )
 
 type controllerServer struct {
@@ -83,8 +73,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if len(volCaps) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
-	if !cs.isValidVolumeCapabilities(volCaps) {
-		return nil, status.Errorf(codes.InvalidArgument, "Volume capabilities not supported: %v", volCaps)
+	if valid, reason := isValidVolumeCapabilities(volCaps); !valid {
+		return nil, status.Errorf(codes.InvalidArgument, "Volume capabilities not supported: %s", reason)
 	}
 	reqParams := req.GetParameters()
 	if len(reqParams) == 0 {
@@ -92,11 +82,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	sysMgmtdHost, ok := reqParams[sysMgmtdHostKey]
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", sysMgmtdHostKey)
+		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", sysMgmtdHostKey)
 	}
 	volDirBasePathBeegfsRoot, ok := reqParams[volDirBasePathKey]
 	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", volDirBasePathKey)
+		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
 	}
 	glog.V(LogDebug).Infof("Cleaning up path %s", path.Join("/", volDirBasePathBeegfsRoot))
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
@@ -223,7 +213,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	confirmed := cs.isValidVolumeCapabilities(volCaps)
+	confirmed, reason := isValidVolumeCapabilities(volCaps)
 	if confirmed {
 		return &csi.ValidateVolumeCapabilitiesResponse{
 			Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
@@ -235,27 +225,10 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 			},
 		}, nil
 	} else {
-		return &csi.ValidateVolumeCapabilitiesResponse{}, nil
+		return &csi.ValidateVolumeCapabilitiesResponse{
+			Message: reason,
+		}, nil
 	}
-}
-
-func (cs *controllerServer) isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) bool {
-	hasSupport := func(cap *csi.VolumeCapability) bool {
-		for _, c := range volumeCaps {
-			if c.GetMode() == cap.AccessMode.GetMode() {
-				return true
-			}
-		}
-		return false
-	}
-
-	foundAll := true
-	for _, c := range volCaps {
-		if !hasSupport(c) {
-			foundAll = false
-		}
-	}
-	return foundAll
 }
 
 func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
