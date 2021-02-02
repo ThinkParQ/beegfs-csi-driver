@@ -16,6 +16,7 @@ import (
 type beegfsCtlExecutorInterface interface {
 	createDirectoryForVolume(vol beegfsVolume) error
 	statDirectoryForVolume(vol beegfsVolume) (string, error)
+	setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error
 }
 
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
@@ -59,6 +60,47 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 // and an error if the stat fails.
 func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
 	return ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
+}
+
+// constructSetPatternForVolume builds the arguments passed to setPatternForVolume.
+func constructSetPatternForVolume(config stripePatternConfig) ([]string, bool) {
+	var needToExecute bool
+	var args []string
+	if config.stripePatternNumTargets != "" {
+		args = append([]string{fmt.Sprintf("--numtargets=%s", config.stripePatternNumTargets)}, args...)
+		needToExecute = true
+	}
+	if config.stripePatternChunkSize != "" {
+		args = append([]string{fmt.Sprintf("--chunksize=%s", config.stripePatternChunkSize)}, args...)
+		needToExecute = true
+	}
+	if config.storagePoolID != "" {
+		args = append([]string{fmt.Sprintf("--storagepoolid=%s", config.storagePoolID)}, args...)
+		needToExecute = true
+	}
+	if needToExecute {
+		args = append([]string{"--unmounted", "--setpattern"}, args...)
+		return args, true
+	}
+
+	return []string{}, false
+}
+
+// setPatternForVolume uses a "beegfs-ctl --unmounted --setpattern" command to set the pattern for a directory specified by
+// vol.volDirPathBeegfsRoot on the BeeGFS file system. setPatternForVolume returns an error if it cannot set the pattern for
+// the directory, but does not return an error if the pattern on the directory already exists. setPatternForVolume has no
+// effect and does not return an error if config is empty.
+func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error {
+	args, needToExecute := constructSetPatternForVolume(config)
+	if needToExecute {
+		args = append(args, vol.volDirPathBeegfsRoot)
+		_, err := ctlExec.execute(vol.clientConfPath, args)
+		if err != nil {
+			return errors.Errorf("cannot set pattern for directory %s on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+		}
+	}
+
+	return nil
 }
 
 // execute runs arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and stderr
@@ -127,4 +169,8 @@ func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
 
 func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
 	return "", nil
+}
+
+func (*fakeBeegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error {
+	return nil
 }

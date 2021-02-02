@@ -18,6 +18,7 @@ package beegfs
 
 import (
 	"path"
+	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -90,6 +91,10 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 	glog.V(LogDebug).Infof("Cleaning up path %s", path.Join("/", volDirBasePathBeegfsRoot))
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
+	stripePatternConfig, err := getStripePatternParamsFromRequest(reqParams)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", stripePatternConfig)
+	}
 
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
 
@@ -109,6 +114,10 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	if err := cs.ctlExec.createDirectoryForVolume(vol); err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if err := cs.ctlExec.setPatternForVolume(vol, stripePatternConfig); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
@@ -282,6 +291,26 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	}
 
 	return csc
+}
+
+func getStripePatternParamsFromRequest(reqParams map[string]string) (stripePatternConfig, error) {
+	stripePattern := stripePatternConfig{}
+	for param := range reqParams {
+		if strings.Contains(param, "stripePattern/") {
+			switch param {
+			case storagePoolIDKey:
+				stripePattern.storagePoolID = reqParams[storagePoolIDKey]
+			case stripePatternChunkSizeKey:
+				stripePattern.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
+			case stripePatternNumTargetsKey:
+				stripePattern.stripePatternNumTargets = reqParams[stripePatternNumTargetsKey]
+			default:
+				return stripePattern, errors.Errorf("CreateVolume parameter invalid: %s", param)
+			}
+		}
+	}
+
+	return stripePattern, nil
 }
 
 // (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context

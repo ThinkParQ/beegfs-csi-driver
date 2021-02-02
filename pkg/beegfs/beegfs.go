@@ -25,8 +25,11 @@ import (
 )
 
 const (
-	volDirBasePathKey = "volDirBasePath"
-	sysMgmtdHostKey   = "sysMgmtdHost"
+	volDirBasePathKey          = "volDirBasePath"
+	sysMgmtdHostKey            = "sysMgmtdHost"
+	storagePoolIDKey           = "stripePattern/storagePoolID"
+	stripePatternChunkSizeKey  = "stripePattern/chunkSize"
+	stripePatternNumTargetsKey = "stripePattern/numTargets"
 
 	LogDebug   = glog.Level(3) // This log level is used for most informational logs in RPCs and GRPC calls
 	LogVerbose = glog.Level(5) // This log level is used for only very repetitive logs such as the Probe GRPC call
@@ -81,6 +84,12 @@ type beegfsVolume struct {
 	volDirPathBeegfsRoot     string // absolute path to BeeGFS directory from BeeGFS root (e.g. /parent/volume)
 	volDirPath               string // absolute path to BeeGFS directory from host root (e.g. .../mountDirPath/mount/parent/volume)
 	volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
+}
+
+type stripePatternConfig struct {
+	storagePoolID           string
+	stripePatternChunkSize  string
+	stripePatternNumTargets string
 }
 
 var (
