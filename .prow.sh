@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 # TODO: move into job
 CSI_PROW_GINKO_PARALLEL="-p -nodes 40" # default was 7
 

@@ -1,3 +1,6 @@
+# Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 FROM alpine:3.13
 
 LABEL maintainers="NetApp"

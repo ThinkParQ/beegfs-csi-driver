@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 ## This file is for app/hostpathplugin
 ## It could be used for other apps in this repo, but
 ## those applications may or may not take the same
