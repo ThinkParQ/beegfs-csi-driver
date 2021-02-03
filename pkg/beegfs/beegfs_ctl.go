@@ -45,9 +45,11 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 			dirsToMake = append([]string{dir}, dirsToMake...) // Prepend so the more general path comes first.
 			dir = path.Dir(dir)
 		}
-		// Starting with the most general path, create all directories required to eventually create mountDirPath.
+		// Starting with the most general path, create all directories required to eventually create vol.volDirPathBeegfsRoot.
 		for _, dir := range dirsToMake {
-			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", dir})
+			// todo(eastburj): Consider replacing "--access=0777" with "fsGroup support"[1].
+			//   [1](https://kubernetes-csi.github.io/docs/support-fsgroup.html)
+			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", "--access=0777", dir})
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
 				return errors.Errorf("cannot create directory %s on BeeGFS instance %s", dir, vol.sysMgmtdHost)
