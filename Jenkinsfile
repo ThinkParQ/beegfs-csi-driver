@@ -7,8 +7,8 @@ if (env.BRANCH_NAME.matches('release-.+')) {
 }
 paddedBuildNumber = env.BUILD_NUMBER.padLeft(4, '0')
 
-def imageName = 'beegfs-csi-driver'  // release-tools gives significance to the name of the /cmd/beegfs-csi-driver directory.
-def releaseToolsImageTag = 'beegfs-csi-driver:latest'  // The "make container" method in build.make uses this tag.
+imageName = 'beegfs-csi-driver'  // release-tools gives significance to the name of the /cmd/beegfs-csi-driver directory.
+releaseToolsImageTag = 'beegfs-csi-driver:latest'  // The "make container" method in build.make uses this tag.
 
 hubProjectName = 'esg-beegfs-csi-driver'
 // Replace projectVersion with a custom version to do an experimental Black Duck scan.
@@ -43,7 +43,18 @@ pipeline {
                 // release-tools always uses a container named k8s-shellcheck in its test. Make sure each node is only
                 // using this tag for one build at a time.
                 lock(resource: "k8s-shellcheck-${env.NODE_NAME}") {
-                    sh 'make test'
+                    script {
+                        if (env.BRANCH_NAME.matches('(master)|(release-.+)|(PR-.+)')) {
+                            // When JOB_NAME is empty, the conditional logic in release-tools/verify-vendor.sh allows
+                            // for vendor testing.
+                            sh 'JOB_NAME= make test'
+                        } else {
+                            // When JOB_NAME is not empty (automatically set by Jenkins), the conditional logic in
+                            // release-tools/verify-vendor.sh does not allow for vendor testing. This is good, because
+                            // vendor testing forces a download of all modules, which is time/bandwidth intensive.
+                            sh 'make test'
+                        }
+                    }
                 }
             }
         }
