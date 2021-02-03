@@ -1,5 +1,7 @@
 # Copyright 2021 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
+
+# Use this file to modify any parameters from their base values (e.g. container arguments, etc.).
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
@@ -10,10 +12,6 @@ spec:
       containers:
         - name: beegfs
           imagePullPolicy: Always
-          args:
-            - --driver-name=beegfs.csi.netapp.com
-            - --node-id=$(KUBE_NODE_NAME)
-            - --endpoint=unix://csi/csi.sock
-            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
-            - --cs-data-dir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
-            - -v=5
+          env:
+            - name: LOG_LEVEL_ARG
+              value: -v=3

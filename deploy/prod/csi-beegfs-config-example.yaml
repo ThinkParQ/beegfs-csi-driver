@@ -1,0 +1,62 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# This is a fairly complicated csi-beegfs-config.yaml representing a great need for custom configuration. Many
+# deployment environments need no custom configuration or very little custom configuration compared to this file. See
+# ../../docs/deplyoment.md for complete instructions on how to use the parameters in this file.
+
+config:
+  connInterfaces:
+    - ib0
+    - eth0
+  connNetFilter:
+    - 10.0.0.1/24
+    - 10.0.0.2/24
+  connTcpOnlyFilter:
+    - 10.0.0.1/24
+  beegfsClientConf:
+    connMgmtdPortTCP: 9008
+
+fileSystemSpecificConfigs:
+  - sysMgmtdHost: some.specific.file.system
+    config:
+      connInterfaces:
+        - ib1
+        - eth1
+      connNetFilter:
+        - 10.0.0.3/24
+        - 10.0.0.4/24
+      connTcpOnlyFilter:
+        - 10.0.0.3/24
+      beegfsClientConf:
+        connMgmtdPortTCP: 10008
+
+nodeSpecificConfigs:
+  - nodeList:
+      - node1
+      - node2
+    config:
+      connInterfaces:
+        - ib2
+        - eth2
+      connNetFilter:
+        - 10.0.0.5/24
+        - 10.0.0.6/24
+      connTcpOnlyFilter:
+        - 10.0.0.5/24
+      beegfsClientConf:
+        connMgmtdPortTCP: 11008
+
+    fileSystemSpecificConfigs:
+      - sysMgmtdHost: some.specific.file.system
+        config:
+          connInterfaces:
+            - ib3
+            - eth3
+          connNetFilter:
+            - 10.0.0.5/24
+            - 10.0.0.6/24
+          connTcpOnlyFilter:
+            - 10.0.0.5/24
+          beegfsClientConf:
+            connMgmtdPortTCP: 12008
