@@ -77,6 +77,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 	if err := yaml.UnmarshalStrict(rawConfigBytes, &rawConfig); err != nil {
 		return pluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
+	glog.V(LogDebug).Infof("Raw configuration parsed from %s: %+v", path, rawConfig)
 
 	// start populating newPluginConfig using values directly from rawConfig
 	newPluginConfig = pluginConfig{
@@ -104,6 +105,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 		return pluginConfig{}, errors.WithMessage(err, "config validation failed")
 	}
 	newPluginConfig.stripConfig()
+	glog.V(LogDebug).Infof("Actual configuration to be applied: %+v", newPluginConfig)
 
 	return newPluginConfig, nil
 }
