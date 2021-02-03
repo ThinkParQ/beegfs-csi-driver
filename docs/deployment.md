@@ -212,11 +212,17 @@ beegfs-client.conf that ships with each BeeGFS distribution. Each *config*
 section may optionally contain parameters that override previous sections.
 
 Depending on the topology of your cluster, some nodes MAY need different
-configuration than others, so each node maintains its own unique copy of the
-configuration file. For non-Kubernetes deployments, it is the administrator's
-responsibility to distribute an appropriate file to each node. See [Kubernetes
-Configuration](#kubernetes-configuration) for the Kubernetes-native way to
-manage configuration within a Kubernetes cluster.
+configuration than others. This requirement can be handled in one of two ways:
+1. The administrator creates unique configuration files and deploys each to the 
+   proper node.
+2. The administrator creates one global configuration file with a 
+   *nodeSpecificConfigs* section and specifies the --node-id CLI flag on each 
+   node when starting the driver.
+
+Kubernetes deployment greatly simplifies the distribution of a global 
+configuration file using the second approach and is the de-facto standard 
+way to deploy the driver. See [Kubernetes
+Configuration](#kubernetes-configuration) for details.
 
 The *beegfsClientConf* section contains parameters taken directly out of a
 beegfs-client.conf configuration file. In particular, the beegfs-client.conf 
@@ -228,21 +234,18 @@ beegfsClientConf parameters.
 
 The order of precedence for configuration option overrides is described by
 "PRECEDENCE" comments in the example below. In general, precedence is as
-follows: 
-1. *fileSystemSpecificConfigs[i].config*. (A file system specific config is 
-   mapped to its respective file system by the 
-   *fileSystemSpecificConfigs[i].sysMgmtdHost*.)
-1. The outermost *config*.
-1. Locally installed BeeGFS configuration files: *beegfs-client.conf*, 
-   *connInterfacesFile*, *connNetFilterFile*, *connTcpOnlyFilterFile*.
+follows: config < fileSystemSpecificConfig < nodeSpecificConfig.config < 
+nodeSpecificConfig.fileSystemSpecificConfig. When conflicts occur between 
+configurations of equal precedence, configuration set lower in the file takes 
+precedence over configuration set higher in the file.
 
-NOTE: All configuration, and in particular *fileSystemSpecificConfigs*
-configuration is OPTIONAL! In many situations, only the outermost *config* is 
-required.
+NOTE: All configuration, and in particular *fileSystemSpecificConfigs* and
+*nodeSpecificConfigs* configuration is OPTIONAL! In many situations, only the 
+outermost *config* is required.
 
 ```yaml
-# when more specific configuration is not provided; PRECEDENCE 1 (lowest)
-config:
+# when more specific configuration is not provided; PRECEDENCE 3 (lowest)
+config:  # OPTIONAL
   connInterfaces:
     - <interface_name>  # e.g. ib0
     - <interface_name>
@@ -257,15 +260,31 @@ config:
     # e.g. connMgmtdPortTCP: 9008
     # SEE BELOW FOR RESTRICTIONS
 
-fileSystemSpecificConfigs:
-    # for a specific filesystem; PRECEDENCE 0 (highest)
+fileSystemSpecificConfigs:  # OPTIONAL
+    # for a specific filesystem; PRECEDENCE 2
   - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
     config:  # as above
 
-    # for a specific filesystem; PRECEDENCE 0 (highest)
-  - sysmMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
+    # for a specific filesystem; PRECEDENCE 2
+  - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
     config:  # as above
-    
+
+nodeSpecificConfigs:  # OPTIONAL
+  - nodeList:
+      - <node_name>  # e.g. node1
+      - <node_name>
+    # default for a specific set of nodes; PRECEDENCE 1
+    config:  # as above:
+    # for a specific node AND filesystem; PRECEDENCE 0 (highest)
+    fileSystemSpecificConfigs:  # as above
+
+  - nodeList:
+      - <node_name>  # e.g. node1
+      - <node_name>
+    # default for a specific set of nodes; PRECEDENCE 1
+    config:  # as above:
+    # for a specific node AND filesystem; PRECEDENCE 0 (highest)
+    fileSystemSpecificConfigs:  # as above
 ```
 
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
@@ -283,78 +302,23 @@ other services.
 ## Kubernetes Configuration
 
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
-configuration for all Kubernetes nodes. The ConfigMap includes the same
-information as the configuration file above, with the addition of
-the *nodeSpecificConfigs* sections. These more specific sections can override 
-values specified (or not specified) in a more general section. When the driver 
-starts up on a node, it uses the node's name to filter the global ConfigMap 
-down to the node-specific configuration defined in 
-[General Configuration](#general-configuration). In later versions,
-[matchExpressions-based node label 
-matching](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
-may also be available.
+configuration for all Kubernetes nodes. When the driver starts up on a node, it 
+uses the node's name to filter the global ConfigMap down to a node-specific 
+version. 
 
-The order of precedence for configuration option overrides is described by
-"PRECEDENCE" comments in the example below. In general, precedence is as
-follows: default < file system < node < file system AND node. When conflicts
-occur between configurations of equal precedence, configuration set lower in the
-file takes precedence over configuration set higher in the file.
+The instructions in the [Kubernetes Deployment](#kubernetes-deployment) 
+automatically create an empty ConfigMap and pass it to the driver on all nodes. 
+To pass custom configuration to the driver, add the desired parameters from 
+[General Configuration](#general-configuration) to 
+deploy/prod/csi-beegfs-config.yaml (or another overlay) before deploying. The 
+resulting deployment will automatically result in a correctly formed ConfigMap. 
+See deploy/prod/csi-beegfs-config-example.yaml for an example file.
 
-NOTE: All configuration, and in particular *fileSystemSpecificConfigs* and
-*nodeSpecificConfigs* configuration is OPTIONAL! In many situations, only the 
-outermost *config* is required.
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: beegfs-csi-config
-data:
-  beegfsCSI: |
-    # when more specific configuration is not provided; PRECEDENCE 3 (lowest)
-    config:
-      connInterfaces:
-        - <interface_name>  # e.g. ib0
-        - <interface_name>
-      connNetFilter:
-        - <ip_subnet>  # e.g. 10.0.0.1/24
-        - <ip_subnet>
-      connTcpOnlyFilter:
-        - <ip_subnet>  # e.g. 10.0.0.1/24
-        - <ip_subnet>
-      beegfsClientConf:
-        <beegfs-client.conf_key>: <beegfs-client.conf_value>  
-        # e.g. connMgmtdPortTCP: 9008
-        # SEE BELOW FOR RESTRICTIONS
-    
-    fileSystemSpecificConfigs:  # OPTIONAL
-        # for a specific filesystem; PRECEDENCE 2
-      - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
-        config:  # as above
-
-        # for a specific filesystem; PRECEDENCE 2
-      - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
-        config:  # as above
-  
-    nodeSpecificConfigs:  # OPTIONAL
-      - nodeList:
-          - <node_name>  # e.g. node1
-          - <node_name>
-        # matchExpressions:  may be supported in >v1.0
-        # default for a specific set of nodes; PRECEDENCE 1
-        config:  # as above:
-        # for a specific node AND filesystem; PRECEDENCE 0 (highest)
-        fileSystemSpecificConfigs:  # as above
-
-      - nodeList:
-          - <node_name>  # e.g. node1
-          - <node_name>
-        # matchExpressions:  may be supported in >v1.0
-        # default for a specific set of nodes; PRECEDENCE 1
-        config:  # as above:
-        # for a specific node AND filesystem; PRECEDENCE 0 (highest)
-        fileSystemSpecificConfigs:  # as above
-```
+To update configuration after initial deployment, modify 
+*deploy/prod/csi-beegfs-config.yaml* and repeat the kubectl deployment step 
+from [Kubernetes Deployment](#kubernetes-deployment). Kustomize will 
+automatically update all components and restart the driver on all nodes so that 
+it picks up the latest changes.
 
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
 separate Kubernetes Secret object. This file is optional, and should only be
@@ -443,4 +407,3 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * tuneUseGlobalAppendLocks
 * tuneUseGlobalFileLocks
 * sysACLsEnabled
-

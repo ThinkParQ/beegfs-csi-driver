@@ -44,12 +44,16 @@ spec:
             - --node-id=$(KUBE_NODE_NAME)
             - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
             - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - --config-path=/csi/config/csi-beegfs-config.yaml
+            - $(LOG_LEVEL_ARG)
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
+            - name: LOG_LEVEL_ARG
+              value: ""  # e.g. -v=5 to override the default log level.
           securityContext:
             privileged: true  # Privileged is required for bidirectional mount propagation and to run the mount command.
           ports:
@@ -76,6 +80,8 @@ spec:
               name: plugins-mount-dir
             - mountPath: /csi
               name: socket-dir
+            - mountPath: /csi/config
+              name: config-dir
         - name: liveness-probe
           volumeMounts:
           - mountPath: /csi
@@ -113,3 +119,6 @@ spec:
             path: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
             type: DirectoryOrCreate
           name: socket-dir
+        - configMap:
+            name: csi-beegfs-config  # kustomized
+          name: config-dir

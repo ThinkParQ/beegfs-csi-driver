@@ -34,3 +34,8 @@ images:
 patchesStrategicMerge:
   - csi-beegfs-controller.yaml
   - csi-beegfs-node.yaml
+configMapGenerator:
+  - name: csi-beegfs-config
+    behavior: replace
+    files:
+      - csi-beegfs-config.yaml
