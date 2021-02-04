@@ -124,8 +124,8 @@ func parseEndpoint(ep string) (string, string, error) {
 
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	logLevel := LogDebug
-	// this GRPC method is called very frequently. filter it out so it only appears at higher log levels
-	if info.FullMethod == "/csi.v1.Identity/Probe" {
+	// These GRPC methods are called very frequently. Filter them out so they only appear at higher log levels.
+	if info.FullMethod == "/csi.v1.Identity/Probe" || info.FullMethod == "/csi.v1.Node/NodeGetCapabilities" {
 		logLevel = LogVerbose
 	}
 
