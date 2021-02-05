@@ -49,7 +49,6 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 	if structUrl.Scheme != "beegfs" {
 		return "", "", errors.New("URL has incorrect scheme")
 	}
-	// TODO(webere) more checks for bad values
 	return structUrl.Host, structUrl.Path, nil
 }
 
@@ -75,9 +74,9 @@ func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
 		return nil
 	}
 
-	// TODO(eastburj): patch BeeGFS to support setting connClientPortUDP to zero
-	// TODO(webere): document that connClientPortUDP is NOT a supported option (maybe a range?)
-	// select a UDP port to use for this volume mount
+	// The BeeGFS client must bind to and listen on a UDP port. Each BeeGFS mount requires a different port. Though
+	// the client is free to define and use its own port, BeeGFS does not support binding to port 0 to obtain an OS
+	// assigned ephemeral port.
 	var connClientPortUDP string
 	port, err := getEphemeralPortUDP()
 	if err != nil {
@@ -85,7 +84,6 @@ func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
 	}
 	connClientPortUDP = strconv.Itoa(port)
 
-	// TODO (webere): consider loading the template globally only once
 	var clientConfBytes []byte
 	var clientConfINI *ini.File
 	if clientConfBytes, err = fsutil.ReadFile(confTemplatePath); err != nil {
@@ -166,7 +164,6 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config pluginConfig) (retu
 // vol.mountDirPath by writeClientFiles.
 func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
 	glog.V(LogDebug).Infof("Mounting volume %s if necessary", vol.volumeID)
-	// TODO (webere): Support mount options
 	mountOpts := []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
 
 	// Check to make sure file system is not already mounted.
