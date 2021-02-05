@@ -287,18 +287,6 @@ nodeSpecificConfigs:  # OPTIONAL
     fileSystemSpecificConfigs:  # as above
 ```
 
-For security purposes, the contents of BeeGFS connAuthFiles are stored in a
-separate file. This file is optional, and should only be
-used if the connAuthFile configuration option is used on a file system's
-other services.
-
-```yaml
-- sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
-  connAuth: <some_secret_value>
-- sysMgmtdHost: <sysMgmtdHost>
-  connAuth: <some_secret_value>
-```
-
 ## Kubernetes Configuration
 
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
@@ -319,24 +307,6 @@ To update configuration after initial deployment, modify
 from [Kubernetes Deployment](#kubernetes-deployment). Kustomize will 
 automatically update all components and restart the driver on all nodes so that 
 it picks up the latest changes.
-
-For security purposes, the contents of BeeGFS connAuthFiles are stored in a
-separate Kubernetes Secret object. This file is optional, and should only be
-deployed if the connAuthFile configuration option is used when configuring a
-file system's other services.
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: beegfs-csi-secret
-data:
-  connAuths: |
-    - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
-      connAuth: <some_secret_value>
-    - sysMgmtdHost: <sysMgmtdHost>
-      connAuth: <some_secret_value>
-```
 
 ## beeGFSClientConf Parameters
 
@@ -367,7 +337,6 @@ have no effect when specified in the beeGFSClientConf configuration section.
 These parameters are specified elsewhere and may exhibit undocumented behavior
 if specified here.
 
-* connAuthFile
 * connInterfacesFile
 * connNetFilterFile
 * connTcpOnlyFilterFile
@@ -376,6 +345,7 @@ if specified here.
 
 These parameters SHOULD result in the desired effect but have not been tested.
 
+* connAuthFile
 * connHelperdPortTCP
 * connMgmtdPortTCP
 * connMgmtdPortUDP
