@@ -97,7 +97,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
 	stripePatternConfig, err := getStripePatternParamsFromRequest(reqParams)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%s missing in request parameters", stripePatternConfig)
+		errors.WithMessagef(err, "%s missing in request parameters", stripePatternConfig)
+		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
 
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
@@ -110,18 +111,19 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		err = errors.Wrapf(err, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
-		return nil, status.Error(codes.Unavailable, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Unavailable, err)
 	}
 
 	if err := cs.ctlExec.createDirectoryForVolume(vol); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	if err := cs.ctlExec.setPatternForVolume(vol, stripePatternConfig); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -142,7 +144,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Write configuration files and mount BeeGFS.
@@ -153,19 +155,23 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		err = errors.Wrapf(err, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
-		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
+		err = errors.WithMessagef(err, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := mountIfNecessary(vol, cs.mounter); err != nil {
-		return nil, status.Errorf(codes.Internal, "error mounting %s: %s", vol.volumeID, err.Error())
+		err = errors.WithMessagef(err, "error mounting %s: %s", vol.volumeID, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Delete volume from mounted BeeGFS.
 	glog.V(LogDebug).Infof("Deleting BeeGFS directory %s for %s", vol.volDirBasePathBeegfsRoot, vol.volumeID)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
-		return nil, status.Errorf(codes.Internal, "error removing volume %s: %s", vol.volDirPath, err.Error())
+		err = errors.Wrapf(err, "error removing volume %s: %s", vol.volDirPath, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	return &csi.DeleteVolumeResponse{}, nil
@@ -199,7 +205,8 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "error creating beegfs volume with ID %s: %s", volumeID, err.Error())
+		err = errors.WithMessagef(err, "error creating beegfs volume with ID %s: %s", volumeID, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Write configuration files but do not mount BeeGFS.
@@ -210,17 +217,20 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
-		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		err = errors.Wrapf(err, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
-		return nil, status.Errorf(codes.Internal, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
+		err = errors.WithMessagef(err, "error writing client files from %s to %s: %s", cs.clientConfTemplatePath, vol, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	if _, err := cs.ctlExec.statDirectoryForVolume(vol); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
-			return nil, status.Error(codes.NotFound, vol.volumeID)
+			err = errors.WithMessage(err, vol.volumeID)
+			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	confirmed, reason := isValidVolumeCapabilities(volCaps)

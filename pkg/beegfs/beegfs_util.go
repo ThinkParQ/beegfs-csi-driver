@@ -20,7 +20,6 @@ import (
 	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
-	"go.uber.org/multierr"
 	"gopkg.in/ini.v1"
 	"k8s.io/utils/mount"
 )
@@ -44,7 +43,7 @@ func newBeegfsUrl(host string, path string) string {
 func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error) {
 	var structUrl *url.URL
 	if structUrl, err = url.Parse(rawUrl); err != nil {
-		return "", "", err
+		return "", "", errors.WithStack(err)
 	}
 	if structUrl.Scheme != "beegfs" {
 		return "", "", errors.New("URL has incorrect scheme")
@@ -266,7 +265,7 @@ func getEphemeralPortUDP() (port int, err error) {
 		if closeErr := conn.Close(); closeErr != nil {
 			closeErr = errors.WithStack(closeErr)
 			if err != nil {
-				err = multierr.Append(err, closeErr)
+				err = errors.WithMessage(err, closeErr.Error())
 			} else {
 				err = closeErr
 			}

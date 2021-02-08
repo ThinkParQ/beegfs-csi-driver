@@ -26,6 +26,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
+	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -79,7 +80,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Check to make sure file system is not already bind mounted
@@ -90,11 +91,13 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
 			if err = fs.MkdirAll(targetPath, 0750); err != nil {
-				return nil, status.Errorf(codes.Internal, "failed making directories for mount point %s: %s", targetPath, err.Error())
+				err = errors.Wrapf(err, "failed making directories for mount point %s: %s", targetPath, err.Error())
+				return nil, newGrpcErrorFromCause(codes.Internal, err)
 			}
 			notMnt = true
 		} else {
-			return nil, status.Error(codes.Internal, err.Error())
+			err = errors.WithStack(err)
+			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
 	}
 	if !notMnt {
@@ -116,8 +119,8 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(),
-			req.GetTargetPath(), err)
+		err = errors.Wrapf(err, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(), req.GetTargetPath(), err)
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	return &csi.NodePublishVolumeResponse{}, nil
@@ -136,7 +139,8 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 
 	glog.V(LogDebug).Infof("Unmounting %s from %s", volumeID, targetPath)
 	if err := mount.CleanupMountPoint(targetPath, ns.mounter, true); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		err = errors.WithStack(err)
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
@@ -161,23 +165,24 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Ensure mountDirPath already exists (CO should have created req.StagingTargetPath).
 	_, err = fs.Stat(vol.mountDirPath)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		err = errors.WithStack(err)
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Write configuration files and mount BeeGFS.
 	if err := writeClientFiles(vol, ns.clientConfTemplatePath); err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := mountIfNecessary(vol, ns.mounter); err != nil {
 		// TODO(webere, A144): Return the appropriate codes.NOT_FOUND if the problem is that we can't find the volume.
 		// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	return &csi.NodeStageVolumeResponse{}, nil
@@ -196,12 +201,12 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	err = unmountAndCleanUpIfNecessary(vol, false, ns.mounter) // The CO will clean up mountDirPath.
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
