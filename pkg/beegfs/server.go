@@ -22,6 +22,8 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"strings"
@@ -33,7 +35,52 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// Traditionally gRPC service handlers should return an error created by the
+// package "google.golang.org/grpc/status".  However our gRPC service handlers
+// should (but are not required to) return a "grpcError".  This allows logGRPC
+// to log stack traces (provided by errors created by the package
+// "github.com/pkg/errors") in a consistent way for all service handlers.
+type grpcError struct {
+	statusErr error // error of type created by google.golang.org/grpc/status
+	cause     error // error of type created by github.com/pkg/errors
+}
+
+func newGrpcErrorFromCause(code codes.Code, cause error) grpcError {
+	if cause == nil {
+		cause = errors.New("")
+	}
+	statusErr := status.Error(code, cause.Error())
+	return grpcError{statusErr: statusErr, cause: cause}
+}
+func newGrpcError(code codes.Code, msg string) grpcError {
+	return newGrpcErrorFromCause(code, errors.New(msg))
+}
+func newGrpcErrorf(code codes.Code, format string, a ...interface{}) grpcError {
+	return newGrpcError(code, fmt.Sprintf(format, a...))
+}
+func (e grpcError) Error() string {
+	return e.statusErr.Error() + ": " + e.cause.Error()
+}
+func (e grpcError) Cause() error  { return e.cause }
+func (e grpcError) Unwrap() error { return e.cause }
+func (e grpcError) Format(s fmt.State, verb rune) {
+	switch verb {
+	case 'v':
+		if s.Flag('+') {
+			fmt.Fprintf(s, "%+v\n", e.Cause())
+			io.WriteString(s, e.statusErr.Error())
+			return
+		}
+		fallthrough
+	case 's', 'q':
+		io.WriteString(s, e.statusErr.Error())
+	}
+}
+func (e grpcError) GetStatusErr() error { return e.statusErr }
 
 func NewNonBlockingGRPCServer() *nonBlockingGRPCServer {
 	return &nonBlockingGRPCServer{}
@@ -134,6 +181,11 @@ func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 	if err != nil {
 		glog.Errorf("GRPC error: %+v for call: %s with request: %+v", err, info.FullMethod,
 			protosanitizer.StripSecrets(req))
+		var grpcErr grpcError
+		if errors.As(err, &grpcErr) {
+			// only forward statusErr
+			err = grpcErr.GetStatusErr()
+		}
 	} else {
 		glog.V(logLevel).Infof("GRPC response: %+v for call: %s with request: %+v",
 			protosanitizer.StripSecrets(resp), info.FullMethod, protosanitizer.StripSecrets(req))
