@@ -129,13 +129,14 @@ func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 		logLevel = LogVerbose
 	}
 
-	glog.V(logLevel).Infof("GRPC call: %s", info.FullMethod)
-	glog.V(logLevel).Infof("GRPC request: %+v", protosanitizer.StripSecrets(req))
+	glog.V(logLevel).Infof("GRPC call: %s with request: %+v", info.FullMethod, protosanitizer.StripSecrets(req))
 	resp, err := handler(ctx, req)
 	if err != nil {
-		glog.Errorf("GRPC error: %v", err)
+		glog.Errorf("GRPC error: %+v for call: %s with request: %+v", err, info.FullMethod,
+			protosanitizer.StripSecrets(req))
 	} else {
-		glog.V(logLevel).Infof("GRPC response: %+v", protosanitizer.StripSecrets(resp))
+		glog.V(logLevel).Infof("GRPC response: %+v for call: %s with request: %+v",
+			protosanitizer.StripSecrets(resp), info.FullMethod, protosanitizer.StripSecrets(req))
 	}
 	return resp, err
 }

@@ -31,12 +31,12 @@ type beegfsCtlExecutor struct{}
 // vol.volDirPathBeegfsRoot on the BeeGFS file system specified by vol.sysMgmtdHost. createDirectory returns an error
 // if it cannot create the directory, but does not return an error if the directory already exists.
 func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
-	glog.V(LogDebug).Infof("Creating directory for volume %s", vol.volumeID)
+	glog.V(LogDebug).Infof("Creating BeeGFS directory %s for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 	// Check if volume already exists.
 	_, err := ctlExec.statDirectoryForVolume(vol)
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
-		glog.V(LogDebug).Infof("Directory %s does not exist on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+		glog.V(LogDebug).Infof("BeeGFS directory %s does not exist for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 
 		// Create parent directories if necessary.
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
@@ -52,13 +52,13 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", "--access=0777", dir})
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
-				return errors.Errorf("cannot create directory %s on BeeGFS instance %s", dir, vol.sysMgmtdHost)
+				return errors.Wrapf(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
 			}
 		}
 	} else if err != nil {
 		return err
 	} else {
-		glog.V(LogDebug).Infof("Directory %s already exists on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+		glog.V(LogDebug).Infof("BeeGFS directory %s already exists for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, config s
 		args = append(args, vol.volDirPathBeegfsRoot)
 		_, err := ctlExec.execute(vol.clientConfPath, args)
 		if err != nil {
-			return errors.Errorf("cannot set pattern for directory %s on BeeGFS instance %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
+			return errors.WithMessagef(err, "cannot set pattern for BeeGFS directory %s for volume %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
 		}
 	}
 
@@ -132,11 +132,15 @@ func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut 
 		} else if strings.Contains(stdErrString, "exists already") {
 			err = errors.WithStack(newCtlExistError(stdOutString, stdErrString))
 		} else {
-			err = errors.Wrap(err, "beegfs-ctl failed")
+			err = errors.Wrapf(err, "beegfs-ctl failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
 		}
 	}
-	glog.V(LogVerbose).Infof(stdOutString)
-	glog.V(LogVerbose).Infof(stdErrString)
+	if stdOutString != "" {
+		glog.V(LogVerbose).Infof("stdout from %s: %s", cmd.Args, stdOutString)
+	}
+	if stdErrString != "" {
+		glog.V(LogVerbose).Infof("stdErr from %s: %s", cmd.Args, stdErrString)
+	}
 
 	return stdOutString, err
 }

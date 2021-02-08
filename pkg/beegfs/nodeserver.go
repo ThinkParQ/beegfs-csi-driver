@@ -89,7 +89,6 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	if err != nil {
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
-			glog.V(LogDebug).Infof("Making directories for mount point %s", targetPath)
 			if err = fs.MkdirAll(targetPath, 0750); err != nil {
 				return nil, status.Errorf(codes.Internal, "failed making directories for mount point %s: %s", targetPath, err.Error())
 			}
@@ -100,6 +99,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 	if !notMnt {
 		// The filesystem is already mounted. There is nothing to do.
+		glog.V(LogDebug).Infof("%s is already mounted to %s", vol.volumeID, vol.mountPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
@@ -134,7 +134,7 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
-	glog.V(LogDebug).Infof("Cleaning up mount point %s", targetPath)
+	glog.V(LogDebug).Infof("Unmounting %s from %s", volumeID, targetPath)
 	if err := mount.CleanupMountPoint(targetPath, ns.mounter, true); err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

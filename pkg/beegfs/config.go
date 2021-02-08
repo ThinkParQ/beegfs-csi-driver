@@ -154,7 +154,7 @@ func (plConfig *pluginConfig) stripConfig() {
 	for _, config := range beegfsConfigs {
 		for _, illegalOption := range illegalBeegfsConfOptions {
 			if val, present := config.BeegfsClientConf[illegalOption]; present {
-				glog.Warningf("Warning: illegal beegfs configuration option %s=%s found. Removing from config.\n",
+				glog.Warningf("Illegal beegfs configuration option %s=%s found and removed from config",
 					illegalOption, val)
 				delete(config.BeegfsClientConf, illegalOption)
 			}
