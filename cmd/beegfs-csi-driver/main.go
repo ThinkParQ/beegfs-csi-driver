@@ -57,9 +57,9 @@ func main() {
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(klogFlags)
 
-	// This block is almost identical to https://github.com/kubernetes/klog/blob/v2.5.0/examples/coexist_glog/coexist_glog.go
-	// The only modification is to the first if statement, so we only modify it if we are using a non-default value
-	// todo(jbostian): determine if we need to flag this as a derivative work
+	// This block is almost identical to
+	// https://github.com/kubernetes/klog/blob/v2.5.0/examples/coexist_glog/coexist_glog.go, which was released under
+	// the Apache 2.0 license. The only modification is to the first if statement.
 	// Sync the glog and klog flags.
 	flag.CommandLine.VisitAll(func(f1 *flag.Flag) {
 		f2 := klogFlags.Lookup(f1.Name)

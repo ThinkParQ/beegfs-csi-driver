@@ -106,8 +106,11 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	// Bind mount volDirPath onto TargetPath.
 	opts := []string{"bind"}
 	if readOnly {
-		// TODO(webere): When the driver runs in a container (as is standard in a K8s deployment), the bind mount
-		// appears read only within that container, but not outside the container (on the host or in another pod).
+		// TODO(webere, A143): Get read-only mounts propagating outside of the plugin container.
+		// When the driver runs in a container (as is standard in a K8s deployment), the bind mount appears read-only
+		// within that container, but not outside the container (on the host or in another pod). K8s read-only mounts
+		// still work as expected (due to a "last-mile" read-only bind mount into the K8s pod), but read-only may not
+		// work as expected for other COs.
 		opts = append(opts, "ro")
 	}
 	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
@@ -161,9 +164,6 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// TODO(jmccormi): Check and return all possible NodeStageVolume errors.
-	// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
-
 	// Ensure mountDirPath already exists (CO should have created req.StagingTargetPath).
 	_, err = fs.Stat(vol.mountDirPath)
 	if err != nil {
@@ -175,6 +175,8 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if err := mountIfNecessary(vol, ns.mounter); err != nil {
+		// TODO(webere, A144): Return the appropriate codes.NOT_FOUND if the problem is that we can't find the volume.
+		// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 

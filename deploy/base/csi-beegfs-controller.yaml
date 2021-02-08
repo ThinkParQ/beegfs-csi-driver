@@ -33,7 +33,6 @@ spec:
           args:
             - -v=5
             - --csi-address=/csi/csi.sock
-            - --feature-gates=Topology=true  # TODO(webere): evaluate this option
             - --volume-name-uuid-length=8
           volumeMounts:
             - mountPath: /csi

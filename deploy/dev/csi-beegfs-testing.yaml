@@ -10,8 +10,9 @@
 #
 # This is useful for testing with csi-sanity or csc.
 
-# TODO(webere): Fix (if necessary) and test this file. We may need to kustomize a socat container into the controller
-# pod and deploy another on an arbitrary node.
+# TODO(webere, A94): Get csi-beegfs-socat working with the new driver deployment.
+# csi-driver-hostpath uses this pod for csc and/or sanity testing. However, all of the pods/services in the
+# csi-driver-hostpath deployment colocate on one node and share one unix socket.
 
 apiVersion: v1
 kind: Service

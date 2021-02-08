@@ -231,11 +231,10 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	if confirmed {
 		return &csi.ValidateVolumeCapabilitiesResponse{
 			Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
-				// TODO(jparnell) if volume context is provided, could validate it too
-				// VolumeContext:      req.GetVolumeContext(),
+				// VolumeContext: req.GetVolumeContext(),  // Our volumes do not include a context.
 				VolumeCapabilities: volCaps,
-				// TODO(jparnell) if parameters are provided, could validate them too
-				// Parameters:      req.GetParameters(),
+				// TODO(webere, A142) Validate CreateVolumeRequest.parameters if provided.
+				// Parameters: req.GetParameters(),
 			},
 		}, nil
 	} else {
