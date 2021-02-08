@@ -14,10 +14,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var illegalBeegfsConfOptions = []string{
+// These parameters have no effect when specified in the beeGFSClientConf configuration section.
+var noEffectBeegfsConfOptions = []string{
 	"sysMgmtdHost",
 	"connClientPortUDP",
 	"connPortShift",
+}
+
+// These parameters are unsupported when specified in the beeGFSClientConf configuration section.
+var unsupportedBeegfsConfOptions = []string{
+	"connInterfacesFile",
+	"connNetFilterFile",
+	"connTcpOnlyFilterFile",
 }
 
 // beegfsConfig contains all of the custom configuration (above and beyond whatever is in the beegfs-client.conf file)
@@ -144,19 +152,26 @@ func (plConfig *pluginConfig) validateConfig() error {
 	return nil
 }
 
-// stripConfig removes any illegal beegfsConf options from the plugin configuration, logging a warning if any are found.
-// See deployment.md for the list of illegal options.
+// stripConfig removes any no-effect beegfsConf options from the plugin configuration, logging a warning if any are
+// found. It also logs a warning (but does not remove) any unsupported options it finds. See deployment.md for the list
+// of no-effect options.
 func (plConfig *pluginConfig) stripConfig() {
 	beegfsConfigs := []beegfsConfig{plConfig.DefaultConfig}
 	for _, config := range plConfig.FileSystemSpecificConfigs {
 		beegfsConfigs = append(beegfsConfigs, config.Config)
 	}
 	for _, config := range beegfsConfigs {
-		for _, illegalOption := range illegalBeegfsConfOptions {
-			if val, present := config.BeegfsClientConf[illegalOption]; present {
-				glog.Warningf("Illegal beegfs configuration option %s=%s found and removed from config",
-					illegalOption, val)
-				delete(config.BeegfsClientConf, illegalOption)
+		for _, noEffectOption := range noEffectBeegfsConfOptions {
+			if val, present := config.BeegfsClientConf[noEffectOption]; present {
+				glog.Warningf("No-effect beegfs configuration option %s=%s found and removed from config",
+					noEffectOption, val)
+				delete(config.BeegfsClientConf, noEffectOption)
+			}
+		}
+		for _, unsupportedOption := range unsupportedBeegfsConfOptions {
+			if val, present := config.BeegfsClientConf[unsupportedOption]; present {
+				glog.Warningf("Unsupported beegfs configuration option %s=%s found and left in config",
+					unsupportedOption, val)
 			}
 		}
 	}

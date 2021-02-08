@@ -197,8 +197,8 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-// Verifies that stripping a config removes any illegal options
-func TestStripIllegalConfig(t *testing.T) {
+// Verifies that stripping a config removes any options marked as "no effect"
+func TestStripNoEffectConfig(t *testing.T) {
 	originalConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
 	if err != nil {
 		t.Fatal(err)
@@ -207,17 +207,19 @@ func TestStripIllegalConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// introduce an illegal option in the default and filesystem configs
-	modifiedConfig.DefaultConfig.BeegfsClientConf[illegalBeegfsConfOptions[0]] = "illegaldefaultkey"
-	modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[illegalBeegfsConfOptions[0]] = "illegalfskey"
+	// introduce no-effect options in the default and filesystem configs
+	for _, noEffectOption := range noEffectBeegfsConfOptions {
+		modifiedConfig.DefaultConfig.BeegfsClientConf[noEffectOption] = "noeffectdefaultkey"
+		modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[noEffectOption] = "noeffectfskey"
+	}
 	modifiedConfig.stripConfig()
 	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
-		t.Fatalf("stripConfig() did not strip correctly. Original: %v, Stripped: %s",
+		t.Fatalf("stripConfig() did not strip correctly. Original: %v, Stripped: %v",
 			originalConfig, modifiedConfig)
 	}
 }
 
-// Verifies that stripping a config with no illegal options does nothing to the config
+// Verifies that stripping a config without unsupported or no-effect options does nothing to the config
 func TestStripCleanConfig(t *testing.T) {
 	originalConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
 	if err != nil {
@@ -229,7 +231,31 @@ func TestStripCleanConfig(t *testing.T) {
 	}
 	modifiedConfig.stripConfig()
 	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
-		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %s",
+		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %v",
+			originalConfig, modifiedConfig)
+	}
+}
+
+// Verifies that stripping a config with unsupported options does not remove them
+func TestStripUnsupportedConfig(t *testing.T) {
+	originalConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	modifiedConfig, err := parseConfigFromFile("testdata/basic.yaml", "testnode")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// introduce unsupported options in the default and filesystem configs
+	for _, unsupportedOption := range unsupportedBeegfsConfOptions {
+		originalConfig.DefaultConfig.BeegfsClientConf[unsupportedOption] = "unsupporteddefaultkey"
+		originalConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[unsupportedOption] = "unsupportedfskey"
+		modifiedConfig.DefaultConfig.BeegfsClientConf[unsupportedOption] = "unsupporteddefaultkey"
+		modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[unsupportedOption] = "unsupportedfskey"
+	}
+	modifiedConfig.stripConfig()
+	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
+		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %v",
 			originalConfig, modifiedConfig)
 	}
 }
