@@ -91,7 +91,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
 			if err = fs.MkdirAll(targetPath, 0750); err != nil {
-				err = errors.Wrapf(err, "failed making directories for mount point %s: %s", targetPath, err.Error())
+				err = errors.WithStack(err)
 				return nil, newGrpcErrorFromCause(codes.Internal, err)
 			}
 			notMnt = true
@@ -119,7 +119,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
-		err = errors.Wrapf(err, "failed to mount %s onto %s: %v", req.GetStagingTargetPath(), req.GetTargetPath(), err)
+		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
