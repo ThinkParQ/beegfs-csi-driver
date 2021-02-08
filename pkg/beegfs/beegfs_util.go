@@ -57,7 +57,7 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 // an existing beegfs-client.conf file at confTemplatePath and overriding its values with those specified in the
 // beegfsVolume's config. writeClientFiles assumes an empty directory has already been created at mountDirPath.
 func writeClientFiles(vol beegfsVolume, confTemplatePath string) (err error) {
-	glog.V(LogDebug).Infof("Writing client files from %s to %s", confTemplatePath, vol.volumeID)
+	glog.V(LogDebug).Infof("Writing client files for %s to %s", vol.volumeID, vol.mountDirPath)
 	connInterfacesFilePath := path.Join(vol.mountDirPath, "connInterfacesFile")
 	connNetFilterFilePath := path.Join(vol.mountDirPath, "connNetFilterFile")
 	connTcpOnlyFilterFilePath := path.Join(vol.mountDirPath, "connTcpOnlyFilterFile")
@@ -163,7 +163,6 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config pluginConfig) (retu
 // mountIfNecessary mounts a BeeGFS file system to vol.mountPath assuming configuration files have been written to
 // vol.mountDirPath by writeClientFiles.
 func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
-	glog.V(LogDebug).Infof("Mounting volume %s if necessary", vol.volumeID)
 	mountOpts := []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
 
 	// Check to make sure file system is not already mounted.
@@ -182,10 +181,11 @@ func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
 
 	if !notMnt {
 		// The filesystem is already mounted. There is nothing to do.
-		return errors.WithStack(err)
+		glog.V(LogDebug).Infof("%s is already mounted to %s", vol.volumeID, vol.mountPath)
+		return nil
 	}
 
-	glog.V(LogDebug).Infof("Mounting BeeGFS to %s", vol.mountPath)
+	glog.V(LogDebug).Infof("Mounting %s to %s", vol.volumeID, vol.mountPath)
 	if err = mounter.Mount("beegfs_nodev", vol.mountPath, "beegfs", mountOpts); err != nil {
 		return errors.WithStack(err)
 	}
@@ -198,7 +198,6 @@ func mountIfNecessary(vol beegfsVolume, mounter mount.Interface) (err error) {
 // all files under mountDirPath. unmountAndCleanUpIfNecessary also deletes mountDirPath if rmDir is set to true.
 // unmountAndCleanUpIfNecessary quietly continues WITHOUT error if the BeeGFS filesystem is not mounted.
 func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.Interface) (err error) {
-	glog.V(LogDebug).Infof("Unmounting volume %s and cleaning up if necessary", vol.volumeID)
 	// Decide whether or not to unmount BeeGFS filesystem by checking whether it is bind mounted somewhere else. We
 	// cannot use beegfsMounter.GetRefs() because we are bind mounting subdirectories (e.g. .../volume1/mount is the
 	// initial mount point but .../volume1/mount/volume1 is the directory we bind mount). beegfsMounter.GetRefs() is
@@ -215,18 +214,19 @@ func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.In
 			for _, opt := range entry.Opts {
 				if strings.Contains(opt, vol.clientConfPath) {
 					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
-					return errors.Errorf("refused to unmount staged file system at %v while bind mounted at %v",
+					return errors.Errorf("refused to unmount staged file system at %s while bind mounted at %s",
 						vol.mountPath, entry.Path)
 				}
 			}
 		}
 	}
 
+	glog.V(LogDebug).Infof("Unmounting %s from %s", vol.volumeID, vol.mountPath)
 	if err = mount.CleanupMountPoint(vol.mountPath, mounter, false); err != nil {
 		return errors.WithStack(err)
 	}
 	if err = cleanUpIfNecessary(vol, rmDir); err != nil {
-		return errors.WithMessagef(err, "error cleaning up volume %v", vol.volumeID)
+		return errors.WithMessagef(err, "failed to clean up %s for %s", vol.mountDirPath, vol.volumeID)
 	}
 	return nil
 }
@@ -234,7 +234,7 @@ func unmountAndCleanUpIfNecessary(vol beegfsVolume, rmDir bool, mounter mount.In
 // cleanUpIfNecessary deletes all files associated with a beegfsVolume (in vol.mountDirPath) that is not mounted. It
 // also deletes vol.mountDirPath if rmDir is set to true.
 func cleanUpIfNecessary(vol beegfsVolume, rmDir bool) (err error) {
-	glog.V(LogDebug).Infof("Cleaning up volume %s if necessary", vol.volumeID)
+	glog.V(LogDebug).Infof("Cleaning up %s for %s", vol.mountDirPath, vol.volumeID)
 	if rmDir == false {
 		dir, err := ioutil.ReadDir(vol.mountDirPath)
 		if err != nil {

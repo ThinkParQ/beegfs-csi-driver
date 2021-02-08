@@ -94,7 +94,6 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
 	}
-	glog.V(LogDebug).Infof("Cleaning up path %s", path.Join("/", volDirBasePathBeegfsRoot))
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
 	stripePatternConfig, err := getStripePatternParamsFromRequest(reqParams)
 	if err != nil {
@@ -107,10 +106,9 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we created the volume.
 		if err := cleanUpIfNecessary(vol, true); err != nil {
-			glog.Warningf("failed to clean up configuration directory: %v", err)
+			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
 		}
 	}()
-	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
@@ -151,10 +149,9 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we deleted the volume.
 		if err := unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
-			glog.Warningf("failed to clean up configuration directory: %v", err)
+			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
 		}
 	}()
-	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
@@ -166,7 +163,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Delete volume from mounted BeeGFS.
-	glog.V(LogDebug).Infof("Removing %s from filesystem %s", vol.volDirPath, vol.sysMgmtdHost)
+	glog.V(LogDebug).Infof("Deleting BeeGFS directory %s for %s", vol.volDirBasePathBeegfsRoot, vol.volumeID)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
 		return nil, status.Errorf(codes.Internal, "error removing volume %s: %s", vol.volDirPath, err.Error())
 	}
@@ -209,10 +206,9 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not the volume exists.
 		if err := cleanUpIfNecessary(vol, true); err != nil {
-			glog.Warningf("failed to clean up configuration directory: %v", err)
+			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
 		}
 	}()
-	glog.V(LogDebug).Infof("Making directories for %s", vol.mountDirPath)
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		return nil, status.Errorf(codes.Internal, "error making directories for mount dir %s: %s", vol.mountDirPath, err.Error())
 	}
