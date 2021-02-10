@@ -53,7 +53,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: LOG_LEVEL_ARG
-              value: ""  # e.g. -v=5 to override the default log level.
+              value: -v=3
           securityContext:
             privileged: true  # Privileged is required for bidirectional mount propagation and to run the mount command.
           ports:
