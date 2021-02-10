@@ -3,9 +3,11 @@
 ## Contents 
 * [Overview](#overview)
 * [Getting Started](#getting-started)
-* [Basic Use](#basic-use)
-  * [Examples](#examples)
-* [Submitting Feedback and Reporting Issues](#submitting-feedback-and-reporting-issues)
+* [Basic Use and Examples](#basic-use)
+* [Best Practices](#best-practices)
+* [Driver Limitations](#driver-limitations)
+* [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
+* [Requesting Enhancements and Reporting Issues ](#requesting-enhancements-and-reporting-issues)
 * [License](#license)
 * [Maintainers](#maintainers)
 
@@ -21,11 +23,13 @@ The BeeGFS Container Storage Interface (CSI) driver provides high performing and
 * Support for ReadWriteOnce, ReadOnlyMany, and ReadWriteMany access modes allow workloads distributed across multiple Kubernetes nodes to share access to the same working directories and enable multi-user/application access to common datasets.
 
 ### Interoperability and CSI Feature Matrix
-| beegfs.csi.netapp.com | K8s Versions  | BeeGFS Versions | CSI Versions | Persistence | Supported Access Modes   | Dynamic Provisioning |
-| ----------------------| ------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
+| beegfs.csi.netapp.com  | K8s Versions  | BeeGFS Versions | CSI Versions | Persistence | Supported Access Modes   | Dynamic Provisioning |
+| -----------------------| ------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
 | v1.0.0                 | 1.19          | 7.2, 7.1.5      | 1.0+         | Persistent  | Read/Write Multiple Pods | Yes                  |  
 
-Note: This matrix indicates tested BeeGFS and Kubernetes versions. The driver is expected to work with other versions of Kubernetes, but extensive testing has not been performed.
+Additional Notes:
+* This matrix indicates tested BeeGFS and Kubernetes versions. The driver is expected to work with other versions of Kubernetes, but extensive testing has not been performed, and changes to the deployment manifests are required.
+* The driver has not been tested with SELinux.
 
 ## Getting Started 
 
@@ -33,12 +37,17 @@ Note: This matrix indicates tested BeeGFS and Kubernetes versions. The driver is
 
 * Deploying the driver requires access to a terminal with `kubectl`. 
 * The BeeGFS client must be preinstalled to each Kubernetes node that needs BeeGFS access. 
-* One or more existing BeeGFS file systems should be available to the Kubernetes nodes over a TCP/IP and/or RDMA (InfiniBand/RoCE) capable network. 
+* One or more existing BeeGFS file systems should be available to the Kubernetes nodes over a TCP/IP and/or RDMA (InfiniBand/RoCE) capable network (not required to deploy the driver).
 
 ### Quick Start
-The steps in this section allow you to get the driver up and running quickly. For production use cases it is recommended to read through the full [deployment guide](docs/deployment.md).
+The steps in this section allow you to get the driver up and running quickly. For production use cases or air-gapped environments it is recommended to read through the full [deployment guide](docs/deployment.md). 
 
-#TODO: Outline steps. 
+1. One a machine with `kubectl` and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository:`git clone https://github.com/NetApp/beegfs-csi-driver.git`
+2. Switch to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
+    * Note by default the beegfs-csi-driver image will be pulled from [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
+3. Verify all components are installed and operational: `kubectl get pods -n kube-system | grep csi-beegfs`
+
+Provided all pods are running the driver is now ready for use. See the following sections for how to get started using the driver.
 
 ## Basic Use
 
@@ -56,7 +65,20 @@ Administrators create a PV and PVC representing an existing directory in a BeeGF
 
 [Example Kubernetes manifests](examples/README.md) of how to use the driver are provided. These are meant to be repurposed to simplify creating objects related to the driver including storage classes, persistent volumes, and persistent volumes claims in your environment.
 
-## Submitting Feedback and Reporting Issues 
+## Best Practices
+* While multiple Kubernetes clusters can use the same BeeGFS file system, it is not recommended to have more than one cluster use the same `volDirBasePath` within the same file system.
+
+## Driver Limitations
+* Each BeeGFS instance used with the driver must have a unique BeeGFS management IP address.
+
+## Notes for BeeGFS Administrators
+
+### Memory Consumption with RDMA
+For performance (and other) reasons each persistent volume used on a given Kubernetes node has a separate mount point. When using remote direct memory access (RDMA) this will increase the amount of memory used for RDMA queue pairs between BeeGFS clients (K8s nodes) and BeeGFS servers. As of BeeGFS 7.2 this is around 12-13MB per mount for each client connection to a BeeGFS storage/metadata service. 
+
+Since clients only open connections when needed this is unlikely to be an issue, but in some large environments may result in unexpected memory utilization. This is much more likely to be an issue on BeeGFS storage and metadata servers than the Kubernetes nodes themselves (since multiple clients connect to each server). Administrators are advised to spec out BeeGFS servers accordingly.
+
+## Requesting Enhancements and Reporting Issues 
 
 If you have any questions, feature requests, or would like to report an issue please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
 
