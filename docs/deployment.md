@@ -1,8 +1,5 @@
 # BeeGFS CSI Driver Deployment
 
-## General Deployment
-TODO: when we know how
-
 ## Kubernetes Node Preparation
 The following packages MUST be installed on any Kubernetes node (master OR 
 worker) that runs a component of the driver:
