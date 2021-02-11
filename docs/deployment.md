@@ -22,6 +22,8 @@ The following MUST be completed on any Kubernetes node (master OR worker) that r
   * beegfs-helperd
 * Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd && systemctl enable beegfs-helperd`
 
+IMPORTANT: By default the driver uses the beegfs-client.conf file at */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the location of this file is not currently supported without changing kustomization files. 
+
 ### Kubernetes Deployment
 Deployment manifests are provided in this repository under *deploy/* along with a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply -k` (kustomize). 
 
@@ -29,7 +31,7 @@ Steps:
 * On a machine with kubectl and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository: `git clone https://github.com/NetApp/beegfs-csi-driver.git`
 * If you wish to modify the default BeeGFS client configuration fill in the empty ConfigMap at *deploy/prod/csi-beegfs-config.yaml*.
   * An example ConfigMap is provided at *deploy/prod/csi-beegfs-config-example.yaml*. Please see the section on [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration) for full details. 
-* Switch to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
+* Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
   * Note by default the beegfs-csi-driver image will be pulled from [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver). See [this section](#air-gapped-kubernetes-deployment) for guidance deploying in offline environments. 
 * Verify all components are installed and operational: `kubectl get pods -n kube-system | grep csi-beegfs`
 
@@ -53,6 +55,8 @@ csi-beegfs-node-2h6ff                     3/3     Running   0          2m27s
 csi-beegfs-node-dkcr5                     3/3     Running   0          2m27s
 csi-beegfs-node-ntcpc                     3/3     Running   0          2m27s
 ```
+Note the `csi-beegfs-node-#####` pods are part of a DaemonSet, so the number you see will correspond to the number of Kubernetes worker nodes in your environment.
+
 Next Steps:
 * If you want a quick example on how to get started with the driver see the [Example Application Deployment](#example-application-deployment) section. 
 * For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md) documentation.
@@ -65,7 +69,7 @@ registries. You must either ensure all necessary images (see
 *deploy/prod/kustomization.yaml* for a complete list) are available on all nodes, 
 or ensure they can be pulled from some internal registry.
 
-One option if your air-gapped environment does not have a DockerHub mirror, you can pull the necessary images from a machine with access to the internet (example: `docker pull netapp/beegfs-csi-driver`) then save them as tar files with [docker save](https://docs.docker.com/engine/reference/commandline/save/) so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker load](https://docs.docker.com/engine/reference/commandline/load/).
+If your air-gapped environment does not have a DockerHub mirror, one option is pulling the necessary images from a machine with access to the internet (example: `docker pull netapp/beegfs-csi-driver`) then save them as tar files with [docker save](https://docs.docker.com/engine/reference/commandline/save/) so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker load](https://docs.docker.com/engine/reference/commandline/load/).
 
 Once the images are available, either modify *deploy/prod/kustomization.yaml* or copy *deploy/prod/* to a new directory (e.g. *deploy/internal*). Adjust the `images[].newTag` fields as 
 necessary to ensure they either match images that exist on the Kubernetes nodes 
@@ -100,7 +104,7 @@ the output above)
 cluster among all k8s clusters accessing this BeeGFS file system.
 
 From the project directory, deploy the application files found in the 
-*examples/dyn/* directory, including a storage class, a PVC, and a pod which
+*examples/dyn/* directory, including a Storage Class, a PVC, and a pod which
 mounts a volume using the BeeGFS CSI driver:
 
 ```bash
@@ -276,7 +280,7 @@ The order of precedence for configuration option overrides is described by
 follows: 
 
 >config < fileSystemSpecificConfig < nodeSpecificConfig.config < 
-nodeSpecificConfig.fileSystemSpecificConfig. 
+nodeSpecificConfig.fileSystemSpecificConfig 
 
 When conflicts occur between 
 configurations of equal precedence, configuration set lower in the file takes 
@@ -427,6 +431,6 @@ If you're experiencing any issues, find functionality lacking, or our documentat
 
 The driver can be removed using `kubectl delete -k` (kustomize) and the original deployment manifests. On a machine with kubectl and access to the Kubernetes cluster you want to remove the BeeGFS CSI driver from: 
 
-* Remove any storage classes, persistent volumes, and persistent volume claims associated with the driver. 
+* Remove any Storage Classes, Persistent Volumes, and Persistent Volume Claims associated with the driver. 
 * Set the working directory to the beegfs-csi-driver repository containing the manifests used to deploy the driver.
 * Run the following command to remove the driver: `kubectl delete -k deploy/prod`

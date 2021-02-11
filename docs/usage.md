@@ -23,16 +23,13 @@ can be a volume (e.g. by specifying */a/very/deep/directory* as the
 
 ### Capacity
 
-In this version, if a Kubernetes Persistent Volume is created with a certain 
-capacity, the driver will do absolutely nothing with that information. 
-Consider the definition of a "volume" above. While an entire BeeGFS
-filesystem may have a usable capacity of 100GiB, there is very little meaning
-associated with the "usable capacity" of a directory within a BeeGFS (or any
-POSIX) filesystem. Future versions of this driver may use BeeGFS enterprise
-features like [Quota Enforcement](https://doc.beegfs.io/latest/advanced_topics/quota.html) to guarantee that the capacity provisioned by the driver is not exceeded.
-
-NOTE: None of the examples in this document specify a capacity or capacity
-request.
+In this version, the driver ignores the capacity requested for a Kubernetes Persistent 
+Volume. Consider the definition of a "volume" above. While an entire BeeGFS filesystem 
+may have a usable capacity of 100GiB, there is very little meaning associated with the 
+"usable capacity" of a directory within a BeeGFS (or any POSIX) filesystem. Future 
+versions of this driver may use BeeGFS enterprise features like 
+[Quota Enforcement](https://doc.beegfs.io/latest/advanced_topics/quota.html) 
+to guarantee that the capacity provisioned by the driver is not exceeded.
 
 ### Static vs Dynamic Provisioning
 
@@ -68,7 +65,7 @@ directory contains.
 ### BeeGFS Version Compatibility
 
 This version of the driver is ONLY tested for compatibility with BeeGFS
-v7.1(.4+) and v7.2. The BeeGFS filesystem services and the BeeGFS clients
+v7.1.5 and v7.2. The BeeGFS filesystem services and the BeeGFS clients
 running on the Kubernetes nodes MUST be the same major.minor version, and
 [beegfsClientConf parameters](deployment.md) passed in the configuration file
 MUST apply to the version in use. The driver will log an error and refuse to
@@ -129,9 +126,9 @@ parameters are passed, the newly created subdirectory will have the same
 striping configuration as its parent. The following parameters have been tested 
 with the driver:
 
-* `storagepoolid`
-* `chunksize`
-* `numtargets`
+* `storagePoolID`
+* `chunkSize`
+* `numTargets`
 
 NOTE: The effects of unlisted configuration options are NOT tested with the
 driver. Contact your BeeGFS support representative for recommendations on
@@ -213,8 +210,7 @@ interest into a Pod from the `volumeHandle` field in the `csi` block of the
 Persistent Volume `spec` block. It MUST be formatted as modeled in the example.
 
 NOTE: The driver does NOT provide a way to modify the stripe settings of a
-directory in the static provisioning workflow. Any `beegfsStripe/` prefixed
-parameters set here will be ignored.
+directory in the static provisioning workflow.
 
 ```yaml
 apiVersion: v1
@@ -259,11 +255,16 @@ created Kubernetes Persistent Volume Claim.
 
 ## Best Practices
 * While multiple Kubernetes clusters can use the same BeeGFS file system, it is not recommended to have more than one cluster use the same `volDirBasePath` within the same file system.
+* Do not rely on Kubernetes [access modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) to prevent directory contents from being overwritten, and set sensible permissions, especially on static directories containing shared datasets (more details [below](#read-only-and-access-modes-in-kubernetes)). 
 
 ## Notes for BeeGFS Administrators
 
+### General
+
+* By default the driver uses the beegfs-client.conf file at */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the location of this file is not currently supported without changing kustomization files. 
+
 ### Memory Consumption with RDMA
-For performance (and other) reasons each persistent volume used on a given Kubernetes node has a separate mount point. When using remote direct memory access (RDMA) this will increase the amount of memory used for RDMA queue pairs between BeeGFS clients (K8s nodes) and BeeGFS servers. As of BeeGFS 7.2 this is around 12-13MB per mount for each client connection to a BeeGFS storage/metadata service. 
+For performance (and other) reasons each Persistent Volume used on a given Kubernetes node has a separate mount point. When using remote direct memory access (RDMA) this will increase the amount of memory used for RDMA queue pairs between BeeGFS clients (K8s nodes) and BeeGFS servers. As of BeeGFS 7.2 this is around 12-13MB per mount for each client connection to a BeeGFS storage/metadata service. 
 
 Since clients only open connections when needed this is unlikely to be an issue, but in some large environments may result in unexpected memory utilization. This is much more likely to be an issue on BeeGFS storage and metadata servers than the Kubernetes nodes themselves (since multiple clients connect to each server). Administrators are advised to spec out BeeGFS servers accordingly.
 
@@ -273,6 +274,12 @@ Since clients only open connections when needed this is unlikely to be an issue,
 
 * Each BeeGFS instance used with the driver must have a unique BeeGFS management IP address.
 
+### Read Only and Access Modes in Kubernetes
+
+Access modes in Kubernetes are how a driver understands what K8s wants to do with a volume, but do not strictly enforce behavior. This may result in unexpected behavior if administrators expect creating a Persistent Volume with (for example) `ReadOnlyMany` access will enforce read only access across all nodes accessing the volume. This is a larger issue with Kubernetes/CSI ecosystem and not specific to the BeeGFS driver. Some relevant discussion can be found in this [GitHub issue](https://github.com/kubernetes/kubernetes/issues/70505).
+
+While moving forward we plan to look at ways the driver could better enforce read only capabilities, doing so will likely require us to deviate slightly from the CSI spec. In the meantime one workaround is to set permissions on static BeeGFS directories so they cannot be overwritten. Note pods running with root permissions could ignore this. 
+
 ### 0777 mode BeeGFS directories created during provisioning
 
 BeeGFS directories created by this driver during provisioning have mode 0777.
@@ -281,7 +288,7 @@ BeeGFS directories created by this driver during provisioning have mode 0777.
 
 The `volume_id` used by this CSI is in the format of a Uniform Resource Identifier (URI) generated by aggregating several fields' values including a path within a BeeGFS file system.
 - In the case of dynamic provisioning, the fields within the StorageClass object (`sc`) and CreateVolumeRequest message (`cvr`) combine to yield the `volume_id`: `beegfs://{sc.parameters.sysMgmtdHost}/{sc.parameters.volDirBasePath}/{cvr.name}`
-- In the case of static provisioning, the fields within the PersistentVolume object (`pv`) and CreateVolumeRequest message (`cvr`) combine to yield the `volume_id`: `{pv.spec.csi.volumeHandle}/{cvr.name}`
+- In the case of static provisioning, the `volume_id` is written directly by the administrator into the Persistent Volume object (`pv`) as the `pv.spec.volumeHandle`. 
 
 In either case the resulting `volume_id` URI is generally of the format `beegfs://ip-or-domain-name/path/to/sub/directory/volume_name`.
 
