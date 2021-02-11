@@ -1,14 +1,39 @@
 # BeeGFS CSI Driver Deployment
 
-## Kubernetes Node Preparation
-The following packages MUST be installed on any Kubernetes node (master OR 
-worker) that runs a component of the driver:
-* beegfs-client-dkms
-* beegfs-helperd (enabled and running under systemd)
+## Contents
+* [Deploying to Kubernetes](#deploying-to-kubernetes)
+  * [Kubernetes Node Preparation](#kubernetes-node-preparation)
+  * [Kubernetes Deployment](#kubernetes-deployment)
+  * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
+* [Example Application Deployment](#example-application-deployment)
+* [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
+  * [General Configuration](#general-configuration)
+  * [Kubernetes Configuration](#kubernetes-configuration)
+  * [BeeGFS Client Parameters](#beegfs-client-parameters-(beeGFSClientConf)) 
+* [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
-## Kubernetes Deployment
-For a completely out-of-the-box deployment, verify you have kubectl access to a 
-cluster and use "kubectl apply -k" (kustomize).
+## Deploying to Kubernetes
+
+### Kubernetes Node Preparation
+The following MUST be completed on any Kubernetes node (master OR worker) that runs a component of the driver:
+* Download the [BeeGFS Repository File](https://doc.beegfs.io/latest/advanced_topics/manual_installation.html) for your Linux distribution to the appropriate directory.
+* Using the appropriate package manager for your Linux distribution (i.e. yum, apt, zypper) install the following packages: 
+  * beegfs-client-dkms
+  * beegfs-helperd
+* Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd && systemctl enable beegfs-helperd`
+
+### Kubernetes Deployment
+Deployment manifests are provided in this repository under deploy/ along with a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply -k` (kustomize). 
+
+Steps:
+* On a machine with `kubectl` and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository: `git clone https://github.com/NetApp/beegfs-csi-driver.git`
+* If you wish to modify the default BeeGFS client configuration fill in the empty ConfigMap at deploy/prod/csi-beegfs-config.yaml.
+  * An example ConfigMap is provided at deploy/prod/csi-beegfs-config-example.yaml. Please see the section on [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration) for full details. 
+* Switch to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
+  * Note by default the beegfs-csi-driver image will be pulled from [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver). See [here](#air-gapped-kubernetes-deployment) for guidance deploying in offline environments. 
+* Verify all components are installed and operational: `kubectl get pods -n kube-system | grep csi-beegfs`
+
+Example command outputs: 
 
 ```bash
 -> kubectl cluster-info
@@ -21,25 +46,28 @@ clusterrolebinding.rbac.authorization.k8s.io/csi-beegfs-provisioner-binding crea
 statefulset.apps/csi-beegfs-controller created
 daemonset.apps/csi-beegfs-node created
 csidriver.storage.k8s.io/beegfs.csi.netapp.com created
-```
 
-Verify all components installed and are operational.
-
-```bash
 -> kubectl get pods -n kube-system | grep csi-beegfs
 csi-beegfs-controller-0                   2/2     Running   0          2m27s
 csi-beegfs-node-2h6ff                     3/3     Running   0          2m27s
 csi-beegfs-node-dkcr5                     3/3     Running   0          2m27s
 csi-beegfs-node-ntcpc                     3/3     Running   0          2m27s
 ```
+Next Steps:
+* If you want a quick example on how to get started with the driver see the [Example Application Deployment](#example-application-deployment) section. 
+* For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md) documentation.
 
-## Air-Gapped Kubernetes Deployment
-You must either ensure all necessary images (see 
-deploy/prod/kustomization.yaml for a complete list) are available on all nodes 
+### Air-Gapped Kubernetes Deployment
+This section provides guidance on deploying the BeeGFS CSI driver in environments where Kubernetes nodes do not have internet access. 
+
+Deploying the CSI driver involves pulling multiple Docker images from various Docker 
+registries. You must either ensure all necessary images (see 
+deploy/prod/kustomization.yaml for a complete list) are available on all nodes, 
 or ensure they can be pulled from some internal registry.
 
-Either modify deploy/prod/kustomization.yaml or copy deploy/prod/ to a new 
-directory (e.g. deploy/internal). Adjust the images[].newTag fields as 
+One option if your air-gapped environment does not have a DockerHub mirror, you can pull the necessary images from a machine with access to the internet (example: `docker pull netapp/beegfs-csi-driver`) then save them as tar files with [docker save](https://docs.docker.com/engine/reference/commandline/save/) so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker load](https://docs.docker.com/engine/reference/commandline/load/).
+
+Once the images are available, either modify deploy/prod/kustomization.yaml or copy deploy/prod/ to a new directory (e.g. deploy/internal). Adjust the images[].newTag fields as 
 necessary to ensure they either match images that exist on the Kubernetes nodes 
 or reference your internal registry. Then follow the above commands for 
 Kubernetes deployment.
@@ -196,7 +224,17 @@ ls /mnt/beegfs/k8s/my-cluster-name/pvc-7621fab2/
 touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
 ```
 
-## General Configuration
+Next Steps:
+* For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md) documentation.
+
+## Managing BeeGFS Client Configuration
+
+Currently the only tested and supported container orchestrator (CO) for the BeeGFS CSI 
+driver is Kubernetes. Notes in the General Configuration section below would apply to 
+other COs if supported. For Kubernetes the preferred method to apply desired BeeGFS Client 
+configuration is using a Kubernetes ConfigMap. 
+
+### General Configuration
 
 The driver is ready to be used right out of the box, but many environments may
 either require or benefit from additional configuration.
@@ -215,18 +253,21 @@ configuration than others. This requirement can be handled in one of two ways:
 2. The administrator creates one global configuration file with a 
    *nodeSpecificConfigs* section and specifies the --node-id CLI flag on each 
    node when starting the driver.
+     * Note: Deploying to Kubernetes using the provided manifests in deploy/
+    handles setting this flag and deploying a ConfigMap representing 
+     this global configuration file.  
 
 Kubernetes deployment greatly simplifies the distribution of a global 
 configuration file using the second approach and is the de-facto standard 
 way to deploy the driver. See [Kubernetes
 Configuration](#kubernetes-configuration) for details.
 
-The *beegfsClientConf* section contains parameters taken directly out of a
-beegfs-client.conf configuration file. In particular, the beegfs-client.conf 
-file contains a number of references to other files (e.g. 
+In the example below, the *beegfsClientConf* section contains parameters 
+taken directly out of a beegfs-client.conf configuration file. In particular, 
+the beegfs-client.conf file contains a number of references to other files (e.g. 
 *connInterfacesFile*). The CSI configuration file instead expects a YAML list,
-which it uses to generate the expected file. See [beegfsClientConf
-Parameters](#beegfsclientconf-parameters) for more detail about supported
+which it uses to generate the expected file. See [BeeGFS Client Parameters
+](#beegfs-client-parameters-(beeGFSClientConf)) for more detail about supported
 beegfsClientConf parameters.
 
 The order of precedence for configuration option overrides is described by
@@ -263,7 +304,7 @@ fileSystemSpecificConfigs:  # OPTIONAL
     config:  # as above
 
     # for a specific filesystem; PRECEDENCE 2
-  - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
+  - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.100
     config:  # as above
 
 nodeSpecificConfigs:  # OPTIONAL
@@ -284,7 +325,7 @@ nodeSpecificConfigs:  # OPTIONAL
     fileSystemSpecificConfigs:  # as above
 ```
 
-## Kubernetes Configuration
+### Kubernetes Configuration
 
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
 configuration for all Kubernetes nodes. When the driver starts up on a node, it 
@@ -305,7 +346,7 @@ from [Kubernetes Deployment](#kubernetes-deployment). Kustomize will
 automatically update all components and restart the driver on all nodes so that 
 it picks up the latest changes.
 
-## beeGFSClientConf Parameters
+### BeeGFS Client Parameters (beegfsClientConf)
 
 The following beegfs-client.conf parameters appear in the BeeGFS v7.2
 [beegfs-client.conf
@@ -313,7 +354,7 @@ file](https://git.beegfs.io/pub/v7/-/blob/7.2/client_module/build/dist/etc/beegf
 Other parameters may exist for newer or older BeeGFS versions. The list a
 parameter falls under determines its level of support in the driver.
 
-### No Effect
+#### No Effect
 
 These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or are determined dynamically and
 have no effect when specified in the beeGFSClientConf configuration section.
@@ -324,12 +365,12 @@ have no effect when specified in the beeGFSClientConf configuration section.
   multiple filesystem mounts.
   On Linux the selected ephemeral port is constrained by the values of
   [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).
-  [Ensure that firewalls allow UDP traffic](https://www.beegfs.io/wiki/NetworkTuning#hn_59ca4f8bbb_4)
+  [Ensure that firewalls allow UDP traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat)
   between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver
   nodes.)
 * connPortShift
 
-### Unsupported
+#### Unsupported
 
 These parameters are specified elsewhere and may exhibit undocumented behavior
 if specified here.
@@ -338,7 +379,7 @@ if specified here.
 * connNetFilterFile
 * connTcpOnlyFilterFile
 
-### Untested
+#### Untested
 
 These parameters SHOULD result in the desired effect but have not been tested.
 
@@ -374,3 +415,13 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * tuneUseGlobalAppendLocks
 * tuneUseGlobalFileLocks
 * sysACLsEnabled
+
+## Removing the Driver from Kubernetes
+
+If you're experiencing any issues, find functionality lacking, or our documentation is unclear, we'd appreciate if you let us know: https://github.com/NetApp/beegfs-csi-driver/issues. 
+
+The driver can be removed using `kubectl delete -k` (kustomize) and the original deployment manifests. On a machine with `kubectl` and access to the Kubernetes cluster you want to remove the BeeGFS CSI driver from: 
+
+* Remove any storage classes, persistent volumes, and persistent volume claims associated with the driver. 
+* Set the working directory to the beegfs-csi-driver repository containing the manifests used to deploy the driver.
+* Run the following command to remove the driver: `kubectl delete -k deploy/prod`

@@ -37,12 +37,13 @@ Additional Notes:
 
 * Deploying the driver requires access to a terminal with `kubectl`. 
 * The BeeGFS client must be preinstalled to each Kubernetes node that needs BeeGFS access. 
+* Each BeeGFS mount point uses a ephemeral UDP port. On Linux the selected ephemeral port is constrained by the values of [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables). [Ensure that firewalls allow UDP traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat) between BeeGFS management/metadata/storage nodes and ephemeral ports on Kubernetes nodes.
 * One or more existing BeeGFS file systems should be available to the Kubernetes nodes over a TCP/IP and/or RDMA (InfiniBand/RoCE) capable network (not required to deploy the driver).
 
 ### Quick Start
 The steps in this section allow you to get the driver up and running quickly. For production use cases or air-gapped environments it is recommended to read through the full [deployment guide](docs/deployment.md). 
 
-1. One a machine with `kubectl` and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository:`git clone https://github.com/NetApp/beegfs-csi-driver.git`
+1. One a machine with `kubectl` and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository: `git clone https://github.com/NetApp/beegfs-csi-driver.git`
 2. Switch to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
     * Note by default the beegfs-csi-driver image will be pulled from [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
 3. Verify all components are installed and operational: `kubectl get pods -n kube-system | grep csi-beegfs`
