@@ -1,0 +1,125 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: test-sts
+spec:
+  selector:
+    matchLabels:
+      app: test-sts
+  serviceName: test-sts
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: test-sts
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: test
+                      operator:  Exists
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      containers:
+        - name: app
+          image: alpine:latest
+          env:
+            - name: POD_UUID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+          volumeMounts:
+          - mountPath: /mnt/dyn-fs1-pvc1
+            name: dyn-fs1-pvc1
+          - mountPath: /mnt/dyn-fs1-pvc2
+            name: dyn-fs1-pvc2
+          - mountPath: /mnt/dyn-fs2-pvc1
+            name: dyn-fs2-pvc1
+          - mountPath: /mnt/dyn-fs2-pvc2
+            name: dyn-fs2-pvc2
+          - mountPath: /mnt/static-fs1-pvc1
+            name: static-fs1-pvc1
+          - mountPath: /mnt/static-fs1-pvc2
+            name: static-fs1-pvc2
+          - mountPath: /mnt/static-fs1-pvcro
+            name: static-fs1-pvcro
+          - mountPath: /mnt/static-fs2-pvc1
+            name: static-fs2-pvc1
+          - mountPath: /mnt/static-fs2-pvc2
+            name: static-fs2-pvc2
+          command:
+            - ash
+            - -c
+            - >-
+              touch "/mnt/dyn-fs1-pvc1/touched-by-${POD_UUID}" &&
+              touch "/mnt/dyn-fs1-pvc2/touched-by-${POD_UUID}" &&
+              touch "/mnt/dyn-fs2-pvc1/touched-by-${POD_UUID}" &&
+              touch "/mnt/dyn-fs2-pvc2/touched-by-${POD_UUID}" &&
+              touch "/mnt/static-fs1-pvc1/touched-by-${POD_UUID}" &&
+              touch "/mnt/static-fs1-pvc2/touched-by-${POD_UUID}" &&
+              touch "/mnt/static-fs2-pvc1/touched-by-${POD_UUID}" &&
+              touch "/mnt/static-fs2-pvc2/touched-by-${POD_UUID}" &&
+              sleep 7d
+        - name: app-non-root
+          image: alpine:latest
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+          volumeMounts:
+            - mountPath: /mnt/dyn-fs1-pvc1
+              name: dyn-fs1-pvc1
+            - mountPath: /mnt/dyn-fs1-pvc2
+              name: dyn-fs1-pvc2
+            - mountPath: /mnt/dyn-fs2-pvc1
+              name: dyn-fs2-pvc1
+            - mountPath: /mnt/dyn-fs2-pvc2
+              name: dyn-fs2-pvc2
+            - mountPath: /mnt/static-fs1-pvc1
+              name: static-fs1-pvc1
+            - mountPath: /mnt/static-fs1-pvc2
+              name: static-fs1-pvc2
+            - mountPath: /mnt/static-fs1-pvcro
+              name: static-fs1-pvcro
+            - mountPath: /mnt/static-fs2-pvc1
+              name: static-fs2-pvc1
+            - mountPath: /mnt/static-fs2-pvc2
+              name: static-fs2-pvc2
+          command:
+            - ash
+            - -c
+            - sleep 7d
+      volumes:
+        - name: dyn-fs1-pvc1
+          persistentVolumeClaim:
+            claimName: test-dyn-fs1-pvc1
+        - name: dyn-fs1-pvc2
+          persistentVolumeClaim:
+            claimName: test-dyn-fs1-pvc2
+        - name: dyn-fs2-pvc1
+          persistentVolumeClaim:
+            claimName: test-dyn-fs2-pvc1
+        - name: dyn-fs2-pvc2
+          persistentVolumeClaim:
+            claimName: test-dyn-fs2-pvc2
+        - name: static-fs1-pvc1
+          persistentVolumeClaim:
+            claimName: test-static-fs1-pvc1
+        - name: static-fs1-pvc2
+          persistentVolumeClaim:
+            claimName: test-static-fs1-pvc2
+        - name: static-fs1-pvcro
+          persistentVolumeClaim:
+            claimName: test-static-fs1-pvcro
+            readOnly: true
+        - name: static-fs2-pvc1
+          persistentVolumeClaim:
+            claimName: test-static-fs2-pvc1
+        - name: static-fs2-pvc2
+          persistentVolumeClaim:
+            claimName: test-static-fs2-pvc2

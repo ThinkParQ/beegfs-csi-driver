@@ -1,0 +1,14 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Use this file as instructed in the General Configuration section of ../../docs/deployment.md. See
+# ../prod/csi-beegfs-config.yaml.example for a worst-case example of what to put in this file. Kustomize will
+# automatically transform this file into a correct ConfigMap readable by the deployed driver. If this file is left
+# unmodified, the driver will deploy correctly with no custom configuration.
+
+fileSystemSpecificConfigs:
+  - sysMgmtdHost: scspa2061750001.rtp.openenglab.netapp.com
+    config:
+      beegfsClientConf:
+        connMgmtdPortTCP: 9009
+        connMgmtdPortUDP: 9009
