@@ -1,4 +1,47 @@
-## Kubernetes Deployment
+# BeeGFS CSI Driver Developer Documentation
+
+## Contents
+* [Overview](#overview)
+* [Building the Project](#building-the-project)
+* [Developer Kubernetes Deployment](#developer-kubernetes-deployment)
+
+## Overview 
+This repository hosts the BeeGFS CSI Driver and all of its build and dependent configuration files to deploy the driver.
+
+## Building the Project 
+
+### Building the binaries
+If you want to build the driver yourself, you can do so with the following command from the root directory:
+
+```shell
+make
+```
+
+### Building the containers
+
+```shell
+make container
+```
+
+### Building and pushing the containers
+
+```shell
+make push
+```
+
+Optionally set `REGISTRY_NAME` or `IMAGE_TAGS`:
+
+```shell
+# Prerequisite(s):
+#   Change "docker.repo.eng.netapp.com/${USER}".
+#   Change 'devBranchName-canary'.
+#   $ docker login docker.repo.eng.netapp.com 
+# REGISTRY_NAME and IMAGE_TAGS must be specified as make arguments.
+# REGISTRY_NAME and IMAGE_TAGS cannot be pulled from the environment.
+make REGISTRY_NAME="docker.repo.eng.netapp.com/${USER}" IMAGE_TAGS=devBranchName-canary push
+```
+
+## Developer Kubernetes Deployment
 Copy deploy/dev/kustomization-template.yaml to deploy/dev/kustomization.yaml 
 and edit it as necessary. deploy/dev/kustomization.yaml is .gitignored, so your 
 local changes won't be (and shouldn't be) included in Git commits. For example:

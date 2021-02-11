@@ -1,4 +1,6 @@
-This directory contains example k8s applications:
+# BeeGFS CSI Driver Examples 
+
+This directory contains example Kubernetes applications:
 
 |Directory|Description|
 |---|---|
