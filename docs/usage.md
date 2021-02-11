@@ -1,5 +1,14 @@
 # BeeGFS CSI Driver Usage
 
+## Contents
+
+* [Important Concepts](#important-concepts)
+* [Dynamic Provisioning Workflow](#dynamic-provisioning-workflow)
+* [Static Provisioning Workflow](#static-provisioning-workflow)
+* [Best Practices](#best-practices)
+* [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
+* [Limitations and Known Issues](#limitations-and-known-issues)
+
 ## Important Concepts
 
 ### Definition of a "Volume"
@@ -14,25 +23,13 @@ can be a volume (e.g. by specifying */a/very/deep/directory* as the
 
 ### Capacity
 
-This version of the driver does very little regarding the capacity of its
-volumes. Consider the definition of a "volume" above. While an entire BeeGFS
+In this version, if a Kubernetes Persistent Volume is created with a certain 
+capacity, the driver will do absolutely nothing with that information. 
+Consider the definition of a "volume" above. While an entire BeeGFS
 filesystem may have a usable capacity of 100GiB, there is very little meaning
 associated with the "usable capacity" of a directory within a BeeGFS (or any
 POSIX) filesystem. Future versions of this driver may use BeeGFS enterprise
-features like Quota Enforcement (see https://www.beegfs.io/wiki/EnableQuota) to
-guarantee that the capacity provisioned by the driver is not exceeded.
-
-In this version, if a Kubernetes Persistent Volume Claim (in the dynamic
-provisioning workflow) requests that a new volume have a certain capacity, the
-driver will check to make sure there is at least that much capacity remaining on
-the BeeGFS filesystem. If there is not, the driver will fail to create the
-volume. If there is, the driver will create the volume and report that it has
-the requested capacity. Neither the driver nor Kubernetes will do anything else
-to guarantee that the volume's capacity specification is not exceeded.
-
-In this version, if a Kubernetes Persistent Volume (in the static provisioning
-workflow) is created with a certain capacity, the driver will do absolutely
-nothing with that information.
+features like [Quota Enforcement](https://doc.beegfs.io/latest/advanced_topics/quota.html) to guarantee that the capacity provisioned by the driver is not exceeded.
 
 NOTE: None of the examples in this document specify a capacity or capacity
 request.
@@ -57,11 +54,11 @@ is the entire volume. It exists as long as the PVC exists.
 
 As an administrator, I want to make a directory within an existing BeeGFS file
 system available to be mounted by multiple users and/or workloads. This
-directory probably contains a large, commonly used data set that I don't want to
+directory probably contains a large, commonly used dataset that I don't want to
 see copied to multiple locations within my file system. I plan to manage the
 volume's lifecycle and I don't want it cleaned up automatically.
 
-As a user, I want to consume an existing data set in my workload.
+As a user, I want to consume an existing dataset in my workload.
 
 In the Kubernetes static provisioning workflow, an administrator manually
 creates a PV and PVC representing an existing BeeGFS file system directory.
@@ -79,23 +76,23 @@ start if incompatible configuration is specified.
 
 Future versions of the driver will support future versions of BeeGFS, but no
 backwards compatibility with previous versions of BeeGFS is planned. BeeGFS
-versions before v7.1.4 do not include the beegfs-dkms package, which the driver
-uses to build the BeeGFS client kernel module and mount BeeGFS filesystems. 
+versions before v7.1.4 do not include the beegfs-client-dkms package, which the 
+driver uses to build the BeeGFS client kernel module and mount BeeGFS file systems. 
 
 ### Client Configuration and Tuning
 
 Depending on your topology, different nodes within your cluster or different
 BeeGFS file systems accessible by your cluster may need different client
 configuration parameters. This configuration is NOT handled at the volume level
-(e.g. in a Kubernetes Storage Class or Kubernetes Persistent Volume). See
-[deployment.md](deployment.md) for detailed instructions on how to prepare your
-cluster for various BeeGFS file system backends.
+(e.g. in a Kubernetes Storage Class or Kubernetes Persistent Volume). See Managing 
+BeeGFS Client Configuration in the [deployment guide](deployment.md) for detailed 
+instructions on how to prepare your cluster to mount various BeeGFS file systems.
 
 ## Dynamic Provisioning Workflow
 
 ### Assumptions
 
-1. A BeeGFS filesystem with its management service listening at *sysMgmtdHost*
+1. A BeeGFS filesystem with its management service listening at `sysMgmtdHost`
    already exists and is accessible from all Kubernetes worker nodes.
 1. A directory that can serve as the parent to all dynamically allocated
    subdirectories already exists within the BeeGFS filesystem at
@@ -122,24 +119,23 @@ subdirectory into the Pod's namespace.
 
 Who: A Kubernetes administrator working closely with a BeeGFS administrator
 
-Specify the filesystem and parent directory using the *sysMgmtdHost* and
-*volDirBasePath* parameters respectively.
+Specify the filesystem and parent directory using the `sysMgmtdHost` and
+`volDirBasePath` parameters respectively.
 
 Striping parameters that can be specified using the beegfs-ctl command line
-utility in the *--setpattern* mode can be passed with the prefix 
-*stripePattern/* in the *parameters* map as in the example. If no striping 
+utility in the `--setpattern` mode can be passed with the prefix 
+`stripePattern/` in the `parameters` map as in the example. If no striping 
 parameters are passed, the newly created subdirectory will have the same 
 striping configuration as its parent. The following parameters have been tested 
 with the driver:
 
-* *storagepoolid*
-* *chunksize*
-* *numtargets*
+* `storagepoolid`
+* `chunksize`
+* `numtargets`
 
 NOTE: The effects of unlisted configuration options are NOT tested with the
 driver. Contact your BeeGFS support representative for recommendations on
-appropriate settings. See https://www.beegfs.io/wiki/Striping for additional
-details.
+appropriate settings. See the [BeeGFS documentation on striping](https://doc.beegfs.io/latest/advanced_topics/striping.html) for additional details.
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -162,8 +158,8 @@ allowVolumeExpansion: false
 
 Who: A Kubernetes user
 
-Specify the Kubernetes Storage Class using the *storageClassName* field in the
-Kubernetes Persistent Volume Claim *spec* block.
+Specify the Kubernetes Storage Class using the `storageClassName` field in the
+Kubernetes Persistent Volume Claim `spec` block.
 
 ```yaml
 apiVersion: v1
@@ -190,7 +186,7 @@ created Kubernetes Persistent Volume Claim.
 
 ### Assumptions
 
-1. A BeeGFS filesystem with its management service listening at *sysMgmtdHost*
+1. A BeeGFS filesystem with its management service listening at `sysMgmtdHost`
    already exists and is accessible from all Kubernetes worker nodes.
 1. A directory of interest already exists within the BeeGFS filesystem at
    */path/to/dir*. If this whole BeeGFS filesystem is to be consumed,
@@ -213,11 +209,11 @@ Persistent Volume to mount the subdirectory into the Pod's namespace.
 Who: A Kubernetes administrator working closely with a BeeGFS administrator
 
 The driver receives all the information it requires to mount the directory of
-interest into a Pod from the *volumeHandle* field in the *csi* block of the
-Persistent Volume *spec* block. It MUST be formatted as modeled in the example.
+interest into a Pod from the `volumeHandle` field in the `csi` block of the
+Persistent Volume `spec` block. It MUST be formatted as modeled in the example.
 
 NOTE: The driver does NOT provide a way to modify the stripe settings of a
-directory in the static provisioning workflow. Any *beegfsStripe/* prefixed
+directory in the static provisioning workflow. Any `beegfsStripe/` prefixed
 parameters set here will be ignored.
 
 ```yaml
@@ -239,7 +235,7 @@ spec:
 Who: A Kubernetes administrator or user
 
 Each Persistent Volume Claim participates in a 1:1 mapping with a Persistent
-Volume. Create a Persistent Volume Claim and set the *volumeName* field to
+Volume. Create a Persistent Volume Claim and set the `volumeName` field to
 ensure it maps to the correct Persistent Volume.
 
 ```yaml
@@ -261,7 +257,21 @@ Who: A Kubernetes user
 Follow standard Kubernetes practices to deploy a Pod that consumes the newly
 created Kubernetes Persistent Volume Claim.
 
+## Best Practices
+* While multiple Kubernetes clusters can use the same BeeGFS file system, it is not recommended to have more than one cluster use the same `volDirBasePath` within the same file system.
+
+## Notes for BeeGFS Administrators
+
+### Memory Consumption with RDMA
+For performance (and other) reasons each persistent volume used on a given Kubernetes node has a separate mount point. When using remote direct memory access (RDMA) this will increase the amount of memory used for RDMA queue pairs between BeeGFS clients (K8s nodes) and BeeGFS servers. As of BeeGFS 7.2 this is around 12-13MB per mount for each client connection to a BeeGFS storage/metadata service. 
+
+Since clients only open connections when needed this is unlikely to be an issue, but in some large environments may result in unexpected memory utilization. This is much more likely to be an issue on BeeGFS storage and metadata servers than the Kubernetes nodes themselves (since multiple clients connect to each server). Administrators are advised to spec out BeeGFS servers accordingly.
+
 ## Limitations and Known Issues
+
+### General 
+
+* Each BeeGFS instance used with the driver must have a unique BeeGFS management IP address.
 
 ### 0777 mode BeeGFS directories created during provisioning
 
@@ -269,7 +279,7 @@ BeeGFS directories created by this driver during provisioning have mode 0777.
 
 ### Long paths may cause errors 
 
-The `volume_id` used by this CSI is in the format of a Uniform Resource Identifier (URI) generated by aggregating several fields' values incuding a path within a BeeGFS file system.
+The `volume_id` used by this CSI is in the format of a Uniform Resource Identifier (URI) generated by aggregating several fields' values including a path within a BeeGFS file system.
 - In the case of dynamic provisioning, the fields within the StorageClass object (`sc`) and CreateVolumeRequest message (`cvr`) combine to yield the `volume_id`: `beegfs://{sc.parameters.sysMgmtdHost}/{sc.parameters.volDirBasePath}/{cvr.name}`
 - In the case of static provisioning, the fields within the PersistentVolume object (`pv`) and CreateVolumeRequest message (`cvr`) combine to yield the `volume_id`: `{pv.spec.csi.volumeHandle}/{cvr.name}`
 

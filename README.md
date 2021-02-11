@@ -4,10 +4,7 @@
 * [Overview](#overview)
 * [Getting Started](#getting-started)
 * [Basic Use and Examples](#basic-use)
-* [Best Practices](#best-practices)
-* [Driver Limitations](#driver-limitations)
-* [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
-* [Requesting Enhancements and Reporting Issues ](#requesting-enhancements-and-reporting-issues)
+* [Requesting Enhancements and Reporting Issues](#requesting-enhancements-and-reporting-issues)
 * [License](#license)
 * [Maintainers](#maintainers)
 
@@ -35,18 +32,20 @@ Additional Notes:
 
 ### Prerequisite(s) 
 
-* Deploying the driver requires access to a terminal with `kubectl`. 
-* The BeeGFS client must be preinstalled to each Kubernetes node that needs BeeGFS access. 
+* Deploying the driver requires access to a terminal with kubectl. 
+* The BeeGFS DKMS client must be preinstalled to each Kubernetes node that needs BeeGFS access. 
 * Each BeeGFS mount point uses a ephemeral UDP port. On Linux the selected ephemeral port is constrained by the values of [IP variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables). [Ensure that firewalls allow UDP traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat) between BeeGFS management/metadata/storage nodes and ephemeral ports on Kubernetes nodes.
 * One or more existing BeeGFS file systems should be available to the Kubernetes nodes over a TCP/IP and/or RDMA (InfiniBand/RoCE) capable network (not required to deploy the driver).
 
 ### Quick Start
 The steps in this section allow you to get the driver up and running quickly. For production use cases or air-gapped environments it is recommended to read through the full [deployment guide](docs/deployment.md). 
 
-1. One a machine with `kubectl` and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository: `git clone https://github.com/NetApp/beegfs-csi-driver.git`
+1. One a machine with kubectl and access to the Kubernetes cluster where you want to deploy the BeeGFS CSI driver clone this repository: `git clone https://github.com/NetApp/beegfs-csi-driver.git`
 2. Switch to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run: `kubectl apply -k deploy/prod`
     * Note by default the beegfs-csi-driver image will be pulled from [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
 3. Verify all components are installed and operational: `kubectl get pods -n kube-system | grep csi-beegfs`
+
+As a one-liner: `git clone https://github.com/NetApp/beegfs-csi-driver.git && cd beegfs-csi-driver && kubectl apply -k deploy/prod && kubectl get pods -n kube-system | grep csi-beegfs`
 
 Provided all pods are running the driver is now ready for use. See the following sections for how to get started using the driver.
 
@@ -54,30 +53,17 @@ Provided all pods are running the driver is now ready for use. See the following
 
  This section provides a quick summary of basic driver use and functionality. Please see the full [usage documentation](docs/usage.md) for a complete overview of all available functionality. The driver was designed to support both dynamic and static storage provisioning and allows directories in BeeGFS to be used as [persistent volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) (PVs) in Kubernetes. Pods with persistent volume claims (PVCs) are only able to see/access the specified directory (and any subdirectories), providing isolation between multiple applications and users using the same BeeGFS file system when desired. 
 
-#### Dynamic Storage Provisioning:
+### Dynamic Storage Provisioning:
 
 Administrators create a storage class in Kubernetes referencing at minimum a specific BeeGFS file system and parent directory within that file system. Users can then submit PVCs against the storage class, and are provided isolated access to new directories under the parent specified in the storage class. 
 
-#### Static Provisioning:
+### Static Provisioning:
 
 Administrators create a PV and PVC representing an existing directory in a BeeGFS file system. This is useful for exposing some existing dataset or shared directory to Kubernetes users and applications.
 
 ### Examples
 
 [Example Kubernetes manifests](examples/README.md) of how to use the driver are provided. These are meant to be repurposed to simplify creating objects related to the driver including storage classes, persistent volumes, and persistent volumes claims in your environment.
-
-## Best Practices
-* While multiple Kubernetes clusters can use the same BeeGFS file system, it is not recommended to have more than one cluster use the same `volDirBasePath` within the same file system.
-
-## Driver Limitations
-* Each BeeGFS instance used with the driver must have a unique BeeGFS management IP address.
-
-## Notes for BeeGFS Administrators
-
-### Memory Consumption with RDMA
-For performance (and other) reasons each persistent volume used on a given Kubernetes node has a separate mount point. When using remote direct memory access (RDMA) this will increase the amount of memory used for RDMA queue pairs between BeeGFS clients (K8s nodes) and BeeGFS servers. As of BeeGFS 7.2 this is around 12-13MB per mount for each client connection to a BeeGFS storage/metadata service. 
-
-Since clients only open connections when needed this is unlikely to be an issue, but in some large environments may result in unexpected memory utilization. This is much more likely to be an issue on BeeGFS storage and metadata servers than the Kubernetes nodes themselves (since multiple clients connect to each server). Administrators are advised to spec out BeeGFS servers accordingly.
 
 ## Requesting Enhancements and Reporting Issues 
 
