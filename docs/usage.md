@@ -278,7 +278,9 @@ Since clients only open connections when needed this is unlikely to be an issue,
 
 Access modes in Kubernetes are how a driver understands what K8s wants to do with a volume, but do not strictly enforce behavior. This may result in unexpected behavior if administrators expect creating a Persistent Volume with (for example) `ReadOnlyMany` access will enforce read only access across all nodes accessing the volume. This is a larger issue with Kubernetes/CSI ecosystem and not specific to the BeeGFS driver. Some relevant discussion can be found in this [GitHub issue](https://github.com/kubernetes/kubernetes/issues/70505).
 
-While moving forward we plan to look at ways the driver could better enforce read only capabilities, doing so will likely require us to deviate slightly from the CSI spec. In the meantime one workaround is to set permissions on static BeeGFS directories so they cannot be overwritten. Note pods running with root permissions could ignore this. 
+If the `pod.spec.volumes.persistentVolumeClaim.readOnly` flag or the `pod.spec.containers.volumeMounts.readOnly` flag is set, volumes are mounted read-only as expected. However, this workflow leaves the read-only vs read-write decision up to the user requesting storage.
+
+While moving forward we plan to look at ways the driver could better enforce read only capabilities when access modes are specified, doing so will likely require us to deviate slightly from the CSI spec. In the meantime one workaround is to set permissions on static BeeGFS directories so they cannot be overwritten. Note pods running with root permissions could ignore this. 
 
 ### 0777 mode BeeGFS directories created during provisioning
 
