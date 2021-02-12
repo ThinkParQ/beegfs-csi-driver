@@ -1,6 +1,17 @@
 Copyright 2021 NetApp, Inc. All Rights Reserved.
 Licensed under the Apache License, Version 2.0.
 
+NetApp Notice Report
+
+About this document:
+
+The following copyright statements and licenses apply to the software components that are distributed with the
+beegfs-csi-driver version 1.0.0 product.  This product does not necessarily use all the software components
+referred to below.
+
+Where required, source code is published at the following location.
+ftp://ftp.netapp.com/frm-ntap/opensource
+
 Components:
 
 alpine-base 3.13.0 : MIT License
