@@ -11,7 +11,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/kubernetes-csi/csi-test/pkg/sanity"
+	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 	"k8s.io/utils/mount"
 )
 
@@ -39,26 +39,15 @@ func TestSanity(t *testing.T) {
 	driver.cs.ctlExec = &fakeBeegfsCtlExecutor{}
 	go driver.Run()
 
-	// Setup paths for mounting and staging
-	mntDir := path.Join(sanityDir, "mnt")
-	if err := os.Mkdir(mntDir, 0750); err != nil {
-		t.Fatal(err)
-	}
-	mntStageDir := path.Join(sanityDir, "mnt-stage")
-	if err := os.Mkdir(mntStageDir, 0750); err != nil {
-		t.Fatal(err)
-	}
-
 	// Setup configuration parameters
 	reqParams := make(map[string]string)
 	reqParams[sysMgmtdHostKey] = "localhost"
 	reqParams[volDirBasePathKey] = "unittest"
-	cfg := &sanity.Config{
-		StagingPath:          mntStageDir,
-		TargetPath:           mntDir,
-		Address:              endpoint,
-		TestVolumeParameters: reqParams,
-	}
+	cfg := sanity.NewTestConfig()
+	cfg.StagingPath = path.Join(sanityDir, "mnt-stage")
+	cfg.TargetPath = path.Join(sanityDir, "mnt")
+	cfg.Address = endpoint
+	cfg.TestVolumeParameters = reqParams
 	// Run the sanity tests
 	sanity.Test(t, cfg)
 	// Cleanup
