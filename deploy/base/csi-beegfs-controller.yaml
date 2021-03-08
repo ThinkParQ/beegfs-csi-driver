@@ -48,8 +48,9 @@ spec:
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - $(LOG_LEVEL_ARG)
           securityContext:
-            capabilities:
-              add: ["SYS_ADMIN"]  # SYS_ADMIN is required to run the mount command.
+            # Privileged is required for bidirectional mount propagation and to run the mount command.
+            # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
+            privileged: true
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
