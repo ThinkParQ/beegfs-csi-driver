@@ -55,7 +55,9 @@ spec:
             - name: LOG_LEVEL_ARG
               value: -v=3
           securityContext:
-            privileged: true  # Privileged is required for bidirectional mount propagation and to run the mount command.
+            # Privileged is required for bidirectional mount propagation and to run the mount command.
+            # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
+            privileged: true
           ports:
           - containerPort: 9898
             name: healthz
