@@ -57,6 +57,7 @@ spec:
           securityContext:
             # Privileged is required for bidirectional mount propagation and to run the mount command.
             # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
+            # In some environments, beegfs-client.conf parameter connUseRDMA=true requires privileged.
             privileged: true
           ports:
           - containerPort: 9898
