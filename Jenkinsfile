@@ -9,7 +9,7 @@ properties([
     ])
 ])
 
-projectVersion = '1.0'  // Increment this value when master branch refers to a different version.
+projectVersion = '1.1'  // Increment this value when master branch refers to a different version.
 if (env.BRANCH_NAME.matches('release-.+')) {
     projectVersion = env.BRANCH_NAME.split('-')[1]  // A release branch carries its own version.
 }
