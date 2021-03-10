@@ -1,7 +1,15 @@
 // Copyright 2021 NetApp, Inc. All Rights Reserved.
 // Licensed under the Apache License, Version 2.0.
 
-projectVersion = '1.0'  // Increment this value when master branch refers to a different version.
+// Set up build parameters so any branch can be manually rebuilt with different values.
+properties([
+    parameters ([
+        string(name: 'hubProjectVersion', defaultValue: '', description: 'Set this to force a Black Duck scan and ' +
+               'manually tag it to a particular Black Duck version (e.g. 1.0.1).')
+    ])
+])
+
+projectVersion = '1.1'  // Increment this value when master branch refers to a different version.
 if (env.BRANCH_NAME.matches('release-.+')) {
     projectVersion = env.BRANCH_NAME.split('-')[1]  // A release branch carries its own version.
 }
@@ -11,11 +19,17 @@ imageName = 'beegfs-csi-driver'  // release-tools gives significance to the name
 releaseToolsImageTag = 'beegfs-csi-driver:latest'  // The "make container" method in build.make uses this tag.
 
 hubProjectName = 'esg-beegfs-csi-driver'
-// Replace projectVersion with a custom version to do an experimental Black Duck scan.
-hubProjectVersion = projectVersion
-// Replace the below conditional with true to force a Black Duck scan. Don't do this unless you have also modified
-// hubProjectVersion or you know exactly what you are doing.
-shouldHubScan = env.BRANCH_NAME.matches('(master)|(release-.+)')
+hubProjectVersion = ''
+shouldHubScan = false
+if (params.hubProjectVersion != '') {
+    // Scan the project and tag the manually selected version if the hubProjectVersion build parameter is set.
+    hubProjectVersion = params.hubProjectVersion
+    shouldHubScan = true
+} else if (env.BRANCH_NAME.matches('(master)|(release-.+)')) {
+    // Scan the project and tag the branch name if this is the release or master branch.
+    hubProjectVersion = env.BRANCH_NAME
+    shouldHubScan = true
+}
 
 // We do NOT rely on release-tools tagging mechanism for internal builds because it does not provide mechanisms for
 // overwriting image tags, etc.

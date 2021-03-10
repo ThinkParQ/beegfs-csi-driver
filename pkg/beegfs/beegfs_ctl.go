@@ -52,7 +52,7 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", "--access=0777", dir})
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
-				return errors.Wrapf(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
+				return errors.WithMessagef(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
 			}
 		}
 	} else if err != nil {
