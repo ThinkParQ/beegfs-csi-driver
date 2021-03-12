@@ -49,6 +49,7 @@ type controllerServer struct {
 	clientConfTemplatePath string
 	mounter                mount.Interface
 	csDataDir              string
+	volumeIDsInFlight      *threadSafeStringLock
 }
 
 func NewControllerServer(nodeID string, pluginConfig pluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
@@ -63,6 +64,7 @@ func NewControllerServer(nodeID string, pluginConfig pluginConfig, clientConfTem
 		clientConfTemplatePath: clientConfTemplatePath,
 		csDataDir:              csDataDir,
 		mounter:                nil,
+		volumeIDsInFlight:      newThreadSafeStringLock(),
 	}
 }
 
@@ -100,7 +102,12 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
 
+	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
+	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+	}
+	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
@@ -140,10 +147,15 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
 
+	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
+	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+	}
+	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
 	// Write configuration files and mount BeeGFS.
 	defer func() {
@@ -199,10 +211,15 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
+	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
+	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+	}
+	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
