@@ -6,10 +6,12 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"math/rand"
 	"path"
 	"reflect"
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/spf13/afero"
@@ -354,5 +356,53 @@ func TestIsValidVolumeCapabilities(t *testing.T) {
 				t.Fatalf("expected: %t, got: %t, reason: %s", tc.wantValid, gotValid, reason)
 			}
 		})
+	}
+}
+
+func TestThreadSafeStringLock(t *testing.T) {
+	type lockStringAndChannel struct {
+		lockString   string
+		obtainedLock chan bool
+	}
+
+	tssl := newThreadSafeStringLock()
+	lock1 := lockStringAndChannel{"lock1", make(chan bool, 5)}
+	lock2 := lockStringAndChannel{"lock2", make(chan bool, 5)}
+	rand.Seed(time.Now().UnixNano())
+
+	// Create multiple Goroutines that each sleep a random length of time before attempting to obtain the first lock
+	// and then sleep an arbitrary length of time before attempting to obtain each subsequent lock.
+	for i := 0; i < 5; i++ {
+		go func(locks ...lockStringAndChannel) {
+			for _, lock := range locks {
+				time.Sleep(time.Duration(rand.Intn(500)) * time.Millisecond)
+				lock.obtainedLock <- tssl.obtainLockOnString(lock.lockString)
+			}
+		}(lock1, lock2)
+	}
+
+	// Verify that each lock was obtained one and only one time.
+	for _, lock := range []lockStringAndChannel{lock1, lock2} {
+		receivedTrue := false
+		for i := 0; i < 5; i++ {
+			if <-lock.obtainedLock {
+				if !receivedTrue {
+					receivedTrue = true
+				} else {
+					t.Fatalf("expected only one successful lock on %s but got more than one", lock.lockString)
+				}
+			}
+		}
+		if !receivedTrue {
+			t.Fatalf("expected at least one successful lock on %s but got none", lock.lockString)
+		}
+	}
+
+	// Verify that releasing each lock allows it to be obtained again.
+	for _, lock := range []lockStringAndChannel{lock1, lock2} {
+		tssl.releaseLockOnString(lock.lockString)
+		if !tssl.obtainLockOnString(lock.lockString) {
+			t.Fatalf("expected to be able to reloack release lock on %s but could not", lock.lockString)
+		}
 	}
 }

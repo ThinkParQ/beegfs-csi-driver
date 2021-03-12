@@ -333,7 +333,7 @@ func (v *threadSafeStringLock) obtainLockOnString(stringToLock string) bool {
 	v.Lock()
 	defer v.Unlock()
 	if _, ok := v.items[stringToLock]; !ok {
-		// stringToLock is not in map (and not in use in another Goroutine). Lock stringToLock and return success.
+		// stringToLock is not in map (and not in use by another Goroutine). Lock stringToLock and return success.
 		v.items[stringToLock] = struct{}{}
 		return true
 	} else {
