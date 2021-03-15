@@ -35,9 +35,6 @@ if (params.hubProjectVersion != '') {
 // overwriting image tags, etc.
 imageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch-0005
-if (env.BRANCH_NAME.matches('(master)|(release-.+)')) {
-    imageTag = "docker.repo.eng.netapp.com/global/apheleia/${imageName}:v${projectVersion}"  // e.g. .../global/apheleia/beegfs-csi-driver:v1.0
-}
 
 pipeline {
     agent any
