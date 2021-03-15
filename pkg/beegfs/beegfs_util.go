@@ -317,8 +317,8 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) (valid bool, rea
 // releasing a lock on a string. Use a threadSafeStringLock to ensure only one Goroutine makes use of or references a
 // particular string at a any given time.
 type threadSafeStringLock struct {
-	sync.RWMutex
-	items map[string]struct{}
+	rwMutex sync.RWMutex
+	items   map[string]struct{}
 }
 
 func newThreadSafeStringLock() *threadSafeStringLock {
@@ -330,8 +330,8 @@ func newThreadSafeStringLock() *threadSafeStringLock {
 // obtainLockOnString locks a string for the current Goroutine and returns true if the string is not already in use by
 // another Goroutine. obtainLockOnString returns false otherwise.
 func (v *threadSafeStringLock) obtainLockOnString(stringToLock string) bool {
-	v.Lock()
-	defer v.Unlock()
+	v.rwMutex.Lock()
+	defer v.rwMutex.Unlock()
 	if _, ok := v.items[stringToLock]; !ok {
 		// stringToLock is not in map (and not in use by another Goroutine). Lock stringToLock and return success.
 		v.items[stringToLock] = struct{}{}
@@ -342,9 +342,9 @@ func (v *threadSafeStringLock) obtainLockOnString(stringToLock string) bool {
 	}
 }
 
-// releaseLockOnString releases the lock on a volumeID.
+// releaseLockOnString releases the lock on a string.
 func (v *threadSafeStringLock) releaseLockOnString(stringToUnlock string) {
-	v.Lock()
-	defer v.Unlock()
+	v.rwMutex.Lock()
+	defer v.rwMutex.Unlock()
 	delete(v.items, stringToUnlock)
 }
