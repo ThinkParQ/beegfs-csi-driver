@@ -6,6 +6,7 @@ metadata:
   name: beegfs.csi.netapp.com
 spec:
   attachRequired: false
+  fsGroupPolicy: None
   # Supports persistent volumes.
   volumeLifecycleModes:
   - Persistent

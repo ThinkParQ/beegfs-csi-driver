@@ -124,20 +124,42 @@ Specify the filesystem and parent directory using the `sysMgmtdHost` and
 
 Striping parameters that can be specified using the beegfs-ctl command line
 utility in the `--setpattern` mode can be passed with the prefix
-`stripePattern/` in the `parameters` map as in the example. If no striping
-parameters are passed, the newly created subdirectory will have the same
-striping configuration as its parent. The following parameters have been tested
-with the driver:
+`stripePattern/` in the `parameters` map. If no striping parameters are passed,
+the newly created subdirectory has the same striping configuration as its
+parent. The following `stripePattern/` parameters work with the driver:
 
-* `storagePoolID`
-* `chunkSize`
-* `numTargets`
+| Prefix         | Parameter     | Required | Accepted patterns                       | Example    | Default
+| ------         | ---------     | -------- | -----------------                       | -------    | -------
+| stripePattern/ | storagePoolID | no       | unsigned integer                        | 1          | file system default
+| stripePattern/ | chunkSize     | no       | unsigned integer + k (kilo) or m (mega) | 512k<br>1m | file system default
+| stripePattern/ | numTargets    | no       | unsigned integer                        | 4          | file system default
+
+NOTE: While the driver expects values with certain patterns (e.g. unsigned
+integer), Kubernetes only accepts string values in Storage Classes. These
+values must be quoted in the Storage Class .yaml (as in the example below).
 
 NOTE: The effects of unlisted configuration options are NOT tested with the
 driver. Contact your BeeGFS support representative for recommendations on
 appropriate settings. See the [BeeGFS documentation on
 striping](https://doc.beegfs.io/latest/advanced_topics/striping.html) for
 additional details.
+
+By default, the driver creates all new subdirectories with root:root ownership
+and globally read/write/executable 0777 access permissions. This makes it easy
+for an arbitrary Pod to consume a dynamically provisioned volume. However,
+administrators [may want to change this behavior](#Permissions) on a
+per-Storage-Class basis. The following `permissions/` parameters allow this
+fine-grained control:
+
+| Prefix       | Parameter | Required | Accepted patterns                  | Example     | Default 
+| ------       | --------- | -------- | -----------------                  | -------     | -------
+| permissions/ | uid       | no       | unsigned integer                   | 1000        | 0 (root)
+| permissions/ | gid       | no       | unsigned integer                   | 1000        | 0 (root)
+| permissions/ | mode      | no       | three or four digit octal notation | 755<br>0755 | 0777
+
+NOTE: While the driver expects values with certain patterns (e.g. unsigned 
+integer), Kubernetes only accepts string values in Storage Classes. These 
+values must be quoted in the Storage Class .yaml (as in the example below).
 
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -151,6 +173,9 @@ parameters:
   stripePattern/storagePoolID: "1"
   stripePattern/chunkSize: 512k
   stripePattern/numTargets: "4"
+  permissions/uid: "1000"
+  permissions/gid: "1000"
+  permissions/mode: "0644"
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: false
@@ -291,6 +316,74 @@ is much more likely to be an issue on BeeGFS storage and metadata servers than
 the Kubernetes nodes themselves (since multiple clients connect to each server).
 Administrators are advised to spec out BeeGFS servers accordingly.
 
+### Permissions
+
+By default, the driver creates all new subdirectories with root:root ownership
+and globally read/write/executable 0777 access permissions. This works well in a
+Kubernetes environment where Pods may run as an arbitrary user or group but
+still expect to access provisioned volumes.
+
+NOTE: Permissions on the `volDirBasePath` are not modified by the 
+driver. These permissions can be used to limit external access to dynamically 
+provisioned subdirectories even when these subdirectories themselves have 0777 
+access permissions.
+   
+In certain situations, it makes sense to override the default behavior and 
+instruct the driver to create directories owned by some other user/group or 
+with a different mode. This can be done on a per-Storage-Class basis. Some 
+example scenarios include:
+* [BeeGFS quotas](https://doc.beegfs.io/latest/advanced_topics/quota.html) are 
+  in use and all files and directories in provisioned volumes must be 
+  associated with a single appropriate GID (as in the 
+  [project directory quota tracking](https://doc.beegfs.io/latest/advanced_topics/quota.html#project-directory-quota-tracking))
+  example in the BeeGFS documentation.
+* It is important to limit the ability of arbitrary BeeGFS file system users 
+  to access dynamically provisioned volumes and the volumes will be accessed 
+  by Pods running as a known user or group anyway (see the above note for 
+  an alternate potential mitigation).
+
+NOTE: The above BeeGFS quotas documentation suggests using `chmod g+s` on a
+directory to enable the setgid bit. The exact same behavior can be obtained
+using four digit octal permissions in the `parameters.permissions/mode` field of
+a BeeGFS Storage Class. For example, 2755 represents the common 755 directory
+access mode with setgid enabled. See the 
+[chmod man page](https://linux.die.net/man/1/chmod) for more details.
+
+Under the hood, the driver uses a combination of beegfs-ctl and 
+chown/chmod-like functionality to set the owner, group, and access mode of a 
+new BeeGFS subdirectory. These properties limit access to the subdirectory both 
+outside of (as expected) and inside of Kubernetes. If permissions are set in a 
+Storage Class, Kubernetes Pods likely need to specify one of the following 
+parameters to allow access:
+* spec.securityContext.runAsUser
+* spec.securityContext.runAsGroup
+* spec.securityContext.fsGroup
+* spec.container.securityContext.runAsUser
+* spec.container.securityContext.runAsGroup
+
+#### fsGroup Behavior
+
+Some CSI drivers support a recursive operation in which the permissions and
+ownership of all files and directories in a provisioned volume are changed to
+match the fsGroup parameter of a Security Context on Pod startup. This 
+behavior is generally undesirable for the following reasons:
+* Unexpected permissions changes within a BeeGFS file system may be
+  confusing to administrators and detrimental to security (especially in the
+  static provisioning workflow).
+* Competing operations executed by multiple Pods against large file systems
+  may be time-consuming and affect overall system performance.
+
+For clusters running most versions, Kubernetes heuristics enable this behavior 
+on ReadWriteOnce volumes and do NOT enable this behavior on ReadWriteMany 
+volumes. Create only ReadWriteMany volumes to ensure no unexpected permissions 
+updates occur.
+
+For clusters running v1.20 or v1.21 WITH the optional CSIVolumeFSGroupPolicy 
+feature gate (in an eventual future version the feature gate will not be 
+required), the `csiDriver.spec.fsGroupPolicy` parameter can be used to disable 
+this behavior for all volumes. The beegfs-csi-driver deploys with this parameter 
+set to "None" in case it is deployed to a cluster that supports it.
+
 ## Limitations and Known Issues
 
 ### General 
@@ -317,11 +410,7 @@ While moving forward we plan to look at ways the driver could better enforce
 read only capabilities when access modes are specified, doing so will likely
 require us to deviate slightly from the CSI spec. In the meantime one workaround
 is to set permissions on static BeeGFS directories so they cannot be
-overwritten. Note pods running with root permissions could ignore this. 
-
-### 0777 mode BeeGFS directories created during provisioning
-
-BeeGFS directories created by this driver during provisioning have mode 0777.
+overwritten. Note pods running with root permissions could ignore this.
 
 ### Long paths may cause errors 
 
