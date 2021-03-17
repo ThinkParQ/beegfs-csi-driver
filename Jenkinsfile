@@ -9,12 +9,7 @@ properties([
     ])
 ])
 
-projectVersion = '1.1'  // Increment this value when master branch refers to a different version.
-if (env.BRANCH_NAME.matches('release-.+')) {
-    projectVersion = env.BRANCH_NAME.split('-')[1]  // A release branch carries its own version.
-}
 paddedBuildNumber = env.BUILD_NUMBER.padLeft(4, '0')
-
 imageName = 'beegfs-csi-driver'  // release-tools gives significance to the name of the /cmd/beegfs-csi-driver directory.
 releaseToolsImageTag = 'beegfs-csi-driver:latest'  // The "make container" method in build.make uses this tag.
 
@@ -112,19 +107,36 @@ pipeline {
                 synopsys_detect detectProperties: """
                     --detect.project.name=${hubProjectName} \
                     --detect.project.version.name=${hubProjectVersion} \
-                    --detect.code.location.name=${hubProjectName}-${hubProjectVersion}-application \
+                    --detect.cleanup=false \
+                    --detect.output.path=blackduck \
                     --detect.project.code.location.unmap=true \
-                    --detect.blackduck.signature.scanner.exclusion.name.patterns=vendor
+                    --detect.detector.search.depth=50 \
+                    --detect.code.location.name=${hubProjectName}_${hubProjectVersion}_application_code \
+                    --detect.bom.aggregate.name=${hubProjectName}_${hubProjectVersion}_application_bom \
+                    --detect.detector.search.exclusion.paths=vendor/,blackduck/ \
+                    --detect.blackduck.signature.scanner.exclusion.patterns=/vendor/,/blackduck/
                 """
                 synopsys_detect detectProperties: """
                     --detect.project.name=${hubProjectName} \
                     --detect.project.version.name=${hubProjectVersion} \
-                    --detect.code.location.name=${hubProjectName}-${hubProjectVersion}-container \
+                    --detect.cleanup=false \
+                    --detect.output.path=blackduck \
                     --detect.project.code.location.unmap=true \
+                    --detect.detector.search.depth=50 \
+                    --detect.code.location.name=${hubProjectName}_${hubProjectVersion}_container_code \
+                    --detect.bom.aggregate.name=${hubProjectName}_${hubProjectVersion}_container_bom \
                     --detect.docker.image=${uniqueImageTag} \
                     --detect.docker.passthrough.service.distro.default=apk \
-                    --detect.tools.excluded=DETECTOR
+                    --detect.docker.path=/usr/bin/docker \
+                    --detect.tools=DOCKER \
+                    --detect.tools=SIGNATURE_SCAN
                 """
+            }
+            post {
+                success {
+                    // Exclude .tar.gz files to avoid archiving large(ish) Docker extractions.
+                    archiveArtifacts(artifacts: 'blackduck/runs/**', excludes: '**/*.tar.gz')
+                }
             }
         }
     }
