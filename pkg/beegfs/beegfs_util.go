@@ -15,6 +15,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/glog"
@@ -310,4 +311,40 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) (valid bool, rea
 		}
 	}
 	return true, ""
+}
+
+// threadSafeStringLock maintains a threadsafe set of strings and provides easily consumable methods for obtaining and
+// releasing a lock on a string. Use a threadSafeStringLock to ensure only one Goroutine makes use of or references a
+// particular string at a any given time.
+type threadSafeStringLock struct {
+	rwMutex sync.RWMutex
+	items   map[string]struct{}
+}
+
+func newThreadSafeStringLock() *threadSafeStringLock {
+	return &threadSafeStringLock{
+		items: make(map[string]struct{}),
+	}
+}
+
+// obtainLockOnString locks a string for the current Goroutine and returns true if the string is not already in use by
+// another Goroutine. obtainLockOnString returns false otherwise.
+func (v *threadSafeStringLock) obtainLockOnString(stringToLock string) bool {
+	v.rwMutex.Lock()
+	defer v.rwMutex.Unlock()
+	if _, ok := v.items[stringToLock]; !ok {
+		// stringToLock is not in map (and not in use by another Goroutine). Lock stringToLock and return success.
+		v.items[stringToLock] = struct{}{}
+		return true
+	} else {
+		// stringToLock is in map (and in use by another Goroutine). Return failure.
+		return false
+	}
+}
+
+// releaseLockOnString releases the lock on a string.
+func (v *threadSafeStringLock) releaseLockOnString(stringToUnlock string) {
+	v.rwMutex.Lock()
+	defer v.rwMutex.Unlock()
+	delete(v.items, stringToUnlock)
 }
