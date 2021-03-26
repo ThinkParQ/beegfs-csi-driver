@@ -1,6 +1,6 @@
 module github.com/netapp/beegfs-csi-driver
 
-go 1.12
+go 1.16
 
 require (
 	github.com/container-storage-interface/spec v1.3.0
