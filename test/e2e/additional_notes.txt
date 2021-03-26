@@ -1,0 +1,18 @@
+ginkgo -p -focus 'External.Storage' e2e.test -- -storage.testdriver=beegfs-csi-driver/test/basic-driver.yaml -kubeconfig=/home/eric/.kube/config -repo-root=beegfs-csi-driver
+
+Disruptive tests don't seem to play nice with non-disruptive ones. Optionally skip disruptive tests.
+	ginkgo -p -focus 'External.Storage' -skip 'Disruptive' e2e.test -- -storage.testdriver=beegfs-csi-driver/test/basic-driver.yaml -kubeconfig=/home/eric/.kube/config -repo-root=beegfs-csi-driver
+
+The -p flag gets us parallel execution. Disruptive tests seem to break on parallel execution. Optionally do not parallelize:
+	ginkgo -focus 'External.Storage' e2e.test -- -storage.testdriver=beegfs-csi-driver/test/basic-driver.yaml -kubeconfig=/home/eric/.kube/config -repo-root=beegfs-csi-driver
+
+	Opting not to parallelize makes the tests go SUPER SLOW.
+
+Must have passwordless SSH access to your username on K8s nodes. Your username must have sudo ability.
+	There MUST be some way of customizing SSH configuration, but I haven't found it.
+	This may only be required for disruptive tests.
+
+	Probably can use some combination of -storage_driver_user and -storage_driver
+
+Best command for running the most tests (so far):
+	ginkgo -focus 'External.Storage' e2e.test -- -storage.testdriver=beegfs-csi-driver/test/basic-driver.yaml -kubeconfig=/home/eric/.kube/config -repo-root=beegfs-csi-driver
