@@ -19,26 +19,29 @@ import (
 // beegfsCtlExecutorInterface abstracts beegfs-ctl so tests can run without access to a beegfs-ctl binary or a BeeGFS
 // file system.
 type beegfsCtlExecutorInterface interface {
-	createDirectoryForVolume(vol beegfsVolume) error
-	statDirectoryForVolume(vol beegfsVolume) (string, error)
-	setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error
+	createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error
+	statDirForVolume(vol beegfsVolume) (string, error)
+	setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error
 }
 
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
 type beegfsCtlExecutor struct{}
 
-// createDirectoryForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by
+// createDirForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by
 // vol.volDirPathBeegfsRoot on the BeeGFS file system specified by vol.sysMgmtdHost. createDirectory returns an error
 // if it cannot create the directory, but does not return an error if the directory already exists.
-func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
+func (ctlExec *beegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error {
 	glog.V(LogDebug).Infof("Creating BeeGFS directory %s for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 	// Check if volume already exists.
-	_, err := ctlExec.statDirectoryForVolume(vol)
+	_, err := ctlExec.statDirForVolume(vol)
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
 		glog.V(LogDebug).Infof("BeeGFS directory %s does not exist for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 
-		// Create parent directories if necessary.
+		// Construct the set of arguments that will be used to create any necessary directories.
+		createDirArgs := constructCreateDirForVolumeArgs(cfg)
+
+		// Multiple parent directories may need to be created.
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
 		dirsToMake := []string{vol.volDirPathBeegfsRoot}
 		for dir := path.Dir(vol.volDirPathBeegfsRoot); dir != "/"; { // path.Dir() returns "." if there is no parent.
@@ -47,9 +50,7 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 		}
 		// Starting with the most general path, create all directories required to eventually create vol.volDirPathBeegfsRoot.
 		for _, dir := range dirsToMake {
-			// TODO(eastburj, A119): Consider replacing "--access=0777" with "fsGroup support"[1].
-			//   [1](https://kubernetes-csi.github.io/docs/support-fsgroup.html)
-			_, err := ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--createdir", "--access=0777", dir})
+			_, err := ctlExec.execute(vol.clientConfPath, append(createDirArgs, dir))
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
 				return errors.WithMessagef(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
@@ -63,26 +64,27 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) err
 	return nil
 }
 
-// statDirectoryForVolume returns the information output by "beegfs-ctl --getentryinfo" as a string, or an empty string
+// statDirForVolume returns the information output by "beegfs-ctl --getentryinfo" as a string, or an empty string
 // and an error if the stat fails.
-func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
+func (ctlExec *beegfsCtlExecutor) statDirForVolume(vol beegfsVolume) (string, error) {
 	return ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
 }
 
-// constructSetPatternForVolume builds the arguments passed to setPatternForVolume.
-func constructSetPatternForVolume(config stripePatternConfig) ([]string, bool) {
+// constructSetPatternForVolumeArgs constructs the slice of arguments that will be passed to ctlExec.execute() in a
+// setPatternForVolume() call. We keep this logic in a separate function for easy testing.
+func constructSetPatternForVolumeArgs(cfg stripePatternConfig) ([]string, bool) {
 	var needToExecute bool
 	var args []string
-	if config.stripePatternNumTargets != "" {
-		args = append([]string{fmt.Sprintf("--numtargets=%s", config.stripePatternNumTargets)}, args...)
+	if cfg.stripePatternNumTargets != "" {
+		args = append([]string{fmt.Sprintf("--numtargets=%s", cfg.stripePatternNumTargets)}, args...)
 		needToExecute = true
 	}
-	if config.stripePatternChunkSize != "" {
-		args = append([]string{fmt.Sprintf("--chunksize=%s", config.stripePatternChunkSize)}, args...)
+	if cfg.stripePatternChunkSize != "" {
+		args = append([]string{fmt.Sprintf("--chunksize=%s", cfg.stripePatternChunkSize)}, args...)
 		needToExecute = true
 	}
-	if config.storagePoolID != "" {
-		args = append([]string{fmt.Sprintf("--storagepoolid=%s", config.storagePoolID)}, args...)
+	if cfg.storagePoolID != "" {
+		args = append([]string{fmt.Sprintf("--storagepoolid=%s", cfg.storagePoolID)}, args...)
 		needToExecute = true
 	}
 	if needToExecute {
@@ -93,12 +95,29 @@ func constructSetPatternForVolume(config stripePatternConfig) ([]string, bool) {
 	return []string{}, false
 }
 
+// constructCreateDirForVolumeArgs constructs the slice of arguments that will be passed to ctlExec.execute() in a
+// createDirForVolume() call. We keep this logic in a separate function for easy testing.
+func constructCreateDirForVolumeArgs(cfg permissionsConfig) []string {
+	args := []string{"--unmounted", "--createdir"}
+	// beegfs-ctl ignores special permissions (the first digit in the four digit octal permissions schema).
+	// Construct the --access argument without this digit for clarity.
+	mode := cfg.mode & 0o777
+	args = append(args, fmt.Sprintf("--access=%03o", mode)) // Print 3 digits padded with 0s to the left.
+	if cfg.uid != 0 {
+		args = append(args, fmt.Sprintf("--uid=%d", cfg.uid))
+	}
+	if cfg.gid != 0 {
+		args = append(args, fmt.Sprintf("--gid=%d", cfg.gid))
+	}
+	return args
+}
+
 // setPatternForVolume uses a "beegfs-ctl --unmounted --setpattern" command to set the pattern for a directory specified by
 // vol.volDirPathBeegfsRoot on the BeeGFS file system. setPatternForVolume returns an error if it cannot set the pattern for
 // the directory, but does not return an error if the pattern on the directory already exists. setPatternForVolume has no
-// effect and does not return an error if config is empty.
-func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error {
-	args, needToExecute := constructSetPatternForVolume(config)
+// effect and does not return an error if cfg is empty.
+func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error {
+	args, needToExecute := constructSetPatternForVolumeArgs(cfg)
 	if needToExecute {
 		args = append(args, vol.volDirPathBeegfsRoot)
 		_, err := ctlExec.execute(vol.clientConfPath, args)
@@ -174,14 +193,14 @@ func (err ctlExistError) Error() string {
 // fakeBeeGFSCtlExecutor is a mock implementation of beegfsCtlExecutorInterface useful for testing.
 type fakeBeegfsCtlExecutor struct{}
 
-func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(vol beegfsVolume) error {
+func (*fakeBeegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error {
 	return nil
 }
 
-func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(vol beegfsVolume) (string, error) {
+func (*fakeBeegfsCtlExecutor) statDirForVolume(vol beegfsVolume) (string, error) {
 	return "", nil
 }
 
-func (*fakeBeegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, config stripePatternConfig) error {
+func (*fakeBeegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error {
 	return nil
 }

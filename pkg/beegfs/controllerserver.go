@@ -22,7 +22,10 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"fmt"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -97,7 +100,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
 	}
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
-	stripePatternConfig, err := getStripePatternParamsFromRequest(reqParams)
+	permissionsConfig, err := getPermissionsConfigFromParams(reqParams)
+	if err != nil {
+		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
+	}
+	stripePatternConfig, err := getStripePatternConfigFromParams(reqParams)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
@@ -112,7 +119,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we created the volume.
-		if err := cleanUpIfNecessary(vol, true); err != nil {
+		if err := unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
 			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
 		}
 	}()
@@ -124,11 +131,26 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	if err := cs.ctlExec.createDirectoryForVolume(vol); err != nil {
+	// Use beegfs-ctl to create the directory and stripe it appropriately.
+	if err := cs.ctlExec.createDirForVolume(vol, permissionsConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := cs.ctlExec.setPatternForVolume(vol, stripePatternConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
+	}
+
+	// Mount BeeGFS and use OS tools to change the access mode only if beegfs-ctl could not handle the access mode
+	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
+	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
+	if permissionsConfig.hasSpecialPermissions() {
+		if err := mountIfNecessary(vol, cs.mounter); err != nil {
+			return nil, newGrpcErrorFromCause(codes.Internal, err)
+		}
+		glog.V(LogDebug).Infof("Applying %s permissions to %s for mounted %s",
+			fmt.Sprintf("%4o", permissionsConfig.mode), vol.volDirPath, vol.volumeID)
+		if err := os.Chmod(vol.volDirPath, permissionsConfig.goFileMode()); err != nil {
+			return nil, newGrpcErrorFromCause(codes.Internal, err)
+		}
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -176,7 +198,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Delete volume from mounted BeeGFS.
-	glog.V(LogDebug).Infof("Deleting BeeGFS directory %s for %s", vol.volDirBasePathBeegfsRoot, vol.volumeID)
+	glog.V(LogDebug).Infof("Deleting BeeGFS directory %s for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
@@ -236,7 +258,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	if _, err := cs.ctlExec.statDirectoryForVolume(vol); err != nil {
+	if _, err := cs.ctlExec.statDirForVolume(vol); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
@@ -313,24 +335,57 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	return csc
 }
 
-func getStripePatternParamsFromRequest(reqParams map[string]string) (stripePatternConfig, error) {
-	stripePattern := stripePatternConfig{}
+func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatternConfig, error) {
+	cfg := stripePatternConfig{}
 	for param := range reqParams {
 		if strings.Contains(param, "stripePattern/") {
 			switch param {
-			case storagePoolIDKey:
-				stripePattern.storagePoolID = reqParams[storagePoolIDKey]
+			case stripePatternStoragePoolIDKey:
+				cfg.storagePoolID = reqParams[stripePatternStoragePoolIDKey]
 			case stripePatternChunkSizeKey:
-				stripePattern.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
+				cfg.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
 			case stripePatternNumTargetsKey:
-				stripePattern.stripePatternNumTargets = reqParams[stripePatternNumTargetsKey]
+				cfg.stripePatternNumTargets = reqParams[stripePatternNumTargetsKey]
 			default:
-				return stripePattern, errors.Errorf("CreateVolume parameter invalid: %s", param)
+				return cfg, errors.Errorf("CreateVolume parameter invalid: %s", param)
 			}
 		}
 	}
+	return cfg, nil
+}
 
-	return stripePattern, nil
+func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsConfig, error) {
+	cfg := permissionsConfig{mode: defaultPermissionsMode}
+	for param := range reqParams {
+		if strings.HasPrefix(param, "permissions/") {
+			switch param {
+			case permissionsUIDKey:
+				val := reqParams[permissionsUIDKey]
+				uid, err := strconv.ParseUint(val, 10, 32) // UIDs are <= 32 bits.
+				if err != nil {
+					return cfg, errors.Wrap(err, "could not parse provided UID")
+				}
+				cfg.uid = uint32(uid)
+			case permissionsGIDKey:
+				val := reqParams[permissionsGIDKey]
+				gid, err := strconv.ParseUint(val, 10, 32) // GIDs are <= 32 bits.
+				if err != nil {
+					return cfg, errors.Wrap(err, "could not parse provided GID")
+				}
+				cfg.gid = uint32(gid)
+			case permissionsModeKey:
+				val := reqParams[permissionsModeKey]
+				mode, err := strconv.ParseUint(val, 8, 12) // Full modes are 12 bits.
+				if err != nil {
+					return cfg, errors.Wrap(err, "could not parse provided mode")
+				}
+				cfg.mode = uint16(mode)
+			default:
+				return cfg, errors.Errorf("CreateVolume parameter invalid: %s", param)
+			}
+		}
+	}
+	return cfg, nil
 }
 
 // (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context

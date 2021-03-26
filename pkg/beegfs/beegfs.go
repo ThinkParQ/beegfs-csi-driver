@@ -22,6 +22,7 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"os"
 	"path"
 
 	"github.com/golang/glog"
@@ -30,11 +31,15 @@ import (
 )
 
 const (
-	volDirBasePathKey          = "volDirBasePath"
-	sysMgmtdHostKey            = "sysMgmtdHost"
-	storagePoolIDKey           = "stripePattern/storagePoolID"
-	stripePatternChunkSizeKey  = "stripePattern/chunkSize"
-	stripePatternNumTargetsKey = "stripePattern/numTargets"
+	volDirBasePathKey             = "volDirBasePath"
+	sysMgmtdHostKey               = "sysMgmtdHost"
+	stripePatternStoragePoolIDKey = "stripePattern/storagePoolID"
+	stripePatternChunkSizeKey     = "stripePattern/chunkSize"
+	stripePatternNumTargetsKey    = "stripePattern/numTargets"
+	permissionsUIDKey             = "permissions/uid"
+	permissionsGIDKey             = "permissions/gid"
+	permissionsModeKey            = "permissions/mode"
+	defaultPermissionsMode        = 0o0777
 
 	LogDebug   = glog.Level(3) // This log level is used for most informational logs in RPCs and GRPC calls
 	LogVerbose = glog.Level(5) // This log level is used for only very repetitive logs such as the Probe GRPC call
@@ -95,6 +100,46 @@ type stripePatternConfig struct {
 	storagePoolID           string
 	stripePatternChunkSize  string
 	stripePatternNumTargets string
+}
+
+// permissionsConfig contains our internal representation of all CreateVolume parameters (StorageClass parameters in
+// K8s) that should be prefaced with permissions/. We expect to receive mode as a three or four digit octal literal in
+// typical Unix fashion and store it as a uint16 for easy output in this same format.
+type permissionsConfig struct {
+	uid  uint32 // The majority of UNIX-like systems support 32-bit UIDs.
+	gid  uint32 // The majority of UNIX-like systems support 32-bit GIDs.
+	mode uint16 // A full access mode consists of four base-8 digits (12 bits).
+}
+
+// hasNonDefaultOwnerOrGroup returns true if either uid or gid are not 0 and false otherwise.
+func (cfg permissionsConfig) hasNonDefaultOwnerOrGroup() bool { return cfg.uid > 0 || cfg.gid > 0 }
+
+// hasSpecialPermissions returns true if the sticky bit, setgid bit, or setuid bit are set (i.e. if the integer value
+// of mode is greater than 0o0777 or 511).
+func (cfg permissionsConfig) hasSpecialPermissions() bool {
+	// A non-zero first octal digit represents special permissions.
+	return cfg.mode > 0o0777
+}
+
+// We store mode as a uint16, but the os package requires an os.FileMode for some functions. goFileMode returns a
+// correct os.FileMode representation of the stored mode.
+func (cfg permissionsConfig) goFileMode() os.FileMode {
+	// os.FileMode doesn't represent special permissions using the same bits as Unix.
+	// Extract the normal permissions and add in the special permissions as a separate sequence of steps.
+	goMode := os.FileMode(cfg.mode & 0o777)
+	stickyBit := (cfg.mode & 0o1000) > 0 // The Unix sticky bit is the 10th most significant bit.
+	setgidBit := (cfg.mode & 0o2000) > 0 // The Unix setgid bit is the 11th most significant bit.
+	setuidBit := (cfg.mode & 004000) > 0 // The Unix setuid bit is the 12th most significant bit.
+	if stickyBit {
+		goMode = goMode | os.ModeSticky
+	}
+	if setgidBit {
+		goMode = goMode | os.ModeSetgid
+	}
+	if setuidBit {
+		goMode = goMode | os.ModeSetuid
+	}
+	return goMode
 }
 
 var (
