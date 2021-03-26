@@ -395,7 +395,7 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 	volDirPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, volName)
 	// This volumeID construction duplicates the one further down in the stack. We do it anyway to generate an
 	// appropriate mountDirPath.
-	volumeID := newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot)
+	volumeID := NewBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot)
 	mountDirPath := path.Join(cs.csDataDir, sanitizeVolumeID(volumeID)) // e.g. /csDataDir/127.0.0.1_scratch_pvc-12345678
 	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, cs.pluginConfig)
 }

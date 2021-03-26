@@ -63,7 +63,7 @@ func TestNewBeegfsUrl(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := newBeegfsUrl(tc.host, tc.path)
+			got := NewBeegfsUrl(tc.host, tc.path)
 			if tc.want != got {
 				t.Fatalf("expected: %s, got: %s", tc.want, got)
 			}

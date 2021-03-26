@@ -225,7 +225,7 @@ func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pl
 		volDirBasePath:           path.Dir(volDirPath),
 		volDirPathBeegfsRoot:     volDirPathBeegfsRoot,
 		volDirPath:               volDirPath,
-		volumeID:                 newBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot),
+		volumeID:                 NewBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot),
 	}
 }
 

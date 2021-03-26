@@ -30,8 +30,8 @@ import (
 var fs = afero.NewOsFs()
 var fsutil = afero.Afero{Fs: fs}
 
-// newBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path.
-func newBeegfsUrl(host string, path string) string {
+// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path.
+func NewBeegfsUrl(host string, path string) string {
 	structURL := url.URL{
 		Scheme: "beegfs",
 		Host:   host,

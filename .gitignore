@@ -3,3 +3,4 @@
 .idea/
 ignored/
 deploy/dev/kustomization.yaml
+junit/
