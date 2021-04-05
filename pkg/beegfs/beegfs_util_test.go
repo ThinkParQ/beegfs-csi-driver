@@ -16,6 +16,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/spf13/afero"
+	"golang.org/x/net/context"
 )
 
 // This is included here as a constant for formatting reasons (literal looks better with no indentation involved).
@@ -166,7 +167,7 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	vol := newBeegfsVolume(mountDirPath, sysMgmtdHost, "test", testConfig)
-	if err := writeClientFiles(vol, confTemplatePath); err != nil {
+	if err := writeClientFiles(context.Background(), vol, confTemplatePath); err != nil {
 		t.Fatalf("expected no error to occur: %v", err)
 	}
 

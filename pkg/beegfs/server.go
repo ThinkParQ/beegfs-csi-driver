@@ -24,13 +24,15 @@ package beegfs
 import (
 	"fmt"
 	"io"
+	"k8s.io/klog/v2/klogr"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
+	"github.com/go-logr/logr"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
@@ -38,6 +40,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const ctxRequestID = "reqID"
+
+var requestIDCounter uint32
 
 // Traditionally gRPC service handlers should return an error created by the
 // package "google.golang.org/grpc/status".  However our gRPC service handlers
@@ -117,19 +123,19 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 
 	proto, addr, err := parseEndpoint(endpoint)
 	if err != nil {
-		glog.Fatal(err.Error())
+		LogFatal(nil, err, "Error parsing endpoint")
 	}
 
 	if proto == "unix" {
 		addr = "/" + addr
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) { //nolint: vetshadow
-			glog.Fatalf("Failed to remove %s, error: %s", addr, err.Error())
+			LogFatal(nil, err, "Failed to remove address", "address", addr)
 		}
 	}
 
 	listener, err := net.Listen(proto, addr)
 	if err != nil {
-		glog.Fatalf("Failed to listen: %v", err)
+		LogFatal(nil, err, "Failed to listen")
 	}
 
 	opts := []grpc.ServerOption{
@@ -148,13 +154,13 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 		csi.RegisterNodeServer(server, ns)
 	}
 
-	glog.Infof("Listening for connections on address: %#v", listener.Addr())
+	Logger(nil).Info("Listening for connections", "address", listener.Addr())
 
 	if err = server.Serve(listener); err != nil {
 		if err == grpc.ErrServerStopped {
-			glog.Info(err.Error())
+			Logger(nil).Info(err.Error())
 		} else {
-			glog.Fatal(err.Error())
+			LogFatal(nil, err, "Fatal error")
 		}
 	}
 }
@@ -170,25 +176,59 @@ func parseEndpoint(ep string) (string, string, error) {
 }
 
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	logLevel := LogDebug
+	reqCtx := generateRequestContext(ctx)
+	logLevel := LogLevelDebug
 	// These GRPC methods are called very frequently. Filter them out so they only appear at higher log levels.
 	if info.FullMethod == "/csi.v1.Identity/Probe" || info.FullMethod == "/csi.v1.Node/NodeGetCapabilities" {
-		logLevel = LogVerbose
+		logLevel = LogLevelVerbose
 	}
 
-	glog.V(logLevel).Infof("GRPC call: %s with request: %+v", info.FullMethod, protosanitizer.StripSecrets(req))
-	resp, err := handler(ctx, req)
+	Logger(reqCtx).V(logLevel).Info("GRPC call", "method", info.FullMethod, "request", protosanitizer.StripSecrets(req).String())
+	resp, err := handler(reqCtx, req)
 	if err != nil {
-		glog.Errorf("GRPC error: %+v for call: %s with request: %+v", err, info.FullMethod,
-			protosanitizer.StripSecrets(req))
+		LogError(reqCtx, err, "GRPC error", "method", info.FullMethod, "request", protosanitizer.StripSecrets(req).String())
 		var grpcErr grpcError
 		if errors.As(err, &grpcErr) {
 			// only forward statusErr
 			err = grpcErr.GetStatusErr()
 		}
 	} else {
-		glog.V(logLevel).Infof("GRPC response: %+v for call: %s with request: %+v",
-			protosanitizer.StripSecrets(resp), info.FullMethod, protosanitizer.StripSecrets(req))
+		Logger(reqCtx).V(logLevel).Info("GRPC response", "response", protosanitizer.StripSecrets(resp).String(), "method", info.FullMethod)
 	}
 	return resp, err
+}
+
+// Generates a new context with a unique hexadecimal requestID to easily keep track of related logs
+func generateRequestContext(parent context.Context) context.Context {
+	return context.WithValue(parent, ctxRequestID, fmt.Sprintf("%04x", atomic.AddUint32(&requestIDCounter, 1)%0x10000))
+}
+
+// logger returns a klogr logger with as much context as possible
+func Logger(ctx context.Context) logr.Logger {
+	newLogger := klogr.New()
+	if ctx != nil {
+		if ctxRqId, ok := ctx.Value(ctxRequestID).(string); ok {
+			newLogger = newLogger.WithValues(ctxRequestID, ctxRqId)
+		}
+	} else {
+		newLogger = newLogger.WithValues("goroutine", "main")
+	}
+	return newLogger
+}
+
+func LogDebug(ctx context.Context, msg string, keysAndValues ...interface{}) {
+	Logger(ctx).V(LogLevelDebug).Info(msg, keysAndValues...)
+}
+
+func LogVerbose(ctx context.Context, msg string, keysAndValues ...interface{}) {
+	Logger(ctx).V(LogLevelVerbose).Info(msg, keysAndValues...)
+}
+
+func LogError(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
+	Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err)).Error(err, msg, keysAndValues...)
+}
+
+func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
+	LogError(ctx, err, "Fatal: "+msg, keysAndValues...)
+	os.Exit(255)
 }

@@ -25,7 +25,6 @@ import (
 	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -102,7 +101,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 	if !notMnt {
 		// The filesystem is already mounted. There is nothing to do.
-		glog.V(LogDebug).Infof("%s is already mounted to %s", vol.volumeID, vol.mountPath)
+		LogDebug(ctx, "Volume is already mounted to path", "volumeID", vol.volumeID, "path", vol.mountPath)
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
@@ -116,7 +115,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		// work as expected for other COs.
 		opts = append(opts, "ro")
 	}
-	glog.V(LogDebug).Infof("Mounting %s to %s with options %s", vol.volDirPath, targetPath, opts)
+	LogDebug(ctx, "Mounting volume", "volDirPath", vol.volDirPath, "targetPath", targetPath, "options", opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
 		err = errors.WithStack(err)
@@ -137,7 +136,7 @@ func (ns *nodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpu
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
-	glog.V(LogDebug).Infof("Unmounting %s from %s", volumeID, targetPath)
+	LogDebug(ctx, "Unmounting volume", "volumeID", volumeID, "mountPath", targetPath)
 	if err := mount.CleanupMountPoint(targetPath, ns.mounter, true); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
@@ -176,10 +175,10 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 	}
 
 	// Write configuration files and mount BeeGFS.
-	if err := writeClientFiles(vol, ns.clientConfTemplatePath); err != nil {
+	if err := writeClientFiles(ctx, vol, ns.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(vol, ns.mounter); err != nil {
+	if err := mountIfNecessary(ctx, vol, ns.mounter); err != nil {
 		// TODO(webere, A144): Return the appropriate codes.NOT_FOUND if the problem is that we can't find the volume.
 		// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
@@ -204,7 +203,7 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	err = unmountAndCleanUpIfNecessary(vol, false, ns.mounter) // The CO will clean up mountDirPath.
+	err = unmountAndCleanUpIfNecessary(ctx, vol, false, ns.mounter) // The CO will clean up mountDirPath.
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
