@@ -12,16 +12,16 @@ import (
 	"path"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
+	"golang.org/x/net/context"
 )
 
 // beegfsCtlExecutorInterface abstracts beegfs-ctl so tests can run without access to a beegfs-ctl binary or a BeeGFS
 // file system.
 type beegfsCtlExecutorInterface interface {
-	createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error
-	statDirForVolume(vol beegfsVolume) (string, error)
-	setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error
+	createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error
+	statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error)
+	setPatternForVolume(ctx context.Context, vol beegfsVolume, cfg stripePatternConfig) error
 }
 
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
@@ -30,13 +30,13 @@ type beegfsCtlExecutor struct{}
 // createDirForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by
 // vol.volDirPathBeegfsRoot on the BeeGFS file system specified by vol.sysMgmtdHost. createDirectory returns an error
 // if it cannot create the directory, but does not return an error if the directory already exists.
-func (ctlExec *beegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error {
-	glog.V(LogDebug).Infof("Creating BeeGFS directory %s for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
+func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error {
+	LogDebug(ctx, "Creating BeeGFS directory", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
 	// Check if volume already exists.
-	_, err := ctlExec.statDirForVolume(vol)
+	_, err := ctlExec.statDirectoryForVolume(ctx, vol)
 	if errors.As(err, &ctlNotExistError{}) {
 		// We can't find the volume so we need to create one.
-		glog.V(LogDebug).Infof("BeeGFS directory %s does not exist for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
+		LogDebug(ctx, "BeeGFS directory does not exist", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
 
 		// Construct the set of arguments that will be used to create any necessary directories.
 		createDirArgs := constructCreateDirForVolumeArgs(cfg)
@@ -50,7 +50,7 @@ func (ctlExec *beegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permi
 		}
 		// Starting with the most general path, create all directories required to eventually create vol.volDirPathBeegfsRoot.
 		for _, dir := range dirsToMake {
-			_, err := ctlExec.execute(vol.clientConfPath, append(createDirArgs, dir))
+			_, err := ctlExec.execute(ctx, vol.clientConfPath, append(createDirArgs, dir))
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
 				return errors.WithMessagef(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
@@ -59,15 +59,15 @@ func (ctlExec *beegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permi
 	} else if err != nil {
 		return err
 	} else {
-		glog.V(LogDebug).Infof("BeeGFS directory %s already exists for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
+		LogDebug(ctx, "BeeGFS directory already exists", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
 	}
 	return nil
 }
 
 // statDirForVolume returns the information output by "beegfs-ctl --getentryinfo" as a string, or an empty string
 // and an error if the stat fails.
-func (ctlExec *beegfsCtlExecutor) statDirForVolume(vol beegfsVolume) (string, error) {
-	return ctlExec.execute(vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
+func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error) {
+	return ctlExec.execute(ctx, vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
 }
 
 // constructSetPatternForVolumeArgs constructs the slice of arguments that will be passed to ctlExec.execute() in a
@@ -115,12 +115,12 @@ func constructCreateDirForVolumeArgs(cfg permissionsConfig) []string {
 // setPatternForVolume uses a "beegfs-ctl --unmounted --setpattern" command to set the pattern for a directory specified by
 // vol.volDirPathBeegfsRoot on the BeeGFS file system. setPatternForVolume returns an error if it cannot set the pattern for
 // the directory, but does not return an error if the pattern on the directory already exists. setPatternForVolume has no
-// effect and does not return an error if cfg is empty.
-func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error {
+// effect and does not return an error if config is empty.
+func (ctlExec *beegfsCtlExecutor) setPatternForVolume(ctx context.Context, vol beegfsVolume, cfg stripePatternConfig) error {
 	args, needToExecute := constructSetPatternForVolumeArgs(cfg)
 	if needToExecute {
 		args = append(args, vol.volDirPathBeegfsRoot)
-		_, err := ctlExec.execute(vol.clientConfPath, args)
+		_, err := ctlExec.execute(ctx, vol.clientConfPath, args)
 		if err != nil {
 			return errors.WithMessagef(err, "cannot set pattern for BeeGFS directory %s for volume %s", vol.volDirPathBeegfsRoot, vol.sysMgmtdHost)
 		}
@@ -132,10 +132,10 @@ func (ctlExec *beegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, cfg stri
 // execute runs arbitrary beegfs-ctl commands like "beegfs-ctl --arg1 --arg2=value". It logs the stdout and stderr
 // when running at a high verbosity and returns stdout as a string (as well as any potential errors). execute fails if
 // beegfs-ctl is not on the PATH.
-func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut string, err error) {
+func (*beegfsCtlExecutor) execute(ctx context.Context, clientConfPath string, args []string) (stdOut string, err error) {
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", clientConfPath)}, args...)
 	cmd := exec.Command("beegfs-ctl", args...)
-	glog.V(LogDebug).Infof("Executing command: %s", cmd.Args)
+	LogDebug(ctx, "Executing command", "command", cmd.Args)
 
 	var stdoutBuffer bytes.Buffer
 	var stderrBuffer bytes.Buffer
@@ -155,10 +155,10 @@ func (*beegfsCtlExecutor) execute(clientConfPath string, args []string) (stdOut 
 		}
 	}
 	if stdOutString != "" {
-		glog.V(LogVerbose).Infof("stdout from %s: %s", cmd.Args, stdOutString)
+		LogVerbose(ctx, "stdout from command", "command", cmd.Args, "stdout", stdOutString)
 	}
 	if stdErrString != "" {
-		glog.V(LogVerbose).Infof("stdErr from %s: %s", cmd.Args, stdErrString)
+		LogVerbose(ctx, "stderr from command", "command", cmd.Args, "stderr", stdErrString)
 	}
 
 	return stdOutString, err
@@ -193,14 +193,14 @@ func (err ctlExistError) Error() string {
 // fakeBeeGFSCtlExecutor is a mock implementation of beegfsCtlExecutorInterface useful for testing.
 type fakeBeegfsCtlExecutor struct{}
 
-func (*fakeBeegfsCtlExecutor) createDirForVolume(vol beegfsVolume, cfg permissionsConfig) error {
+func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error {
 	return nil
 }
 
-func (*fakeBeegfsCtlExecutor) statDirForVolume(vol beegfsVolume) (string, error) {
+func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error) {
 	return "", nil
 }
 
-func (*fakeBeegfsCtlExecutor) setPatternForVolume(vol beegfsVolume, cfg stripePatternConfig) error {
+func (*fakeBeegfsCtlExecutor) setPatternForVolume(ctx context.Context, vol beegfsVolume, cfg stripePatternConfig) error {
 	return nil
 }

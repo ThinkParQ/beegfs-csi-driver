@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -119,23 +118,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we created the volume.
-		if err := unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
-			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
+		if err := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
+			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
+	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Use beegfs-ctl to create the directory and stripe it appropriately.
-	if err := cs.ctlExec.createDirForVolume(vol, permissionsConfig); err != nil {
+	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, permissionsConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := cs.ctlExec.setPatternForVolume(vol, stripePatternConfig); err != nil {
+	if err := cs.ctlExec.setPatternForVolume(ctx, vol, stripePatternConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
@@ -143,11 +142,11 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
 	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
 	if permissionsConfig.hasSpecialPermissions() {
-		if err := mountIfNecessary(vol, cs.mounter); err != nil {
+		if err := mountIfNecessary(ctx, vol, cs.mounter); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
-		glog.V(LogDebug).Infof("Applying %s permissions to %s for mounted %s",
-			fmt.Sprintf("%4o", permissionsConfig.mode), vol.volDirPath, vol.volumeID)
+		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", permissionsConfig.mode),
+			"volDirPath", vol.volDirPath, "volumeID", vol.volumeID)
 		if err := os.Chmod(vol.volDirPath, permissionsConfig.goFileMode()); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
@@ -182,23 +181,23 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	// Write configuration files and mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we deleted the volume.
-		if err := unmountAndCleanUpIfNecessary(vol, true, cs.mounter); err != nil {
-			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
+		if err := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
+			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
+	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(vol, cs.mounter); err != nil {
+	if err := mountIfNecessary(ctx, vol, cs.mounter); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Delete volume from mounted BeeGFS.
-	glog.V(LogDebug).Infof("Deleting BeeGFS directory %s for %s", vol.volDirPathBeegfsRoot, vol.volumeID)
+	LogDebug(ctx, "Deleting BeeGFS directory", "volDirBasePathBeegfsRoot", vol.volDirBasePathBeegfsRoot, "volumeID", vol.volumeID)
 	if err = fs.RemoveAll(vol.volDirPath); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
@@ -246,19 +245,19 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not the volume exists.
-		if err := cleanUpIfNecessary(vol, true); err != nil {
-			glog.Warningf("Failed to clean up %s for %s: %+v", vol.mountDirPath, vol.volumeID, err)
+		if err := cleanUpIfNecessary(ctx, vol, true); err != nil {
+			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
 		}
 	}()
 	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := writeClientFiles(vol, cs.clientConfTemplatePath); err != nil {
+	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	if _, err := cs.ctlExec.statDirForVolume(vol); err != nil {
+	if _, err := cs.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
@@ -322,7 +321,7 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	var csc []*csi.ControllerServiceCapability
 
 	for _, cap := range cl {
-		glog.V(LogDebug).Infof("Enabling controller service capability: %v", cap.String())
+		LogDebug(nil, "Enabling controller service capability", "capability", cap.String())
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{

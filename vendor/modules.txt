@@ -4,10 +4,8 @@ github.com/container-storage-interface/spec/lib/go/csi
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v0.2.0
-github.com/go-logr/logr
-# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 ## explicit
-github.com/golang/glog
+github.com/go-logr/logr
 # github.com/golang/protobuf v1.4.3
 ## explicit
 github.com/golang/protobuf/descriptor
@@ -211,6 +209,7 @@ gopkg.in/yaml.v2
 # k8s.io/klog/v2 v2.4.0
 ## explicit
 k8s.io/klog/v2
+k8s.io/klog/v2/klogr
 # k8s.io/utils v0.0.0-20200912215256-4140de9c8800
 ## explicit
 k8s.io/utils/exec

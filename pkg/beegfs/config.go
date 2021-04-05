@@ -9,7 +9,6 @@ import (
 	"net"
 	"regexp"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
@@ -90,7 +89,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 	if err := yaml.UnmarshalStrict(rawConfigBytes, &rawConfig); err != nil {
 		return pluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
-	glog.V(LogDebug).Infof("Raw configuration parsed from %s: %+v", path, rawConfig)
+	LogDebug(nil, "Raw configuration parsed", "parsePath", path, "rawConfig", rawConfig)
 
 	// start populating newPluginConfig using values directly from rawConfig
 	newPluginConfig = pluginConfig{
@@ -118,7 +117,7 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 		return pluginConfig{}, errors.WithMessage(err, "config validation failed")
 	}
 	newPluginConfig.stripConfig()
-	glog.V(LogDebug).Infof("Actual configuration to be applied: %+v", newPluginConfig)
+	LogDebug(nil, "Actual configuration to be applied", "pluginConfig", newPluginConfig)
 
 	return newPluginConfig, nil
 }
@@ -163,15 +162,15 @@ func (plConfig *pluginConfig) stripConfig() {
 	for _, config := range beegfsConfigs {
 		for _, noEffectOption := range noEffectBeegfsConfOptions {
 			if val, present := config.BeegfsClientConf[noEffectOption]; present {
-				glog.Warningf("No-effect beegfs configuration option %s=%s found and removed from config",
-					noEffectOption, val)
+				LogDebug(nil, "WARNING: No-effect beegfs configuration option found and removed from config",
+					"noEffectOption", noEffectOption, "noEffectValue", val)
 				delete(config.BeegfsClientConf, noEffectOption)
 			}
 		}
 		for _, unsupportedOption := range unsupportedBeegfsConfOptions {
 			if val, present := config.BeegfsClientConf[unsupportedOption]; present {
-				glog.Warningf("Unsupported beegfs configuration option %s=%s found and left in config",
-					unsupportedOption, val)
+				LogDebug(nil, "WARNING: Unsupported beegfs configuration option found and left in config",
+					"unsupportedOption", unsupportedOption, "unsupportedValue", val)
 			}
 		}
 	}
