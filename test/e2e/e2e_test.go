@@ -3,9 +3,6 @@ package e2e
 import (
 	"flag"
 	"fmt"
-	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -14,20 +11,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	beegfssuites "github.com/netapp/beegfs-csi-driver/test/e2e/testsuites"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 )
 
 var (
-	perFSConfigsPath    string
-	perFSConfigs        []driver.PerFSConfig
-	beegfsDriver        *driver.BeegfsDriver
-	beegfsDynamicDriver *driver.BeegfsDynamicDriver
-	beegfsStaticDriver  *driver.BeegfsStaticDriver
+	perFSConfigsPath string
+	perFSConfigs     []driver.PerFSConfig
 )
 
 func init() {
@@ -60,26 +57,26 @@ var csiTestSuites = []func() testsuites.TestSuite{
 	testsuites.InitVolumeModeTestSuite,
 }
 
-var _ = BeforeSuite(func() {
+var _ = ginkgo.BeforeSuite(func() {
 	framework.ExpectNotEqual(len(perFSConfigs), 0, "At least one perFSConfig must be specified")
 })
 
-var _ = Describe("E2E Tests", func() {
+var _ = ginkgo.Describe("E2E Tests", func() {
 	perFSConfigsBytes, _ := ioutil.ReadFile(perFSConfigsPath)
 	_ = yaml.UnmarshalStrict(perFSConfigsBytes, &perFSConfigs)
 
 	staticDriver := driver.InitBeegfsStaticDriver(perFSConfigs)
-	Context(testsuites.GetDriverNameWithFeatureTags(staticDriver), func() {
+	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(staticDriver), func() {
 		testsuites.DefineTestSuite(staticDriver, csiTestSuites)
 	})
 
 	dynamicDriver := driver.InitBeegfsDynamicDriver(perFSConfigs)
-	Context(testsuites.GetDriverNameWithFeatureTags(dynamicDriver), func() {
+	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(dynamicDriver), func() {
 		testsuites.DefineTestSuite(dynamicDriver, csiTestSuites)
 	})
 
 	driver := driver.InitBeegfsDriver(perFSConfigs)
-	Context(testsuites.GetDriverNameWithFeatureTags(driver), func() {
+	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(driver), func() {
 		testsuites.DefineTestSuite(driver, []func() testsuites.TestSuite{beegfssuites.InitBeegfsTestSuite})
 	})
 })
@@ -88,9 +85,9 @@ func Test(t *testing.T) {
 	// Much of the code in this function is copied directly from the RunE2ETests function in
 	// the k8s.io/kubernetes/test/e2e package.
 
-	RegisterFailHandler(Fail)
+	gomega.RegisterFailHandler(ginkgo.Fail)
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-	var r []Reporter
+	var r []ginkgo.Reporter
 	if framework.TestContext.ReportDir != "" {
 		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
 			log.Fatalf("Failed creating report directory: %v", err)
@@ -99,5 +96,5 @@ func Test(t *testing.T) {
 		}
 	}
 	log.Printf("Starting e2e run %q on Ginkgo node %d", framework.RunID, config.GinkgoConfig.ParallelNode)
-	RunSpecsWithDefaultAndCustomReporters(t, "E2E Tests", r)
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "E2E Tests", r)
 }

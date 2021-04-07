@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/storage/names"
 	"k8s.io/kubernetes/test/e2e/framework"
-	"k8s.io/kubernetes/test/e2e/framework/skipper"
+	e2eskipper "k8s.io/kubernetes/test/e2e/framework/skipper"
 	"k8s.io/kubernetes/test/e2e/storage/testpatterns"
 	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 )
@@ -63,9 +63,9 @@ type BeegfsDynamicDriver struct {
 // operation.
 type PerFSConfig struct {
 	SysMgmtdHost             string `yaml:"sysMgmtdHost"`
-	VolDirBasePath           string `yaml:"volDirBasePath"`
+	MountPath                string `yaml:"mountPath"`
 	VolDirBasePathBeegfsRoot string `yaml:"volDirBasePathBeegfsRoot"`
-	ClientConfPath           string `yaml:"clientConfPath"`
+	RDMACapable              bool   `yaml:"rdmaCapable"`
 }
 
 // baseBeegfsDriver implements the testsuites.TestDriver interface.
@@ -79,7 +79,7 @@ func (d *baseBeegfsDriver) SkipUnsupportedTest(pattern testpatterns.TestPattern)
 	// Late binding ephemeral tests fail unless skipped, but they probably shouldn't.
 	// TODO: Figure out why.
 	case storagev1.VolumeBindingWaitForFirstConsumer:
-		skipper.Skipf("Driver %s does not support binding mode %s", d.driverInfo.Name, pattern.BindingMode)
+		e2eskipper.Skipf("Driver %s does not support binding mode %s", d.driverInfo.Name, pattern.BindingMode)
 	}
 }
 
@@ -182,8 +182,8 @@ func (d *baseBeegfsDriver) createVolume(config *testsuites.PerTestConfig,
 	volumeType testpatterns.TestVolType) beegfsVolume {
 	fsConfig := d.GetFSConfig()
 	dirName := names.SimpleNameGenerator.GenerateName(config.Framework.Namespace.Name + "-static-")
-	volDirPath := path.Join(fsConfig.VolDirBasePath, dirName)
 	volDirPathBeegfsRoot := path.Join(fsConfig.VolDirBasePathBeegfsRoot, dirName)
+	volDirPath := path.Join(fsConfig.MountPath, volDirPathBeegfsRoot)
 	err := os.Mkdir(volDirPath, 0o755)
 	framework.ExpectNoError(err)
 	return beegfsVolume{
@@ -314,4 +314,16 @@ func (d *baseBeegfsDriver) GetNumFS() int {
 // a PerFSConfig as beegfs-csi-driver specific tests are developed.
 func (d *baseBeegfsDriver) GetFSConfig() PerFSConfig {
 	return d.perFSConfigs[d.fsIndex]
+}
+
+// SetFSIndexForRDMA looks for an RDMA capable file system and sets fsIndex to refer to the first one it finds. It
+// returns false if there are no RDMA capable file systems.
+func (d *baseBeegfsDriver) SetFSIndexForRDMA() bool {
+	for i, cfg := range d.perFSConfigs {
+		if cfg.RDMACapable {
+			d.SetFSIndex(i)
+			return true
+		}
+	}
+	return false // There are no RDMA capable file systems.
 }
