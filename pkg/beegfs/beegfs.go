@@ -25,7 +25,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/golang/glog"
 	"github.com/pkg/errors"
 	"k8s.io/utils/mount"
 )
@@ -41,8 +40,8 @@ const (
 	permissionsModeKey            = "permissions/mode"
 	defaultPermissionsMode        = 0o0777
 
-	LogDebug   = glog.Level(3) // This log level is used for most informational logs in RPCs and GRPC calls
-	LogVerbose = glog.Level(5) // This log level is used for only very repetitive logs such as the Probe GRPC call
+	LogLevelDebug   = 3 // This log level is used for most informational logs in RPCs and GRPC calls
+	LogLevelVerbose = 5 // This log level is used for only very repetitive logs such as the Probe GRPC call
 )
 
 type beegfs struct {
@@ -174,8 +173,7 @@ func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, client
 		return nil, errors.Wrap(err, "failed to create csDataDir")
 	}
 
-	glog.Infof("Driver: %v ", driverName)
-	glog.Infof("Version: %s", vendorVersion)
+	Logger(nil).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
 
 	var driver beegfs
 	driver = beegfs{
