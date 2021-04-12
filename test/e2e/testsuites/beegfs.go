@@ -9,7 +9,6 @@ package testsuites
 
 import (
 	"fmt"
-	"os/exec"
 	"path"
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
@@ -91,6 +90,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		hostExec.Cleanup()
 	}
 
+	// This test runs for DynamicPV and PreprovisionedPV patterns.
 	ginkgo.It("should access to two volumes from different file systems with the same volume mode and retain "+
 		"data across pod recreation on the same node", func() {
 		init()
@@ -127,7 +127,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		cfg, _ := d.PrepareTest(f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
-		// Create storage resources including a StorageClass with non-standard striping params.
+		// Create storage resource including a StorageClass with non-standard striping params.
 		d.SetStorageClassParams(map[string]string{
 			"stripePattern/storagePoolID": "2",
 			"stripePattern/chunkSize":     "1m",
@@ -137,19 +137,33 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		resource := testsuites.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
 
-		// Use beegfs-ctl to investigate the striping parameters on the created directory.
-		// If we develop more tests that use beegfs-ctl, it would be better to streamline this (e.g. have the test
-		// driver return a mostly complete beegfs-ctl command to run or pass beegfs-ctl arguments to the driver).
-		mountPath := d.GetFSConfig().MountPath
-		volDirPathBeegfsRoot := path.Join(d.GetFSConfig().VolDirBasePathBeegfsRoot, resource.Pv.Name)
-		cmd := exec.Command("/usr/sbin/beegfs-ctl", fmt.Sprintf("--mount=%s", mountPath), "--unmounted",
-			"--getentryinfo", volDirPathBeegfsRoot)
-		output, err := cmd.CombinedOutput()
+		// Create a pod to consume the storage resource.
+		podConfig := e2epod.Config{
+			NS:      cfg.Framework.Namespace.Name,
+			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
+			ImageID: e2evolume.GetDefaultTestImageID(),
+		}
+		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, framework.PodStartTimeout)
+		defer func() {
+			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
+			framework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+		}()
+		framework.ExpectNoError(err)
 
-		framework.ExpectNoError(err, string(output))
-		gomega.Expect(string(output)).To(gomega.ContainSubstring("Storage Pool: 2"))
-		gomega.Expect(string(output)).To(gomega.ContainSubstring("Chunksize: 1M"))
-		gomega.Expect(string(output)).To(gomega.ContainSubstring("Number of storage targets: desired: 2"))
+		// Construct necessary beegfs-ctl parameters.
+		globalMountPath := fmt.Sprintf("/var/lib/kubelet/plugins/kubernetes.io/csi/pv/%s/globalmount/mount", resource.Pv.Name)
+		volDirPathBeegfsRoot := path.Join(resource.Sc.Parameters["volDirBasePath"], resource.Pv.Name)
+
+		// Get striping information using beegfs-ctl on the appropriate hose.
+		node, err := f.ClientSet.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
+		framework.ExpectNoError(err)
+		cmd := fmt.Sprintf("beegfs-ctl --mount=%s --unmounted --getentryinfo %s", globalMountPath, volDirPathBeegfsRoot)
+		result, err := hostExec.IssueCommandWithResult(cmd, node)
+
+		framework.ExpectNoError(err)
+		gomega.Expect(string(result)).To(gomega.ContainSubstring("Storage Pool: 2"))
+		gomega.Expect(string(result)).To(gomega.ContainSubstring("Chunksize: 1M"))
+		gomega.Expect(string(result)).To(gomega.ContainSubstring("Number of storage targets: desired: 2"))
 	})
 
 	ginkgo.It("should use RDMA to connect", func() {

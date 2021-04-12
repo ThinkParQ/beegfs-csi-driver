@@ -40,12 +40,12 @@ var (
 
 type nodeServer struct {
 	nodeID                 string
-	pluginConfig           pluginConfig
+	pluginConfig           PluginConfig
 	clientConfTemplatePath string
 	mounter                mount.Interface
 }
 
-func NewNodeServer(nodeId string, pluginConfig pluginConfig, clientConfTemplatePath string) *nodeServer {
+func NewNodeServer(nodeId string, pluginConfig PluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
 		nodeID:                 nodeId,
 		pluginConfig:           pluginConfig,

@@ -47,14 +47,14 @@ type controllerServer struct {
 	ctlExec                beegfsCtlExecutorInterface
 	caps                   []*csi.ControllerServiceCapability
 	nodeID                 string
-	pluginConfig           pluginConfig
+	pluginConfig           PluginConfig
 	clientConfTemplatePath string
 	mounter                mount.Interface
 	csDataDir              string
 	volumeIDsInFlight      *threadSafeStringLock
 }
 
-func NewControllerServer(nodeID string, pluginConfig pluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
+func NewControllerServer(nodeID string, pluginConfig PluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
@@ -389,7 +389,7 @@ func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsCon
 
 // (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context
 // of the controller service. (*controllerServer) newBeegfsVolume selects the mountDirPath and passes the controller
-//service's pluginConfig.
+//service's PluginConfig.
 func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName string) beegfsVolume {
 	volDirPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, volName)
 	// This volumeID construction duplicates the one further down in the stack. We do it anyway to generate an
@@ -401,7 +401,7 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 
 // (*controllerServer) newBeegfsVolumeFromID is a wrapper around newBeegfsVolumeFromID that makes it easier to call in
 // the context of the controller service. (*controllerServer) newBeegfsVolumeFromID selects the mountDirPath and passes
-// the controller service's pluginConfig.
+// the controller service's PluginConfig.
 func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume, error) {
 	mountDirPath := path.Join(cs.csDataDir, sanitizeVolumeID(volumeID)) // e.g. /csDataDir/127.0.0.1_scratch_pvc-12345678
 	return newBeegfsVolumeFromID(mountDirPath, volumeID, cs.pluginConfig)

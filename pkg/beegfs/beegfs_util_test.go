@@ -139,7 +139,7 @@ func TestWriteClientFiles(t *testing.T) {
 	confTemplatePath := path.Join(confTemplateDirPath, "beegfs-client.conf")
 	mountDirPath := "/testvol"
 	sysMgmtdHost := "127.0.0.1"
-	testConfig := pluginConfig{
+	testConfig := PluginConfig{
 		DefaultConfig: beegfsConfig{
 			ConnInterfaces:    []string{"ib0"},
 			ConnNetFilter:     []string{"127.0.0.0/24"},
@@ -221,9 +221,9 @@ func TestSquashConfigForSysMgmtdHost(t *testing.T) {
 	defaultConfig.ConnInterfaces = []string{"ib0"}
 	fileSystemSpecificBeegfsConfig := *newBeegfsConfig()
 	fileSystemSpecificBeegfsConfig.ConnInterfaces = []string{"ib1"}
-	testConfig := pluginConfig{
+	testConfig := PluginConfig{
 		DefaultConfig: defaultConfig,
-		FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+		FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 			{
 				SysMgmtdHost: "127.0.0.1",
 				Config:       fileSystemSpecificBeegfsConfig,

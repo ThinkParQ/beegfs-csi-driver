@@ -145,11 +145,11 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 	return nil
 }
 
-// squashConfigForSysMgmtdHost takes a sysMgmtdHost and pluginConfig, which MAY have FileSystemSpecificConfigs. If
-// the pluginConfig contains overrides for the provided sysMgmtdHost, squashConfigForSysMgmtdHost combines them with
-// the DefaultConfig (giving preference to the appropriate fileSystemSpecificConfig). Otherwise, it returns the
+// squashConfigForSysMgmtdHost takes a sysMgmtdHost and PluginConfig, which MAY have FileSystemSpecificConfigs. If
+// the PluginConfig contains overrides for the provided sysMgmtdHost, squashConfigForSysMgmtdHost combines them with
+// the DefaultConfig (giving preference to the appropriate FileSystemSpecificConfig). Otherwise, it returns the
 // DefaultConfig.
-func squashConfigForSysMgmtdHost(sysMgmtdHost string, config pluginConfig) (returnConfig beegfsConfig) {
+func squashConfigForSysMgmtdHost(sysMgmtdHost string, config PluginConfig) (returnConfig beegfsConfig) {
 	returnConfig = *newBeegfsConfig()
 	returnConfig.overwriteFrom(config.DefaultConfig)
 	for _, fileSystemSpecificConfig := range config.FileSystemSpecificConfigs {

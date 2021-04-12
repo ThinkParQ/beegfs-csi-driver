@@ -1,9 +1,9 @@
 package e2e
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/netapp/beegfs-csi-driver/pkg/beegfs"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	beegfssuites "github.com/netapp/beegfs-csi-driver/test/e2e/testsuites"
 	"github.com/onsi/ginkgo"
@@ -18,29 +19,32 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/test/e2e/framework"
+	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 )
 
-var (
-	perFSConfigsPath string
-	perFSConfigs     []driver.PerFSConfig
-)
+// A pointer to a BeegfsDriver is kept here as a global variable so its perFSConfigs can be set with
+// beegfsDriver.SetPerFSConfigs in BeforeSuite. Another option would be to SetPerFSConfigs in beegfsDriver.PrepareTest,
+// but this would cause us to query the K8s API server for every test. There are likely additional strategies for
+// setting the BeegfsDriver's perFSConfigs, but Ginkgo's "order or execution" makes things difficult.
+var beegfsDriver *driver.BeegfsDriver
+var beegfsDynamicDriver *driver.BeegfsDynamicDriver
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	framework.RegisterCommonFlags(flag.CommandLine)
 	framework.RegisterClusterFlags(flag.CommandLine)
-	registerFlags(flag.CommandLine)
 	framework.AfterReadingAllFlags(&framework.TestContext)
+
 }
 
-func registerFlags(flags *flag.FlagSet) {
-	flags.StringVar(&perFSConfigsPath, "per-fs-configs-path", "",
-		"Absolute path to a configuration file defining the file systems to test.")
+var beegfsSuitesToRun = []func() testsuites.TestSuite{
+	beegfssuites.InitBeegfsTestSuite,
 }
 
-var csiTestSuites = []func() testsuites.TestSuite{
+var k8sSuitesToRun = []func() testsuites.TestSuite{
 	// This list of test results in 31 pass and 1 fail.
 	testsuites.InitDisruptiveTestSuite,
 	//testsuites.InitEphemeralTestSuite, // 2 fail when WaitForFirstConsumer is enabled. Currently disabled.
@@ -58,26 +62,47 @@ var csiTestSuites = []func() testsuites.TestSuite{
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	framework.ExpectNotEqual(len(perFSConfigs), 0, "At least one perFSConfig must be specified")
+	cs, err := framework.LoadClientset()
+	framework.ExpectNoError(err, "expected to load a client set")
+
+	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace).
+	controllerPods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-controller"})
+	framework.ExpectNoError(err, "expected to find controller Pod")
+	framework.ExpectEqual(len(controllerPods), 1, "expected only one controller pod")
+
+	// Get the name of the ConfigMap from the controller Pod.
+	var driverCMName string
+	controllerNS := controllerPods[0].ObjectMeta.Namespace
+	for _, volume := range controllerPods[0].Spec.Volumes {
+		if volume.Name == "config-dir" {
+			driverCMName = volume.ConfigMap.Name
+		}
+	}
+
+	// Read the ConfigMap.
+	driverCM, err := cs.CoreV1().ConfigMaps(controllerNS).Get(context.TODO(), driverCMName, metav1.GetOptions{})
+	framework.ExpectNoError(err, "expected to read ConfigMap")
+	driverConfigString, ok := driverCM.Data["csi-beegfs-config.yaml"]
+	framework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
+
+	// Unmarshal the ConfigMap and use it to populate the global BeegfsDriver's perFSConfigs.
+	var pluginConfig beegfs.PluginConfig
+	err = yaml.UnmarshalStrict([]byte(driverConfigString), &pluginConfig)
+	framework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
+	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
+	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
+
 })
 
 var _ = ginkgo.Describe("E2E Tests", func() {
-	perFSConfigsBytes, _ := ioutil.ReadFile(perFSConfigsPath)
-	_ = yaml.UnmarshalStrict(perFSConfigsBytes, &perFSConfigs)
-
-	staticDriver := driver.InitBeegfsStaticDriver(perFSConfigs)
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(staticDriver), func() {
-		testsuites.DefineTestSuite(staticDriver, csiTestSuites)
+	beegfsDriver = driver.InitBeegfsDriver()
+	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(beegfsDriver), func() {
+		testsuites.DefineTestSuite(beegfsDriver, beegfsSuitesToRun)
 	})
 
-	dynamicDriver := driver.InitBeegfsDynamicDriver(perFSConfigs)
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(dynamicDriver), func() {
-		testsuites.DefineTestSuite(dynamicDriver, csiTestSuites)
-	})
-
-	driver := driver.InitBeegfsDriver(perFSConfigs)
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(driver), func() {
-		testsuites.DefineTestSuite(driver, []func() testsuites.TestSuite{beegfssuites.InitBeegfsTestSuite})
+	beegfsDynamicDriver = driver.InitBeegfsDynamicDriver()
+	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
+		testsuites.DefineTestSuite(beegfsDynamicDriver, k8sSuitesToRun)
 	})
 })
 

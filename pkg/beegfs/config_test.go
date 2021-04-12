@@ -22,19 +22,19 @@ func TestParseConfig(t *testing.T) {
 	tests := map[string]struct {
 		configFile string
 		nodeID     string
-		want       pluginConfig
+		want       PluginConfig
 	}{
 		"basic all fields correct": {
 			configFile: "testdata/basic.yaml",
 			nodeID:     "testnode",
-			want: pluginConfig{
+			want: PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
 					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
 				},
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
@@ -51,7 +51,7 @@ func TestParseConfig(t *testing.T) {
 			// because "testnode" is in nodeList, default values should be overridden
 			configFile: "testdata/node-default-override.yaml",
 			nodeID:     "testnode",
-			want: pluginConfig{
+			want: PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnInterfaces:    []string{"ib1"},
 					ConnNetFilter:     []string{"127.0.0.1/24"},
@@ -64,7 +64,7 @@ func TestParseConfig(t *testing.T) {
 			// because "testnode" is in nodeList, default values should be overridden, then overridden again
 			configFile: "testdata/node-default-override-double.yaml",
 			nodeID:     "testnode",
-			want: pluginConfig{
+			want: PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnInterfaces:    []string{"ib2"},
 					ConnNetFilter:     []string{"127.0.0.2/24"},
@@ -77,7 +77,7 @@ func TestParseConfig(t *testing.T) {
 			// because "testnode" is NOT in nodeList, default values should NOT be overridden
 			configFile: "testdata/node-default-override.yaml",
 			nodeID:     "nottestnode",
-			want: pluginConfig{
+			want: PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
@@ -90,14 +90,14 @@ func TestParseConfig(t *testing.T) {
 			// because "testnode" is in nodeList, file system specific values should be overridden
 			configFile: "testdata/node-filesystem-override.yaml",
 			nodeID:     "testnode",
-			want: pluginConfig{
+			want: PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
 					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
 				},
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.1",
 						Config: beegfsConfig{
@@ -133,7 +133,7 @@ func TestValidateConfig(t *testing.T) {
 
 	tests := map[string]struct {
 		expectedError error
-		config        pluginConfig
+		config        PluginConfig
 	}{
 		"basic config passes validation": {
 			nil,
@@ -141,8 +141,8 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"sysMgmtdHost with domain name": {
 			nil,
-			pluginConfig{
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+			PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "subdomain.somewebsite.com",
 					},
@@ -151,8 +151,8 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid sysMgmtdHost": {
 			errors.New("invalid SysMgmtdHost testinvalid"),
-			pluginConfig{
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+			PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "testinvalid",
 					},
@@ -161,8 +161,8 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid connNetFilter": {
 			errors.New("invalid ConnNetFilter testinvalid"),
-			pluginConfig{
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+			PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
@@ -174,11 +174,11 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid ConnTCPOnlyFilter": {
 			errors.New("invalid ConnTCPOnlyFilter testinvalid"),
-			pluginConfig{
+			PluginConfig{
 				DefaultConfig: beegfsConfig{
 					ConnTcpOnlyFilter: []string{"127.0.0.0", "testinvalid"},
 				},
-				FileSystemSpecificConfigs: []fileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
 					},

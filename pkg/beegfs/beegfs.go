@@ -49,7 +49,7 @@ type beegfs struct {
 	nodeID                 string
 	version                string
 	endpoint               string
-	pluginConfig           pluginConfig
+	pluginConfig           PluginConfig
 	clientConfTemplatePath string
 	csDataDir              string // directory controller service uses to create BeeGFS config files and mount file systems
 
@@ -161,7 +161,7 @@ func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, client
 		vendorVersion = version
 	}
 
-	var pluginConfig pluginConfig
+	var pluginConfig PluginConfig
 	if configPath != "" {
 		var err error
 		if pluginConfig, err = parseConfigFromFile(configPath, nodeID); err != nil {
@@ -208,7 +208,7 @@ func (b *beegfs) Run() {
 }
 
 // newBeeGFSVolume creates a beegfsVolume from parameters.
-func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pluginConfig pluginConfig) beegfsVolume {
+func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pluginConfig PluginConfig) beegfsVolume {
 	// These parameters must be constructed outside of the struct literal.
 	mountPath := path.Join(mountDirPath, "mount")
 	volDirPath := path.Join(mountPath, volDirPathBeegfsRoot)
@@ -228,7 +228,7 @@ func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pl
 }
 
 // newBeeGFSVolume creates a beegfsVolume from a volumeID.
-func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig pluginConfig) (beegfsVolume, error) {
+func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig PluginConfig) (beegfsVolume, error) {
 	sysMgmtdHost, volDirPathBeegfsRoot, err := parseBeegfsUrl(volumeID)
 	if err != nil {
 		return beegfsVolume{}, err

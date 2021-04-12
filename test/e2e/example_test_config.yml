@@ -1,8 +1,0 @@
-- sysMgmtdHost: scspa2058537001.rtp.openenglab.netapp.com
-  mountPath: /mnt/7.2-fs1/
-  volDirBasePathBeegfsRoot: /e2e-test
-  rdmaCapable: false
-- sysMgmtdHost: scspa2060446001.rtp.openenglab.netapp.com
-  mountPath: /mnt/7.2-fs2/
-  volDirBasePathBeegfsRoot: /e2e-test
-  rdmaCapable: false
