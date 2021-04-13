@@ -1,0 +1,11 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: basic-sc  # name is not actually used
+provisioner: beegfs.csi.netapp.com
+parameters:
+  sysMgmtdHost: scspa2014509001.rtp.openenglab.netapp.com
+  volDirBasePath: test/e2e/
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: false

@@ -42,8 +42,8 @@ func newBeegfsConfig() *beegfsConfig {
 	}
 }
 
-// fileSystemSpecificConfig associates a beegfsConfig with a sysMgmtdHost.
-type fileSystemSpecificConfig struct {
+// FileSystemSpecificConfig associates a beegfsConfig with a sysMgmtdHost.
+type FileSystemSpecificConfig struct {
 	SysMgmtdHost string       `yaml:"sysMgmtdHost"`
 	Config       beegfsConfig `yaml:"config"`
 }
@@ -53,46 +53,46 @@ type fileSystemSpecificConfig struct {
 type nodeSpecificConfig struct {
 	NodeList                  []string                   `yaml:"nodeList"`
 	DefaultConfig             beegfsConfig               `yaml:"config"`
-	FileSystemSpecificConfigs []fileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs"`
+	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs"`
 }
 
-// pluginConfig contains a default beegfsConfig and a list of file system specific configurations. It is the
+// PluginConfig contains a default beegfsConfig and a list of file system specific configurations. It is the
 // configuration that is maintained for the life of the running plugin. It does NOT contain node specific
-// configurations. The plugin creates its pluginConfig on startup by iterating through any  node specific
+// configurations. The plugin creates its PluginConfig on startup by iterating through any  node specific
 // configurations and accounting for those that apply to the node it is running on.
-type pluginConfig struct {
+type PluginConfig struct {
 	DefaultConfig             beegfsConfig               `yaml:"config"`
-	FileSystemSpecificConfigs []fileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs"`
+	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs"`
 }
 
-// pluginConfigFromFile contains a pluginConfig and a list of node specific configurations. It is only used
+// pluginConfigFromFile contains a PluginConfig and a list of node specific configurations. It is only used
 // intermediately during the configuration file parsing process, as it may contain configurations that do NOT apply to
 // the node the plugin is running on.
 type pluginConfigFromFile struct {
-	pluginConfig        `yaml:",inline"`     // embedded structs must be inlined
+	PluginConfig        `yaml:",inline"`     // embedded structs must be inlined
 	NodeSpecificConfigs []nodeSpecificConfig `yaml:"nodeSpecificConfigs"`
 }
 
 // parseConfigFromFile reads the file at the specified path, unmarshalls it into a pluginConfigFromFile, and constructs
-// a pluginConfig. It uses nodeID to determine if any node specific configuration applies to the node the plugin is
-// running on. If it does, the final pluginConfig contains node specific overrides.
-func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
+// a PluginConfig. It uses nodeID to determine if any node specific configuration applies to the node the plugin is
+// running on. If it does, the final PluginConfig contains node specific overrides.
+func parseConfigFromFile(path, nodeID string) (PluginConfig, error) {
 	var rawConfig pluginConfigFromFile
-	var newPluginConfig pluginConfig
+	var newPluginConfig PluginConfig
 
 	// read and parse configuration file
 	// return immediately if an error occurs
 	rawConfigBytes, err := fsutil.ReadFile(path)
 	if err != nil {
-		return pluginConfig{}, errors.Wrap(err, "failed to read configuration file")
+		return PluginConfig{}, errors.Wrap(err, "failed to read configuration file")
 	}
 	if err := yaml.UnmarshalStrict(rawConfigBytes, &rawConfig); err != nil {
-		return pluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
+		return PluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
 	LogDebug(nil, "Raw configuration parsed", "parsePath", path, "rawConfig", rawConfig)
 
 	// start populating newPluginConfig using values directly from rawConfig
-	newPluginConfig = pluginConfig{
+	newPluginConfig = PluginConfig{
 		DefaultConfig:             rawConfig.DefaultConfig,
 		FileSystemSpecificConfigs: rawConfig.FileSystemSpecificConfigs,
 	}
@@ -114,15 +114,15 @@ func parseConfigFromFile(path, nodeID string) (pluginConfig, error) {
 	}
 
 	if err := newPluginConfig.validateConfig(); err != nil {
-		return pluginConfig{}, errors.WithMessage(err, "config validation failed")
+		return PluginConfig{}, errors.WithMessage(err, "config validation failed")
 	}
 	newPluginConfig.stripConfig()
-	LogDebug(nil, "Actual configuration to be applied", "pluginConfig", newPluginConfig)
+	LogDebug(nil, "Actual configuration to be applied", "PluginConfig", newPluginConfig)
 
 	return newPluginConfig, nil
 }
 
-func (plConfig *pluginConfig) validateConfig() error {
+func (plConfig *PluginConfig) validateConfig() error {
 	beegfsConfigs := []beegfsConfig{plConfig.DefaultConfig}
 	// this regex is used to determine whether a given string is a domain name
 	domainRegex := regexp.MustCompile("^(?:[_a-z0-9](?:[_a-z0-9-]{0,61}[a-z0-9]\\.)|(?:[0-9]+/[0-9]{2})\\.)+(?:[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?$")
@@ -154,7 +154,7 @@ func (plConfig *pluginConfig) validateConfig() error {
 // stripConfig removes any no-effect beegfsConf options from the plugin configuration, logging a warning if any are
 // found. It also logs a warning (but does not remove) any unsupported options it finds. See deployment.md for the list
 // of no-effect options.
-func (plConfig *pluginConfig) stripConfig() {
+func (plConfig *PluginConfig) stripConfig() {
 	beegfsConfigs := []beegfsConfig{plConfig.DefaultConfig}
 	for _, config := range plConfig.FileSystemSpecificConfigs {
 		beegfsConfigs = append(beegfsConfigs, config.Config)
@@ -179,7 +179,7 @@ func (plConfig *pluginConfig) stripConfig() {
 // overwriteFileSystemSpecificConfigs looks for FileSystemSpecificConfigs in writeTo and writeFrom with the same
 // sysMgmtdHost. When it finds a match, overwriteFileSystemSpecificConfigs ONLY overwrites configuration in writeTo
 // that is also defined in writeFrom.
-func overwriteFileSystemSpecificConfigs(writeTo, writeFrom []fileSystemSpecificConfig) []fileSystemSpecificConfig {
+func overwriteFileSystemSpecificConfigs(writeTo, writeFrom []FileSystemSpecificConfig) []FileSystemSpecificConfig {
 	for _, writeFromConfig := range writeFrom {
 		writeToHadConfig := false
 		for i, writeToConfig := range writeTo { // use index to modify writeTo in place

@@ -7,6 +7,7 @@
 # unmodified, the driver will deploy correctly with no custom configuration.
 
 fileSystemSpecificConfigs:
+  - sysMgmtdHost: scspa2059245001.rtp.openenglab.netapp.com
   - sysMgmtdHost: scspa2061750001.rtp.openenglab.netapp.com
     config:
       beegfsClientConf:
