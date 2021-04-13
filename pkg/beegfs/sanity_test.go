@@ -37,6 +37,7 @@ func TestSanity(t *testing.T) {
 	driver.cs.mounter = mount.NewFakeMounter(mps)
 	driver.ns.mounter = mount.NewFakeMounter(mps)
 	driver.cs.ctlExec = &fakeBeegfsCtlExecutor{}
+	driver.ns.ctlExec = &fakeBeegfsCtlExecutor{}
 	go driver.Run()
 
 	// Setup configuration parameters

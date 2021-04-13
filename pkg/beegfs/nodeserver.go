@@ -39,6 +39,7 @@ var (
 )
 
 type nodeServer struct {
+	ctlExec                beegfsCtlExecutorInterface
 	nodeID                 string
 	pluginConfig           PluginConfig
 	clientConfTemplatePath string
@@ -47,6 +48,7 @@ type nodeServer struct {
 
 func NewNodeServer(nodeId string, pluginConfig PluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
+		ctlExec:                &beegfsCtlExecutor{},
 		nodeID:                 nodeId,
 		pluginConfig:           pluginConfig,
 		clientConfTemplatePath: clientConfTemplatePath,
@@ -79,6 +81,16 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
+	}
+
+	// Only continue if our target directory exists. Check using beegfs-ctl instead of something more straightforward
+	// (e.g. fs.Stat(vol.volDirPath)) because beegfs-ctl is easier to mock for sanity tests. Client files are already
+	// written. If they weren't, the volume couldn't have been staged.
+	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+		if errors.As(err, &ctlNotExistError{}) {
+			return nil, newGrpcErrorFromCause(codes.NotFound, err)
+		}
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
@@ -174,13 +186,19 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	// Write configuration files and mount BeeGFS.
+	// Write configuration files.
 	if err := writeClientFiles(ctx, vol, ns.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
+
+	// Only mount BeeGFS if beegfs-ctl reports our target directory exists.
+	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+		if errors.As(err, &ctlNotExistError{}) {
+			return nil, newGrpcErrorFromCause(codes.NotFound, err)
+		}
+		return nil, newGrpcErrorFromCause(codes.Internal, err)
+	}
 	if err := mountIfNecessary(ctx, vol, ns.mounter); err != nil {
-		// TODO(webere, A144): Return the appropriate codes.NOT_FOUND if the problem is that we can't find the volume.
-		// https://github.com/container-storage-interface/spec/blob/master/spec.md#nodestagevolume-errors
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
