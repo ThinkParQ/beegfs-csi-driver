@@ -43,7 +43,7 @@ pipeline {
     stages {
         stage('Unit Test') {
             options {
-                timeout(time: 5, unit: 'MINUTES')
+                timeout(time: 10, unit: 'MINUTES')
             }
             steps {
                 // release-tools always uses a container named k8s-shellcheck in its test. Make sure each node is only

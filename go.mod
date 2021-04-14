@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/container-storage-interface/spec v1.3.0
 	github.com/go-logr/logr v0.2.0
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.9.0
 	github.com/kubernetes-csi/csi-test/v4 v4.0.2
 	github.com/onsi/ginkgo v1.14.2
