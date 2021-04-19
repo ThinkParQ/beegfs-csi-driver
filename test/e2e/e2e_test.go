@@ -20,9 +20,10 @@ import (
 	"github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/test/e2e/framework"
+	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
-	"k8s.io/kubernetes/test/e2e/storage/testsuites"
+	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
+	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
 )
 
 // A pointer to a BeegfsDriver is kept here as a global variable so its perFSConfigs can be set with
@@ -34,41 +35,41 @@ var beegfsDynamicDriver *driver.BeegfsDynamicDriver
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
-	framework.RegisterCommonFlags(flag.CommandLine)
-	framework.RegisterClusterFlags(flag.CommandLine)
-	framework.AfterReadingAllFlags(&framework.TestContext)
+	e2eframework.RegisterCommonFlags(flag.CommandLine)
+	e2eframework.RegisterClusterFlags(flag.CommandLine)
+	e2eframework.AfterReadingAllFlags(&e2eframework.TestContext)
 
 }
 
-var beegfsSuitesToRun = []func() testsuites.TestSuite{
+var beegfsSuitesToRun = []func() storageframework.TestSuite{
 	beegfssuites.InitBeegfsTestSuite,
 }
 
-var k8sSuitesToRun = []func() testsuites.TestSuite{
+var k8sSuitesToRun = []func() storageframework.TestSuite{
 	// This list of test results in 31 pass and 1 fail.
-	testsuites.InitDisruptiveTestSuite,
-	//testsuites.InitEphemeralTestSuite, // 2 fail when WaitForFirstConsumer is enabled. Currently disabled.
-	//testsuites.InitFsGroupChangePolicyTestSuite, // No specs run as long as Capabilities[CapFsGroup] = false.
-	testsuites.InitMultiVolumeTestSuite,
-	//testsuites.InitProvisioningTestSuite, // No specs run. TODO: Look into "should provision storage with mount options."
-	//testsuites.InitSnapshottableTestSuite, // No specs run.
-	//testsuites.InitSubPathTestSuite, // 17 pass, 1 fails (after a long time). TODO: Investigate failure.
-	//testsuites.InitTopologyTestSuite, // No specs run.
-	//testsuites.InitVolumeExpandTestSuite, // No specs run.
-	testsuites.InitVolumeIOTestSuite,
-	testsuites.InitVolumeStressTestSuite,
-	//testsuites.InitVolumeLimitsTestSuite, // No specs run.
-	testsuites.InitVolumeModeTestSuite,
+	storagesuites.InitDisruptiveTestSuite,
+	//storagesuites.InitEphemeralTestSuite, // 2 fail when WaitForFirstConsumer is enabled. Currently disabled.
+	//storagesuites.InitFsGroupChangePolicyTestSuite, // No specs run as long as Capabilities[CapFsGroup] = false.
+	storagesuites.InitMultiVolumeTestSuite,
+	//storagesuites.InitProvisioningTestSuite, // No specs run. TODO: Look into "should provision storage with mount options."
+	//storagesuites.InitSnapshottableTestSuite, // No specs run.
+	//storagesuites.InitSubPathTestSuite, // 17 pass, 1 fails (after a long time). TODO: Investigate failure.
+	//storagesuites.InitTopologyTestSuite, // No specs run.
+	//storagesuites.InitVolumeExpandTestSuite, // No specs run.
+	storagesuites.InitVolumeIOTestSuite,
+	storagesuites.InitVolumeStressTestSuite,
+	//storagesuites.InitVolumeLimitsTestSuite, // No specs run.
+	storagesuites.InitVolumeModeTestSuite,
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	cs, err := framework.LoadClientset()
-	framework.ExpectNoError(err, "expected to load a client set")
+	cs, err := e2eframework.LoadClientset()
+	e2eframework.ExpectNoError(err, "expected to load a client set")
 
 	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace).
 	controllerPods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-controller"})
-	framework.ExpectNoError(err, "expected to find controller Pod")
-	framework.ExpectEqual(len(controllerPods), 1, "expected only one controller pod")
+	e2eframework.ExpectNoError(err, "expected to find controller Pod")
+	e2eframework.ExpectEqual(len(controllerPods), 1, "expected only one controller pod")
 
 	// Get the name of the ConfigMap from the controller Pod.
 	var driverCMName string
@@ -81,14 +82,14 @@ var _ = ginkgo.BeforeSuite(func() {
 
 	// Read the ConfigMap.
 	driverCM, err := cs.CoreV1().ConfigMaps(controllerNS).Get(context.TODO(), driverCMName, metav1.GetOptions{})
-	framework.ExpectNoError(err, "expected to read ConfigMap")
+	e2eframework.ExpectNoError(err, "expected to read ConfigMap")
 	driverConfigString, ok := driverCM.Data["csi-beegfs-config.yaml"]
-	framework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
+	e2eframework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
 
 	// Unmarshal the ConfigMap and use it to populate the global BeegfsDriver's perFSConfigs.
 	var pluginConfig beegfs.PluginConfig
 	err = yaml.UnmarshalStrict([]byte(driverConfigString), &pluginConfig)
-	framework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
+	e2eframework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 
@@ -96,13 +97,13 @@ var _ = ginkgo.BeforeSuite(func() {
 
 var _ = ginkgo.Describe("E2E Tests", func() {
 	beegfsDriver = driver.InitBeegfsDriver()
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(beegfsDriver), func() {
-		testsuites.DefineTestSuite(beegfsDriver, beegfsSuitesToRun)
+	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDriver), func() {
+		storageframework.DefineTestSuites(beegfsDriver, beegfsSuitesToRun)
 	})
 
 	beegfsDynamicDriver = driver.InitBeegfsDynamicDriver()
-	ginkgo.Context(testsuites.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
-		testsuites.DefineTestSuite(beegfsDynamicDriver, k8sSuitesToRun)
+	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
+		storageframework.DefineTestSuites(beegfsDynamicDriver, k8sSuitesToRun)
 	})
 })
 
@@ -113,13 +114,15 @@ func Test(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
 	var r []ginkgo.Reporter
-	if framework.TestContext.ReportDir != "" {
-		if err := os.MkdirAll(framework.TestContext.ReportDir, 0755); err != nil {
+	if e2eframework.TestContext.ReportDir != "" {
+		if err := os.MkdirAll(e2eframework.TestContext.ReportDir, 0755); err != nil {
 			log.Fatalf("Failed creating report directory: %v", err)
 		} else {
-			r = append(r, reporters.NewJUnitReporter(path.Join(framework.TestContext.ReportDir, fmt.Sprintf("junit_%v%02d.xml", framework.TestContext.ReportPrefix, config.GinkgoConfig.ParallelNode))))
+			r = append(r, reporters.NewJUnitReporter(path.Join(e2eframework.TestContext.ReportDir,
+				fmt.Sprintf("junit_%v%02d.xml", e2eframework.TestContext.ReportPrefix,
+					config.GinkgoConfig.ParallelNode))))
 		}
 	}
-	log.Printf("Starting e2e run %q on Ginkgo node %d", framework.RunID, config.GinkgoConfig.ParallelNode)
+	log.Printf("Starting e2e run %q on Ginkgo node %d", e2eframework.RunID, config.GinkgoConfig.ParallelNode)
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "E2E Tests", r)
 }
