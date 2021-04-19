@@ -18,40 +18,40 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/kubernetes/test/e2e/framework"
+	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2eskipper "k8s.io/kubernetes/test/e2e/framework/skipper"
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
-	"k8s.io/kubernetes/test/e2e/storage/testpatterns"
-	"k8s.io/kubernetes/test/e2e/storage/testsuites"
-	"k8s.io/kubernetes/test/e2e/storage/utils"
+	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
+	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
+	storageutils "k8s.io/kubernetes/test/e2e/storage/utils"
 )
 
 // Verify interface is properly implemented at compile time.
-var _ testsuites.TestSuite = &beegfsTestSuite{}
+var _ storageframework.TestSuite = &beegfsTestSuite{}
 
 type beegfsTestSuite struct {
-	tsInfo testsuites.TestSuiteInfo
+	tsInfo storageframework.TestSuiteInfo
 }
 
-// beegfsTestSuite implements the testsuites.TestSuiteInfo interface.
-func (b *beegfsTestSuite) GetTestSuiteInfo() testsuites.TestSuiteInfo {
+// beegfsTestSuite implements the storageframework.TestSuite interface.
+func (b *beegfsTestSuite) GetTestSuiteInfo() storageframework.TestSuiteInfo {
 	return b.tsInfo
 }
 
-// beegfsTestSuite implements the testsuites.TestSuiteInfo interface.
-func (b *beegfsTestSuite) SkipRedundantSuite(driver testsuites.TestDriver, pattern testpatterns.TestPattern) {
+// beegfsTestSuite implements the storageframework.TestSuite interface.
+func (b *beegfsTestSuite) SkipUnsupportedTests(driver storageframework.TestDriver, pattern storageframework.TestPattern) {
 	// Intentionally empty.
 }
 
-// InitBeegfsTestSuite returns a beegfsTestSuite that implements TestSuite interface
-func InitBeegfsTestSuite() testsuites.TestSuite {
+// InitBeegfsTestSuite returns a beegfsTestSuite that implements storageframework.TestSuite interface
+func InitBeegfsTestSuite() storageframework.TestSuite {
 	return &beegfsTestSuite{
-		tsInfo: testsuites.TestSuiteInfo{
+		tsInfo: storageframework.TestSuiteInfo{
 			Name: "beegfs-suite",
-			TestPatterns: []testpatterns.TestPattern{
-				testpatterns.DefaultFsDynamicPV,
-				testpatterns.DefaultFsPreprovisionedPV,
+			TestPatterns: []storageframework.TestPattern{
+				storageframework.DefaultFsDynamicPV,
+				storageframework.DefaultFsPreprovisionedPV,
 			},
 			SupportedSizeRange: e2evolume.SizeRange{
 				Min: "1Mi",
@@ -60,14 +60,14 @@ func InitBeegfsTestSuite() testsuites.TestSuite {
 	}
 }
 
-// beegfsTestSuite implements the testsuites.TestSuiteInfo interface.
-func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern testpatterns.TestPattern) {
-	f := framework.NewDefaultFramework("beegfs")
+// beegfsTestSuite implements the storageframework.TestSuiteInfo interface.
+func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, pattern storageframework.TestPattern) {
+	f := e2eframework.NewDefaultFramework("beegfs")
 
 	var (
 		d         *driver.BeegfsDriver
-		resources []*testsuites.VolumeResource
-		hostExec  utils.HostExec
+		resources []*storageframework.VolumeResource
+		hostExec  storageutils.HostExec
 	)
 
 	init := func() {
@@ -77,8 +77,8 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 			e2eskipper.Skipf("This test only works with a BeegfsDriver")
 		}
 		d.SetFSIndex(0)
-		resources = make([]*testsuites.VolumeResource, 0)
-		hostExec = utils.NewHostExec(f)
+		resources = make([]*storageframework.VolumeResource, 0)
+		hostExec = storageutils.NewHostExec(f)
 	}
 
 	cleanup := func() {
@@ -86,7 +86,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		for _, resource := range resources {
 			errs = append(errs, resource.CleanupResource())
 		}
-		framework.ExpectNoError(errors.NewAggregate(errs), "while cleaning up resources")
+		e2eframework.ExpectNoError(errors.NewAggregate(errs), "while cleaning up resources")
 		hostExec.Cleanup()
 	}
 
@@ -107,17 +107,17 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		var pvcs []*corev1.PersistentVolumeClaim
 		for i := 0; i < d.GetNumFS(); i++ {
 			d.SetFSIndex(i)
-			resource := testsuites.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+			resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
 			resources = append(resources, resource) // Allow for cleanup.
 			pvcs = append(pvcs, resource.Pvc)
 		}
 
 		// There is already a Kubernetes end-to-end test that tests this behavior (and more).
-		testsuites.TestAccessMultipleVolumesAcrossPodRecreation(f, f.ClientSet, f.Namespace.Name, cfg.ClientNodeSelection, pvcs, true)
+		storagesuites.TestAccessMultipleVolumesAcrossPodRecreation(f, f.ClientSet, f.Namespace.Name, cfg.ClientNodeSelection, pvcs, true)
 	})
 
 	ginkgo.It("should correctly interpret a storage class stripe pattern", func() {
-		if pattern.VolType != testpatterns.DynamicPV {
+		if pattern.VolType != storageframework.DynamicPV {
 			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
 		}
 
@@ -134,21 +134,21 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 			"stripePattern/numTargets":    "2",
 		})
 		defer d.UnsetStorageClassParams()
-		resource := testsuites.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
 
 		// Create a pod to consume the storage resource.
 		podConfig := e2epod.Config{
 			NS:      cfg.Framework.Namespace.Name,
 			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
-			ImageID: e2evolume.GetDefaultTestImageID(),
+			ImageID: e2epod.GetDefaultTestImageID(),
 		}
-		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, framework.PodStartTimeout)
+		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
 		defer func() {
 			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
-			framework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
 		}()
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 
 		// Construct necessary beegfs-ctl parameters.
 		globalMountPath := fmt.Sprintf("/var/lib/kubelet/plugins/kubernetes.io/csi/pv/%s/globalmount/mount", resource.Pv.Name)
@@ -156,11 +156,11 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 
 		// Get striping information using beegfs-ctl on the appropriate hose.
 		node, err := f.ClientSet.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 		cmd := fmt.Sprintf("beegfs-ctl --mount=%s --unmounted --getentryinfo %s", globalMountPath, volDirPathBeegfsRoot)
 		result, err := hostExec.IssueCommandWithResult(cmd, node)
 
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Storage Pool: 2"))
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Chunksize: 1M"))
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Number of storage targets: desired: 2"))
@@ -178,28 +178,28 @@ func (b *beegfsTestSuite) DefineTests(tDriver testsuites.TestDriver, pattern tes
 		}
 
 		// Create a single storage resource to be consumed by a Pod.
-		resource := testsuites.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
 
 		// Create a pod to consume the storage resource.
 		podConfig := e2epod.Config{
 			NS:      cfg.Framework.Namespace.Name,
 			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
-			ImageID: e2evolume.GetDefaultTestImageID(),
+			ImageID: e2epod.GetDefaultTestImageID(),
 		}
-		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, framework.PodStartTimeout)
+		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
 		defer func() {
 			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
-			framework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
 		}()
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 
 		// Query /proc for connection information associated with this storage resource.
 		node, err := f.ClientSet.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 		cmd := fmt.Sprintf("cat $(dirname $(grep -l %s /proc/fs/beegfs/*/config))/storage_nodes", resource.Pv.Name)
 		result, err := hostExec.IssueCommandWithResult(cmd, node)
-		framework.ExpectNoError(err)
+		e2eframework.ExpectNoError(err)
 
 		// Output looks like:
 		// localhost [ID: 1]
