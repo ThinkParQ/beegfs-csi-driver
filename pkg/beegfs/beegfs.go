@@ -128,7 +128,7 @@ func (cfg permissionsConfig) goFileMode() os.FileMode {
 	goMode := os.FileMode(cfg.mode & 0o777)
 	stickyBit := (cfg.mode & 0o1000) > 0 // The Unix sticky bit is the 10th most significant bit.
 	setgidBit := (cfg.mode & 0o2000) > 0 // The Unix setgid bit is the 11th most significant bit.
-	setuidBit := (cfg.mode & 004000) > 0 // The Unix setuid bit is the 12th most significant bit.
+	setuidBit := (cfg.mode & 0o4000) > 0 // The Unix setuid bit is the 12th most significant bit.
 	if stickyBit {
 		goMode = goMode | os.ModeSticky
 	}

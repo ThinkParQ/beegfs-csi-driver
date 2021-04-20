@@ -24,7 +24,6 @@ package beegfs
 import (
 	"fmt"
 	"io"
-	"k8s.io/klog/v2/klogr"
 	"net"
 	"os"
 	"strings"
@@ -39,6 +38,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/klog/v2/klogr"
 )
 
 const ctxRequestID = "reqID"
@@ -129,12 +129,14 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 	if proto == "unix" {
 		addr = "/" + addr
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) { //nolint: vetshadow
+			err = errors.WithStack(err)
 			LogFatal(nil, err, "Failed to remove address", "address", addr)
 		}
 	}
 
 	listener, err := net.Listen(proto, addr)
 	if err != nil {
+		err = errors.WithStack(err)
 		LogFatal(nil, err, "Failed to listen")
 	}
 
@@ -158,7 +160,8 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 
 	if err = server.Serve(listener); err != nil {
 		if err == grpc.ErrServerStopped {
-			Logger(nil).Info(err.Error())
+			err = errors.WithStack(err)
+			LogError(nil, err, "")
 		} else {
 			LogFatal(nil, err, "Fatal error")
 		}
@@ -177,13 +180,13 @@ func parseEndpoint(ep string) (string, string, error) {
 
 func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	reqCtx := generateRequestContext(ctx)
-	logLevel := LogLevelDebug
+	log := LogDebug
 	// These GRPC methods are called very frequently. Filter them out so they only appear at higher log levels.
 	if info.FullMethod == "/csi.v1.Identity/Probe" || info.FullMethod == "/csi.v1.Node/NodeGetCapabilities" {
-		logLevel = LogLevelVerbose
+		log = LogVerbose
 	}
 
-	Logger(reqCtx).V(logLevel).Info("GRPC call", "method", info.FullMethod, "request", protosanitizer.StripSecrets(req).String())
+	log(reqCtx, "GRPC call", "method", info.FullMethod, "request", protosanitizer.StripSecrets(req).String())
 	resp, err := handler(reqCtx, req)
 	if err != nil {
 		LogError(reqCtx, err, "GRPC error", "method", info.FullMethod, "request", protosanitizer.StripSecrets(req).String())
@@ -193,7 +196,7 @@ func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 			err = grpcErr.GetStatusErr()
 		}
 	} else {
-		Logger(reqCtx).V(logLevel).Info("GRPC response", "response", protosanitizer.StripSecrets(resp).String(), "method", info.FullMethod)
+		log(reqCtx, "GRPC response", "response", protosanitizer.StripSecrets(resp).String(), "method", info.FullMethod)
 	}
 	return resp, err
 }
@@ -217,18 +220,30 @@ func Logger(ctx context.Context) logr.Logger {
 }
 
 func LogDebug(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	Logger(ctx).V(LogLevelDebug).Info(msg, keysAndValues...)
+	l := Logger(ctx).V(LogLevelDebug)
+	logr.
+		WithCallDepth(l, 1).
+		Info(msg, keysAndValues...)
 }
 
 func LogVerbose(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	Logger(ctx).V(LogLevelVerbose).Info(msg, keysAndValues...)
+	l := Logger(ctx).V(LogLevelVerbose)
+	logr.
+		WithCallDepth(l, 1).
+		Info(msg, keysAndValues...)
 }
 
 func LogError(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
-	Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err)).Error(err, msg, keysAndValues...)
+	l := Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
+	logr.
+		WithCallDepth(l, 1).
+		Error(err, msg, keysAndValues...)
 }
 
 func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
-	LogError(ctx, err, "Fatal: "+msg, keysAndValues...)
+	l := Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
+	logr.
+		WithCallDepth(l, 1).
+		Error(err, "Fatal: "+msg, keysAndValues...)
 	os.Exit(255)
 }
