@@ -269,20 +269,23 @@ Next Steps:
 Currently the only tested and supported container orchestrator (CO) for the
 BeeGFS CSI driver is Kubernetes. Notes in the General Configuration section
 below would apply to other COs if supported. For Kubernetes the preferred method
-to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap. 
+to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap and
+Secret, as described in [Kubernetes Configuration](#kubernetes-configuration).
 
 ### General Configuration
 
 The driver is ready to be used right out of the box, but many environments may
 either require or benefit from additional configuration.
 
-The driver loads a configuration file on startup (specified by the
-`--config-path` parameter) which it uses as a template to create the necessary
-configuration files to properly mount a BeeGFS file system. A beegfs-client.conf
-file does NOT ship with the driver, so it applies the values defined in its
-configuration file on top of the default beegfs-client.conf that ships with each
-BeeGFS distribution. Each `config` section may optionally contain parameters 
-that override previous sections.
+The driver loads a configuration file on startup which it uses as a template to
+create the necessary configuration files to properly mount a BeeGFS file system.
+A beegfs-client.conf file does NOT ship with the driver, so it applies the
+values defined in its configuration file on top of the default
+beegfs-client.conf that ships with each BeeGFS distribution. Each `config`
+section may optionally contain parameters that override previous sections.
+
+NOTE: The configuration file is specified by the `--config-path` command line 
+argument. For Kubernetes, the deployment manifests handle this automatically.
 
 Depending on the topology of your cluster, some nodes MAY need different
 configuration than others. This requirement can be handled in one of two ways:
@@ -370,9 +373,12 @@ nodeSpecificConfigs:  # OPTIONAL
 #### ConnAuth Configuration
 
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
-separate file (specified by the `--connauth-path` parameter). This file is
-optional, and should only be used if the connAuthFile configuration option is
-used on a file system's other services.
+separate file. This file is optional, and should only be used if the
+connAuthFile configuration option is used on a file system's other services.
+
+NOTE: The connAuth configuration file is specified by the `--connauth-path`
+command line argument. For Kubernetes, the deployment manifests handle this
+automatically.
 
 ```yaml
 - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
