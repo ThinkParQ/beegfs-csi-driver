@@ -206,4 +206,41 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		//    Connections: TCP: 4 (10.193.113.4:8003);
 		gomega.Expect(result).To(gomega.ContainSubstring("RDMA"))
 	})
+
+	ginkgo.It("should not be able to write to the /host file system", func() {
+		if pattern.VolType != storageframework.DynamicPV {
+			e2eskipper.Skipf("This test is covered with the dynamic volume pattern -- skipping")
+		}
+
+		init()
+		defer cleanup()
+
+		// Get the controller Pod, which could be running in any namespace.
+		pods, err := e2epod.GetPods(f.ClientSet, "", map[string]string{"app": "csi-beegfs-controller"})
+		e2eframework.ExpectNoError(err)
+		e2eframework.ExpectEqual(len(pods), 1, "There should be one controller pod")
+		controllerPod := pods[0]
+
+		// Get a node Pod, which could be running in any namespace.
+		pods, err = e2epod.GetPods(f.ClientSet, "", map[string]string{"app": "csi-beegfs-node"})
+		e2eframework.ExpectNoError(err)
+		e2eframework.ExpectNotEqual(len(pods), 0, "There should be at least one node pod")
+		nodePod := pods[0]
+
+		for _, pod := range []corev1.Pod{controllerPod, nodePod} {
+			execOptions := e2eframework.ExecOptions{
+				Command:       []string{"touch", "/host/test-file"},
+				PodName:       pod.Name,
+				Namespace:     pod.Namespace,
+				ContainerName: "beegfs",
+				CaptureStdout: true, // stdOut must be captured to avoid a timeout.
+				CaptureStderr: true,
+			}
+			// There are other framework functions that seem more appropriate (e.g. LookForStringInPodExecToContainer),
+			// but they do not work because they ignore stdErr, which we want to read.
+			_, stdErr, err := f.ExecWithOptions(execOptions)
+			e2eframework.ExpectError(err) // The touch should not be successful.
+			gomega.Expect(stdErr).To(gomega.ContainSubstring("Read-only file system"))
+		}
+	})
 }
