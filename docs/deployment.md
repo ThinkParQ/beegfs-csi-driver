@@ -281,8 +281,8 @@ The driver loads a configuration file on startup (specified by the
 configuration files to properly mount a BeeGFS file system. A beegfs-client.conf
 file does NOT ship with the driver, so it applies the values defined in its
 configuration file on top of the default beegfs-client.conf that ships with each
-BeeGFS distribution. Each `config`
-section may optionally contain parameters that override previous sections.
+BeeGFS distribution. Each `config` section may optionally contain parameters 
+that override previous sections.
 
 Depending on the topology of your cluster, some nodes MAY need different
 configuration than others. This requirement can be handled in one of two ways:
