@@ -16,7 +16,7 @@ import (
 // TestParseConfig makes use of .yaml files in the testdata directory. Numerical values in these files attempt to
 // follow a convention in which 0 represents a value that is unmodified (e.g. 8000 or 127.0.0.0), 1 represents a value
 // that has been modified once (e.g. 8001 or 127.0.0.1), etc.
-func TestParseConfig(t *testing.T) {
+func TestParseConfigFromFile(t *testing.T) {
 	fs = afero.NewOsFs()
 	fsutil = afero.Afero{Fs: fs}
 	tests := map[string]struct {
@@ -120,6 +120,123 @@ func TestParseConfig(t *testing.T) {
 			}
 			if !reflect.DeepEqual(tc.want, got) {
 				t.Fatalf("expected: %v, got: %v", tc.want, got)
+			}
+		})
+	}
+}
+
+func TestParseConnAuthFromFile(t *testing.T) {
+	fs = afero.NewOsFs()
+	fsutil = afero.Afero{Fs: fs}
+	tests := map[string]struct {
+		path        string
+		startConfig PluginConfig
+		want        PluginConfig
+	}{
+		"non-matching file system specific config": {
+			path: "testdata/connauthfile.yaml",
+			startConfig: PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.1",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+				},
+			},
+			want: PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.1",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							ConnAuth: "secret1",
+						},
+					},
+				},
+			},
+		},
+		"matching file system specific config and no default config": {
+			path: "testdata/connauthfile.yaml",
+			startConfig: PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+				},
+			},
+			want: PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+							ConnAuth:         "secret1",
+						},
+					},
+				},
+			},
+		},
+		"matching filesystem specific config and default config": {
+			path: "testdata/connauthfile.yaml",
+			startConfig: PluginConfig{
+				DefaultConfig: beegfsConfig{
+					BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+				},
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+				},
+			},
+			want: PluginConfig{
+				DefaultConfig: beegfsConfig{BeegfsClientConf: map[string]string{"testkey": "testvalue"}},
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+							ConnAuth:         "secret1",
+						},
+					},
+				},
+			},
+		},
+		"nil pluginConfig": {
+			path: "testdata/connauthfile.yaml",
+			want: PluginConfig{
+				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsConfig{
+							ConnAuth: "secret1",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			err := parseConnAuthFromFile(tc.path, &tc.startConfig)
+			if err != nil {
+				t.Error(err)
+			}
+			if !reflect.DeepEqual(tc.want, tc.startConfig) {
+				t.Fatalf("expected: %v, got: %v", tc.want, tc.startConfig)
 			}
 		})
 	}

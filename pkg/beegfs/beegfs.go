@@ -145,7 +145,7 @@ var (
 	vendorVersion = "dev"
 )
 
-func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath, version string) (*beegfs, error) {
+func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath, version string) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -166,6 +166,13 @@ func NewBeegfsDriver(configPath, csDataDir, driverName, endpoint, nodeID, client
 		var err error
 		if pluginConfig, err = parseConfigFromFile(configPath, nodeID); err != nil {
 			return nil, errors.WithMessage(err, "failed to handle configuration file")
+		}
+	}
+
+	if connAuthPath != "" {
+		var err error
+		if err = parseConnAuthFromFile(connAuthPath, &pluginConfig); err != nil {
+			return nil, errors.WithMessage(err, "failed to handle connAuth file")
 		}
 	}
 

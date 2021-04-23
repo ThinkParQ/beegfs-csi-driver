@@ -34,6 +34,7 @@ type beegfsConfig struct {
 	ConnNetFilter     []string          `yaml:"connNetFilter"`
 	ConnTcpOnlyFilter []string          `yaml:"connTcpOnlyFilter"`
 	BeegfsClientConf  map[string]string `yaml:"beegfsClientConf"`
+	ConnAuth          string            `yaml:"connAuth"`
 }
 
 func newBeegfsConfig() *beegfsConfig {
@@ -71,6 +72,12 @@ type PluginConfig struct {
 type pluginConfigFromFile struct {
 	PluginConfig        `yaml:",inline"`     // embedded structs must be inlined
 	NodeSpecificConfigs []nodeSpecificConfig `yaml:"nodeSpecificConfigs"`
+}
+
+// connAuthConfig associates a ConnAuth with a SysMgmtdHost.
+type connAuthConfig struct {
+	SysMgmtdHost string `yaml:"sysMgmtdHost"`
+	ConnAuth     string `yaml:"connAuth"`
 }
 
 // parseConfigFromFile reads the file at the specified path, unmarshalls it into a pluginConfigFromFile, and constructs
@@ -120,6 +127,57 @@ func parseConfigFromFile(path, nodeID string) (PluginConfig, error) {
 	LogDebug(nil, "Actual configuration to be applied", "PluginConfig", newPluginConfig)
 
 	return newPluginConfig, nil
+}
+
+// parseConnAuthFromFile reads the file at the specified path, unmarshalls it into a slice of connAuthConfigs, and constructs
+// a pointer reference to a PluginConfig.
+func parseConnAuthFromFile(path string, newPluginConfig *PluginConfig) error {
+	connAuthConfigs := make([]connAuthConfig, 0)
+	rawConnAuthConfigBytes, err := fsutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "failed to read connAuth file")
+	}
+	if err := yaml.UnmarshalStrict(rawConnAuthConfigBytes, &connAuthConfigs); err != nil {
+		return errors.Wrap(err, "failed to unmarshal connAuth file")
+	}
+	// to-do, remove sanitized
+	var sanitizedConnAuthConfigs connAuthConfig
+	for i, sanitizedConnAuthConfigs := range connAuthConfigs {
+		sanitizedConnAuthConfigs.SysMgmtdHost = connAuthConfigs[i].SysMgmtdHost
+		sanitizedConnAuthConfigs.ConnAuth = "******"
+	}
+	LogDebug(nil, "Raw connAuthConfigs parsed", "parsePath", path, "connAuthConfigs", sanitizedConnAuthConfigs)
+
+	for _, connAuth := range connAuthConfigs {
+		foundMatchingConfig := false
+		for i, specificConfig := range newPluginConfig.FileSystemSpecificConfigs {
+			if connAuth.SysMgmtdHost == specificConfig.SysMgmtdHost {
+				newPluginConfig.FileSystemSpecificConfigs[i].Config.ConnAuth = connAuth.ConnAuth
+				foundMatchingConfig = true
+				break
+			}
+		}
+		if !foundMatchingConfig {
+			newSpecificConfig := FileSystemSpecificConfig{
+				SysMgmtdHost: connAuth.SysMgmtdHost,
+				Config: beegfsConfig{
+					ConnAuth: connAuth.ConnAuth,
+				},
+			}
+			newPluginConfig.FileSystemSpecificConfigs = append(newPluginConfig.FileSystemSpecificConfigs, newSpecificConfig)
+		}
+	}
+	// to-do, remove sanitized
+	var sanitizedFileSystemSpecificConfigs FileSystemSpecificConfig
+	for i, sanitizedFileSystemSpecificConfigs := range newPluginConfig.FileSystemSpecificConfigs {
+		if sanitizedFileSystemSpecificConfigs.Config.ConnAuth != "******" {
+			sanitizedFileSystemSpecificConfigs.SysMgmtdHost = newPluginConfig.FileSystemSpecificConfigs[i].SysMgmtdHost
+			sanitizedFileSystemSpecificConfigs.Config.ConnAuth = "******"
+		}
+	}
+	LogDebug(nil, "Actual configuration to be applied after connAuthConfigs", "PluginConfig", sanitizedFileSystemSpecificConfigs)
+
+	return nil
 }
 
 func (plConfig *PluginConfig) validateConfig() error {
@@ -209,6 +267,9 @@ func (c *beegfsConfig) overwriteFrom(writeFrom beegfsConfig) {
 	if len(writeFrom.ConnTcpOnlyFilter) != 0 {
 		c.ConnTcpOnlyFilter = make([]string, len(writeFrom.ConnTcpOnlyFilter))
 		copy(c.ConnTcpOnlyFilter, writeFrom.ConnTcpOnlyFilter)
+	}
+	if writeFrom.ConnAuth != "" {
+		c.ConnAuth = writeFrom.ConnAuth
 	}
 	for k, v := range writeFrom.BeegfsClientConf {
 		c.BeegfsClientConf[k] = v
