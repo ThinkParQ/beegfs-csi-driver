@@ -26,3 +26,8 @@ configMapGenerator:
     behavior: replace
     files:
       - csi-beegfs-config.yaml
+secretGenerator:
+  - name: csi-beegfs-connauth
+    behavior: replace
+    files:
+      - csi-beegfs-connauth.yaml

@@ -15,3 +15,11 @@ configMapGenerator:
   - name: csi-beegfs-config
     files:
       - csi-beegfs-config.yaml
+secretGenerator:
+  # Kustomize will append a hash of the Secret data to this name because it is considered "bad practice" to change
+  # the data held in a live Secret. Kustomize will also change all references to this Secret to include the hash.
+  # It will do this any time a "kubectl apply -k" is used in combination with changed config data, so StatefulSets,
+  # Deployments, etc. are updated and know about the latest changes.
+  - name: csi-beegfs-connauth
+    files:
+      - csi-beegfs-connauth.yaml

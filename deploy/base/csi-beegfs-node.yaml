@@ -45,6 +45,7 @@ spec:
             - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
             - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
             - --config-path=/csi/config/csi-beegfs-config.yaml
+            - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
             - $(LOG_LEVEL_ARG)
           env:
             - name: KUBE_NODE_NAME
@@ -84,6 +85,8 @@ spec:
               name: socket-dir
             - mountPath: /csi/config
               name: config-dir
+            - mountPath: /csi/connauth
+              name: connauth-dir
         - name: liveness-probe
           volumeMounts:
           - mountPath: /csi
@@ -124,3 +127,6 @@ spec:
         - configMap:
             name: csi-beegfs-config  # kustomized
           name: config-dir
+        - secret:
+            secretName: csi-beegfs-connauth  # kustomized
+          name: connauth-dir

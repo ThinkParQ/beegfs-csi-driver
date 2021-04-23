@@ -269,7 +269,8 @@ Next Steps:
 Currently the only tested and supported container orchestrator (CO) for the
 BeeGFS CSI driver is Kubernetes. Notes in the General Configuration section
 below would apply to other COs if supported. For Kubernetes the preferred method
-to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap. 
+to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap and
+Secret, as described in [Kubernetes Configuration](#kubernetes-configuration).
 
 ### General Configuration
 
@@ -282,6 +283,9 @@ A beegfs-client.conf file does NOT ship with the driver, so it applies the
 values defined in its configuration file on top of the default
 beegfs-client.conf that ships with each BeeGFS distribution. Each `config`
 section may optionally contain parameters that override previous sections.
+
+NOTE: The configuration file is specified by the `--config-path` command line 
+argument. For Kubernetes, the deployment manifests handle this automatically.
 
 Depending on the topology of your cluster, some nodes MAY need different
 configuration than others. This requirement can be handled in one of two ways:
@@ -366,6 +370,27 @@ nodeSpecificConfigs:  # OPTIONAL
     fileSystemSpecificConfigs:  # as above
 ```
 
+#### ConnAuth Configuration
+
+For security purposes, the contents of BeeGFS connAuthFiles are stored in a
+separate file. This file is optional, and should only be used if the
+connAuthFile configuration option is used on a file system's other services.
+
+NOTE: The connAuth configuration file is specified by the `--connauth-path`
+command line argument. For Kubernetes, the deployment manifests handle this
+automatically.
+
+```yaml
+- sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
+  connAuth: <some_secret_value>
+- sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.100
+  connAuth: <some_secret_value>
+```
+
+NOTE: Unlike general configuration, connAuth configuration is only applied at a 
+per file system level. There is no default connAuth and the concept of a node 
+specific connAuth doesn't make sense.
+
 ### Kubernetes Configuration
 
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
@@ -374,12 +399,20 @@ uses the node's name to filter the global ConfigMap down to a node-specific
 version. 
 
 The instructions in the [Kubernetes Deployment](#kubernetes-deployment)
-automatically create an empty ConfigMap and pass it to the driver on all nodes.
-To pass custom configuration to the driver, add the desired parameters from
+automatically create an empty ConfigMap and an empty Secret and pass them to the
+driver on all nodes.
+
+* To pass custom configuration to the driver, add the desired parameters from
 [General Configuration](#general-configuration) to
-*deploy/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. The
-resulting deployment will automatically result in a correctly formed ConfigMap.
-See *deploy/prod/csi-beegfs-config-example.yaml* for an example file.
+  *deploy/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. 
+  The resulting deployment will automatically include a correctly formed 
+  ConfigMap.  See *deploy/prod/csi-beegfs-config-example.yaml* for an example 
+  file.
+* To pass connAuth configuration to the driver, modify
+  *deploy/prod/csi-beegfs-connauth.yaml* (or another overlay) before deploying. 
+  The resulting deployment will automatically include a correctly formed
+  Secret. See *deploy/prod/csi-beegfs-config-connauth.yaml* for an example
+  file.
 
 To update configuration after initial deployment, modify
 *deploy/prod/csi-beegfs-config.yaml* and repeat the kubectl deployment step from
@@ -418,15 +451,18 @@ are determined dynamically and have no effect when specified in the
 These parameters are specified elsewhere and may exhibit undocumented behavior
 if specified here.
 
-* `connInterfacesFile`
-* `connNetFilterFile`
-* `connTcpOnlyFilterFile`
+* `connAuthFile` - Overridden in the 
+  [connAuth configuration file](#connauth-configuration).
+* `connInterfacesFile` - Overridden by lists in the 
+  [driver configuration file](#general-configuration).
+* `connNetFilterFile` - Overridden by lists in the driver configuration file.
+* `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
+  file.
 
 #### Untested
 
 These parameters SHOULD result in the desired effect but have not been tested.
 
-* `connAuthFile`
 * `connHelperdPortTCP`
 * `connMgmtdPortTCP`
 * `connMgmtdPortUDP`
