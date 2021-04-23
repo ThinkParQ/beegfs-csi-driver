@@ -154,7 +154,7 @@ func TestWriteClientFiles(t *testing.T) {
 			{
 				SysMgmtdHost: sysMgmtdHost,
 				Config: beegfsConfig{
-					ConnAuth: "secret1",
+					connAuth: "secret1",
 				},
 			},
 		},

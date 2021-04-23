@@ -156,7 +156,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
-							ConnAuth: "secret1",
+							connAuth: "secret1",
 						},
 					},
 				},
@@ -180,7 +180,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							ConnAuth:         "secret1",
+							connAuth:         "secret1",
 						},
 					},
 				},
@@ -208,7 +208,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							ConnAuth:         "secret1",
+							connAuth:         "secret1",
 						},
 					},
 				},
@@ -221,7 +221,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsConfig{
-							ConnAuth: "secret1",
+							connAuth: "secret1",
 						},
 					},
 				},

@@ -115,8 +115,8 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		}
 	}
 
-	if len(vol.config.ConnAuth) != 0 {
-		connAuthFileContents := vol.config.ConnAuth + "\n"
+	if len(vol.config.connAuth) != 0 {
+		connAuthFileContents := vol.config.connAuth + "\n"
 		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", connAuthFilePath); err != nil {
 			return err
 		}
