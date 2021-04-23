@@ -24,14 +24,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"path"
 
 	"github.com/netapp/beegfs-csi-driver/pkg/beegfs"
+	"k8s.io/klog/v2"
 )
 
 var (
+	connAuthPath           = flag.String("connauth-path", "", "path to connection authentication file")
 	configPath             = flag.String("config-path", "", "path to plugin configuration file")
 	csDataDir              = flag.String("cs-data-dir", "/tmp/beegfs-csi-data-dir", "path to directory the controller service uses to store client configuration files and mount file systems")
 	driverName             = flag.String("driver-name", "beegfs.csi.netapp.com", "name of the driver")
@@ -62,7 +63,7 @@ func main() {
 }
 
 func handle() {
-	driver, err := beegfs.NewBeegfsDriver(*configPath, *csDataDir, *driverName, *endpoint, *nodeID, *clientConfTemplatePath, version)
+	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID, *clientConfTemplatePath, version)
 	if err != nil {
 		beegfs.LogFatal(nil, err, "Failed to initialize driver")
 	}

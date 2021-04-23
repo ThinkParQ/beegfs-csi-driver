@@ -58,6 +58,7 @@ func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error)
 // beegfsVolume's config. writeClientFiles assumes an empty directory has already been created at mountDirPath.
 func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath string) (err error) {
 	LogDebug(ctx, "Writing client files", "volumeID", vol.volumeID, "path", vol.mountDirPath)
+	connAuthFilePath := path.Join(vol.mountDirPath, "connAuthFile")
 	connInterfacesFilePath := path.Join(vol.mountDirPath, "connInterfacesFile")
 	connNetFilterFilePath := path.Join(vol.mountDirPath, "connNetFilterFile")
 	connTcpOnlyFilterFilePath := path.Join(vol.mountDirPath, "connTcpOnlyFilterFile")
@@ -111,6 +112,16 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		}
 		if err = fsutil.WriteFile(connInterfacesFilePath, []byte(connInterfacesFileContents), 0644); err != nil {
 			return errors.Wrap(err, "error writing connInterfaces file")
+		}
+	}
+
+	if len(vol.config.connAuth) != 0 {
+		connAuthFileContents := vol.config.connAuth + "\n"
+		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", connAuthFilePath); err != nil {
+			return err
+		}
+		if err = fsutil.WriteFile(connAuthFilePath, []byte(connAuthFileContents), 0400); err != nil {
+			return errors.Wrap(err, "error writing connAuth file")
 		}
 	}
 

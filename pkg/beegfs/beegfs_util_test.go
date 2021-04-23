@@ -29,6 +29,7 @@ connMgmtdPortTCP      = 8008
 connInterfacesFile    =
 connNetFilterFile     =
 connTcpOnlyFilterFile =
+connAuthFile          =
 `
 
 // Do not remove extra newline at end of file. go-ini writes one that we must match.
@@ -42,6 +43,7 @@ connMgmtdPortTCP      = 8000
 connInterfacesFile    = /testvol/connInterfacesFile
 connNetFilterFile     = /testvol/connNetFilterFile
 connTcpOnlyFilterFile = /testvol/connTcpOnlyFilterFile
+connAuthFile          = /testvol/connAuthFile
 
 `
 
@@ -148,7 +150,16 @@ func TestWriteClientFiles(t *testing.T) {
 				"connMgmtdPortTCP": "8000",
 			},
 		},
+		FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			{
+				SysMgmtdHost: sysMgmtdHost,
+				Config: beegfsConfig{
+					connAuth: "secret1",
+				},
+			},
+		},
 	}
+	wantConnAuthFile := "secret1\n"            // desired connAuthFile contents
 	wantConnInterfacesFile := "ib0\n"          // desired connInterfacesFile contents
 	wantConnNetFilterFile := "127.0.0.0/24\n"  // desired connNetFilterFile contents
 	wantConnTcpOnlyFilterFile := "127.0.0.0\n" // desired connTcpOnlyFilterFile contents
@@ -183,6 +194,16 @@ func TestWriteClientFiles(t *testing.T) {
 	if wantString != gotString {
 		t.Errorf("beegfs-client.conf does not match; expected:\n%vgot:\n%v",
 			wantString, gotString)
+	}
+
+	// check written connAuthFile
+	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connAuthFile"))
+	if err != nil {
+		t.Errorf("could not read output connAuthFile")
+	}
+	if wantConnAuthFile != string(got) {
+		t.Errorf("connAuthFile does not match; expected:\n%vgot:\n%v",
+			wantConnAuthFile, string(got))
 	}
 
 	// check written connInterfacesFile

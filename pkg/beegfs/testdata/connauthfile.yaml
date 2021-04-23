@@ -1,0 +1,2 @@
+- sysMgmtdHost: 127.0.0.0
+  connAuth: secret1

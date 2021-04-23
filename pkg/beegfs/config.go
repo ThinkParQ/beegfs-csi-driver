@@ -6,6 +6,7 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"encoding/json"
 	"net"
 	"regexp"
 
@@ -25,6 +26,7 @@ var unsupportedBeegfsConfOptions = []string{
 	"connInterfacesFile",
 	"connNetFilterFile",
 	"connTcpOnlyFilterFile",
+	"connAuthFile",
 }
 
 // beegfsConfig contains all of the custom configuration (above and beyond whatever is in the beegfs-client.conf file)
@@ -34,12 +36,36 @@ type beegfsConfig struct {
 	ConnNetFilter     []string          `yaml:"connNetFilter"`
 	ConnTcpOnlyFilter []string          `yaml:"connTcpOnlyFilter"`
 	BeegfsClientConf  map[string]string `yaml:"beegfsClientConf"`
+	connAuth          string            // unexported with no yaml tag so it cannot be set from a configuration file
 }
 
 func newBeegfsConfig() *beegfsConfig {
 	return &beegfsConfig{
 		BeegfsClientConf: make(map[string]string),
 	}
+}
+
+// MarshalJSON overrides the default JSON encoding for the beegfsConfig struct. klogr uses JSON encoding to log
+// struct values and thus implicitly calls this method. beegfsConfig does not export the connAuth field, so MarshalJSON
+// encodes a new anonymous struct that includes an exported ConnAuth field and replaces it's value with "******" if
+// it is not empty.
+func (c beegfsConfig) MarshalJSON() ([]byte, error) {
+	var connAuthString string
+	if c.connAuth != "" {
+		connAuthString = "******"
+	}
+
+	// See https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/ for more context on how this works.
+	type beegfsConfigAlias beegfsConfig // Use an alias to avoid an infinite loop and a stack overflow.
+	return json.Marshal(&struct {
+		// Use omitempty to avoid logging in "impossible" locations like DefaultConfig.
+		// Use upper case ConnAuth because other similar fields are logged this way.
+		ConnAuth          string `json:"ConnAuth,omitempty"`
+		beegfsConfigAlias        // Embed the beegfsConfig type to avoid retyping all of its fields.
+	}{
+		ConnAuth:          connAuthString,
+		beegfsConfigAlias: beegfsConfigAlias(c),
+	})
 }
 
 // FileSystemSpecificConfig associates a beegfsConfig with a sysMgmtdHost.
@@ -71,6 +97,26 @@ type PluginConfig struct {
 type pluginConfigFromFile struct {
 	PluginConfig        `yaml:",inline"`     // embedded structs must be inlined
 	NodeSpecificConfigs []nodeSpecificConfig `yaml:"nodeSpecificConfigs"`
+}
+
+// connAuthConfig associates a ConnAuth with a SysMgmtdHost.
+type connAuthConfig struct {
+	SysMgmtdHost string `yaml:"sysMgmtdHost"`
+	ConnAuth     string `yaml:"connAuth"`
+}
+
+// MarshalJSON overrides the default JSON encoding for the connAuthConfig struct. klogr uses JSON encoding to log
+// struct values and thus implicitly calls this method. MarshalJSON replaces connAuthConfig.ConnAuth with "******" if
+// it is not empty.
+func (c connAuthConfig) MarshalJSON() ([]byte, error) {
+	var connAuthString string
+	if c.ConnAuth != "" {
+		connAuthString = "******"
+	}
+
+	// See https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/ for more context on how this works.
+	type connAuthConfigAlias connAuthConfig // Use an alias to avoid an infinite loop and a stack overflow.
+	return json.Marshal(connAuthConfigAlias{SysMgmtdHost: c.SysMgmtdHost, ConnAuth: connAuthString})
 }
 
 // parseConfigFromFile reads the file at the specified path, unmarshalls it into a pluginConfigFromFile, and constructs
@@ -120,6 +166,48 @@ func parseConfigFromFile(path, nodeID string) (PluginConfig, error) {
 	LogDebug(nil, "Actual configuration to be applied", "PluginConfig", newPluginConfig)
 
 	return newPluginConfig, nil
+}
+
+// parseConnAuthFromFile reads the file at the specified path and modifies the provided PluginConfig so that it
+// includes connAuth information.
+func parseConnAuthFromFile(path string, newPluginConfig *PluginConfig) error {
+	connAuthConfigs := make([]connAuthConfig, 0)
+	rawConnAuthConfigBytes, err := fsutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "failed to read connAuth file")
+	}
+	if err := yaml.UnmarshalStrict(rawConnAuthConfigBytes, &connAuthConfigs); err != nil {
+		return errors.Wrap(err, "failed to unmarshal connAuth file")
+	}
+	// The connAuthConfig.UnmarshallJSON method makes connAuthConfigs safe for logging.
+	LogDebug(nil, "Raw connAuth configuration parsed", "parsePath", path,
+		"connAuthConfigs", connAuthConfigs)
+
+	for _, connAuth := range connAuthConfigs {
+		foundMatchingConfig := false
+		for i, specificConfig := range newPluginConfig.FileSystemSpecificConfigs {
+			if connAuth.SysMgmtdHost == specificConfig.SysMgmtdHost {
+				newPluginConfig.FileSystemSpecificConfigs[i].Config.connAuth = connAuth.ConnAuth
+				foundMatchingConfig = true
+				break
+			}
+		}
+		if !foundMatchingConfig {
+			newSpecificConfig := FileSystemSpecificConfig{
+				SysMgmtdHost: connAuth.SysMgmtdHost,
+				Config: beegfsConfig{
+					connAuth: connAuth.ConnAuth,
+				},
+			}
+			newPluginConfig.FileSystemSpecificConfigs = append(newPluginConfig.FileSystemSpecificConfigs, newSpecificConfig)
+		}
+	}
+
+	// The pluginConfig.UnmashallJSON method makes newPluginConfig safe for logging.
+	LogDebug(nil, "Actual configuration to be applied after parsing connAuth configuration",
+		"PluginConfig", newPluginConfig)
+
+	return nil
 }
 
 func (plConfig *PluginConfig) validateConfig() error {
@@ -209,6 +297,9 @@ func (c *beegfsConfig) overwriteFrom(writeFrom beegfsConfig) {
 	if len(writeFrom.ConnTcpOnlyFilter) != 0 {
 		c.ConnTcpOnlyFilter = make([]string, len(writeFrom.ConnTcpOnlyFilter))
 		copy(c.ConnTcpOnlyFilter, writeFrom.ConnTcpOnlyFilter)
+	}
+	if writeFrom.connAuth != "" {
+		c.connAuth = writeFrom.connAuth
 	}
 	for k, v := range writeFrom.BeegfsClientConf {
 		c.BeegfsClientConf[k] = v
