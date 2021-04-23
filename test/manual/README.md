@@ -52,8 +52,8 @@ Within each filesystem create the following directories:
 1. Copy ./<overlay>/csi-beegfs-config.yaml to deploy/dev/csi-beegfs-config.yaml. 
    This allows access to the second file system on its non-standard 9009 mgmtd 
    port. 
-1. Copy ./<overlay>/csi-beegfs-config.yaml (if it exists) to 
-   deploy/dev/csi-beegfs-config.yaml. This allows access to the second file 
+1. Copy ./<overlay>/csi-beegfs-connauth.yaml (if it exists) to 
+   deploy/dev/csi-beegfs-connauth.yaml. This allows access to the second file 
    system using a connAuthFile.
 1. Do the standard `kubectl apply -k deploy/dev/`.
 
