@@ -32,7 +32,7 @@ remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
 imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
 
-String[] integrationEnvironments = [ "beegfs-7.1.5" ] // , "beegfs-7.2" ]
+String[] integrationEnvironments = [ "beegfs-7.1.5", "beegfs-7.2" ]
 
 pipeline {
     agent any
@@ -181,6 +181,8 @@ pipeline {
                                         rm -rf deploy/dev/csi-beegfs-config.yaml
                                         cp test/manual/${it}/csi-beegfs-config.yaml deploy/dev/csi-beegfs-config.yaml
                                         cat deploy/dev/csi-beegfs-config.yaml
+                                        cp test/manual/${it}/csi-beegfs-connauth.yaml deploy/dev/csi-beegfs-connauth.yaml
+                                        cat deploy/dev/csi-beegfs-connauth.yaml
                                         kubectl apply -k deploy/dev/
                                         go test ./test/e2e/ -ginkgo.v -test.v -report-dir ./junit -timeout 30m
                                     """
