@@ -12,10 +12,12 @@ import (
 	"testing"
 
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
+	"github.com/onsi/ginkgo/config"
 	"k8s.io/utils/mount"
 )
 
 func TestSanity(t *testing.T) {
+	config.DefaultReporterConfig.NoColor = true
 	sanityDir, err := ioutil.TempDir("", "driver-sanity")
 	if err != nil {
 		t.Fatal(err)

@@ -111,6 +111,7 @@ func Test(t *testing.T) {
 	// Much of the code in this function is copied directly from the RunE2ETests function in
 	// the k8s.io/kubernetes/test/e2e package.
 
+	config.DefaultReporterConfig.NoColor = true
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
 	var r []ginkgo.Reporter

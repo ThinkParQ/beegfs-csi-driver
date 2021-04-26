@@ -28,15 +28,18 @@ if (params.hubProjectVersion != '') {
 
 // We do NOT rely on release-tools tagging mechanism for internal builds because it does not provide mechanisms for
 // overwriting image tags, etc.
-imageTag = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch
-uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfsplugin:my-branch-0005
+remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
+imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
+uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
+
+String[] integrationEnvironments = [ "beegfs-7.1.5" ] // , "beegfs-7.2" ]
 
 pipeline {
     agent any
 
     options {
         timestamps()
-        timeout(time: 1, unit: 'HOURS')
+        timeout(time: 3, unit: 'HOURS')
         buildDiscarder(logRotator(artifactNumToKeepStr: '15'))
     }
 
@@ -136,6 +139,58 @@ pipeline {
                 success {
                     // Exclude .tar.gz files to avoid archiving large(ish) Docker extractions.
                     archiveArtifacts(artifacts: 'blackduck/runs/**', excludes: '**/*.tar.gz')
+                }
+            }
+        }
+        stage("Integration Testing") {
+            when {
+                expression { return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') }
+            }
+            options {
+                timeout(time: 2, unit: 'HOURS')
+            }
+            environment {
+                // The disruptive test suite will try to SSH into k8s cluster nodes, defaulting as the jenkins user,
+                // which doesn't exist on those nodes. This changes the test suite to SSH as the root user instead
+                KUBE_SSH_USER = "root"
+            }
+            steps {
+                script {
+                    if (env.BRANCH_NAME.startsWith('PR-') && currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()) {
+                        // We want to ensure the integration tests pass before merging pull requests, but we don't want them to run
+                        // after every push to conserve resources. This stage will only pass on a PR if it is triggered manually
+                        // in Jenkins and all integration tests pass.
+                        error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
+                    }
+                    sh """
+                        cp deploy/dev/kustomization-template.yaml deploy/dev/kustomization.yaml
+                        sed -i 's+docker.repo.eng.netapp.com/user/beegfs-csi-driver+${remoteImageName}+g' deploy/dev/kustomization.yaml
+                        sed -i 's+latest+${env.BRANCH_NAME}+g' deploy/dev/kustomization.yaml
+                    """
+                    integrationEnvironments.each {
+                        lock(resource: "${it}") {
+                            withCredentials([file(credentialsId: "kubeconfig-${it}", variable: 'KUBECONFIG')]) {
+                                try {
+                                    // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
+                                    // running on the cluster. We can't simply delete using -k deploy/dev/ because a previous
+                                    // user might have deployed the driver using a different deployment scheme
+                                    sh """
+                                        echo 'Running test against ${it}'
+                                        kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete sts || true
+                                        kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete ds || true
+                                        rm -rf deploy/dev/csi-beegfs-config.yaml
+                                        cp test/manual/${it}/csi-beegfs-config.yaml deploy/dev/csi-beegfs-config.yaml
+                                        cat deploy/dev/csi-beegfs-config.yaml
+                                        kubectl apply -k deploy/dev/
+                                        go test ./test/e2e/ -ginkgo.v -test.v -report-dir ./junit -timeout 30m
+                                    """
+                                } catch (err) {
+                                    sh "kubectl delete -k deploy/dev || true"
+                                    throw err
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
