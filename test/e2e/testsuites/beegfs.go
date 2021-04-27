@@ -12,6 +12,7 @@ import (
 	"path"
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
+	"github.com/netapp/beegfs-csi-driver/test/e2e/utils"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	"golang.org/x/net/context"
@@ -154,7 +155,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		globalMountPath := fmt.Sprintf("/var/lib/kubelet/plugins/kubernetes.io/csi/pv/%s/globalmount/mount", resource.Pv.Name)
 		volDirPathBeegfsRoot := path.Join(resource.Sc.Parameters["volDirBasePath"], resource.Pv.Name)
 
-		// Get striping information using beegfs-ctl on the appropriate hose.
+		// Get striping information using beegfs-ctl on the appropriate host.
 		node, err := f.ClientSet.CoreV1().Nodes().Get(context.TODO(), pod.Spec.NodeName, metav1.GetOptions{})
 		e2eframework.ExpectNoError(err)
 		cmd := fmt.Sprintf("beegfs-ctl --mount=%s --unmounted --getentryinfo %s", globalMountPath, volDirPathBeegfsRoot)
@@ -242,5 +243,86 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			e2eframework.ExpectError(err) // The touch should not be successful.
 			gomega.Expect(stdErr).To(gomega.ContainSubstring("Read-only file system"))
 		}
+	})
+
+	ginkgo.It("should correctly set permissions specified as storage class parameters", func() {
+		if pattern.VolType != storageframework.DynamicPV {
+			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
+		}
+
+		// Don't do expensive test setup until we know we'll run the test.
+		init()
+		defer cleanup()
+		cfg, _ := d.PrepareTest(f)
+		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
+
+		// Create volume resource including a StorageClass with permissions params.
+		const (
+			uid          = "1000"
+			gid          = "2000"
+			mode         = "0755"
+			expectedMode = "drwxr-xr-x" // `ls` representation of the expected octal mode for a directory
+		)
+		d.SetStorageClassParams(map[string]string{
+			"permissions/uid":  uid,
+			"permissions/gid":  gid,
+			"permissions/mode": mode,
+		})
+		defer d.UnsetStorageClassParams()
+		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resources = append(resources, resource) // Allow for cleanup.
+
+		// Create a pod to consume the storage resource.
+		podConfig := e2epod.Config{
+			NS:      cfg.Framework.Namespace.Name,
+			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
+			ImageID: e2epod.GetDefaultTestImageID(),
+		}
+		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
+		defer func() {
+			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+		}()
+		e2eframework.ExpectNoError(err)
+
+		// Verify permissions.
+		utils.VerifyDirectoryModeUidGidInPod(f, "/mnt/volume1", expectedMode, uid, gid, pod)
+	})
+
+	ginkgo.It("should correctly set default permissions", func() {
+		if pattern.VolType != storageframework.DynamicPV {
+			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
+		}
+
+		// Don't do expensive test setup until we know we'll run the test.
+		init()
+		defer cleanup()
+		cfg, _ := d.PrepareTest(f)
+		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
+
+		// Create volume resource including a StorageClass without permissions params.
+		const (
+			expectedMode = "drwxrwxrwx" // `ls` representation of the expected octal mode for a directory
+			expectedUid  = "root"
+			expectedGid  = "root"
+		)
+		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resources = append(resources, resource) // Allow for cleanup.
+
+		// Create a pod to consume the storage resource.
+		podConfig := e2epod.Config{
+			NS:      cfg.Framework.Namespace.Name,
+			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
+			ImageID: e2epod.GetDefaultTestImageID(),
+		}
+		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
+		defer func() {
+			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+		}()
+		e2eframework.ExpectNoError(err)
+
+		// Verify permissions.
+		utils.VerifyDirectoryModeUidGidInPod(f, "/mnt/volume1", expectedMode, expectedUid, expectedGid, pod)
 	})
 }
