@@ -32,7 +32,7 @@ remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
 imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
 
-String[] integrationEnvironments = [ "beegfs-7.1.5" ] // , "beegfs-7.2" ]
+String[] integrationEnvironments = [ "beegfs-7.1.5", "beegfs-7.2" ]
 
 pipeline {
     agent any
@@ -162,6 +162,15 @@ pipeline {
                         // in Jenkins and all integration tests pass.
                         error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
                     }
+
+                    // Always skip the broken subpath test.
+                    // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
+                    ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted'"
+                    // Skip the [Slow] tests except on master.
+                    if (!env.BRANCH_NAME.matches('master')) {
+                        ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted|\\[Slow\\]'"
+                    }
+
                     sh """
                         cp deploy/dev/kustomization-template.yaml deploy/dev/kustomization.yaml
                         sed -i 's+docker.repo.eng.netapp.com/user/beegfs-csi-driver+${remoteImageName}+g' deploy/dev/kustomization.yaml
@@ -181,8 +190,10 @@ pipeline {
                                         rm -rf deploy/dev/csi-beegfs-config.yaml
                                         cp test/manual/${it}/csi-beegfs-config.yaml deploy/dev/csi-beegfs-config.yaml
                                         cat deploy/dev/csi-beegfs-config.yaml
+                                        cp test/manual/${it}/csi-beegfs-connauth.yaml deploy/dev/csi-beegfs-connauth.yaml
+                                        cat deploy/dev/csi-beegfs-connauth.yaml
                                         kubectl apply -k deploy/dev/
-                                        go test ./test/e2e/ -ginkgo.v -test.v -report-dir ./junit -timeout 30m
+                                        go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 30m
                                     """
                                 } catch (err) {
                                     sh "kubectl delete -k deploy/dev || true"

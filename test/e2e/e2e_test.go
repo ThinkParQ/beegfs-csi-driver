@@ -46,19 +46,25 @@ var beegfsSuitesToRun = []func() storageframework.TestSuite{
 }
 
 var k8sSuitesToRun = []func() storageframework.TestSuite{
-	// This list of test results in 31 pass and 1 fail.
 	storagesuites.InitDisruptiveTestSuite,
-	//storagesuites.InitEphemeralTestSuite, // 2 fail when WaitForFirstConsumer is enabled. Currently disabled.
-	//storagesuites.InitFsGroupChangePolicyTestSuite, // No specs run as long as Capabilities[CapFsGroup] = false.
+	// Two ephemeral tests fail when WaitForFirstConsumer is enabled.
+	// TODO(webere, A201): Enable ephemeral tests.
+	//storagesuites.InitEphemeralTestSuite,
+	storagesuites.InitFsGroupChangePolicyTestSuite, // No specs run because Capabilities[CapFsGroup] = false.
 	storagesuites.InitMultiVolumeTestSuite,
-	//storagesuites.InitProvisioningTestSuite, // No specs run. TODO: Look into "should provision storage with mount options."
-	//storagesuites.InitSnapshottableTestSuite, // No specs run.
-	//storagesuites.InitSubPathTestSuite, // 17 pass, 1 fails (after a long time). TODO: Investigate failure.
-	//storagesuites.InitTopologyTestSuite, // No specs run.
-	//storagesuites.InitVolumeExpandTestSuite, // No specs run.
+	// TODO(webere, A202): Look for reasons no specs from the provisioning test suite run. Pay special attention to
+	// "should provision storage with mount options".
+	storagesuites.InitProvisioningTestSuite,  // No specs run.
+	storagesuites.InitSnapshottableTestSuite, // No specs run.
+	// One subpath test (should be able to unmount after the subpath directory is deleted [LinuxOnly]) fails
+	// consistently and must be skipped in the "go test" or "ginkgo" command.
+	// TODO(webere, A200): Fix broken subpath functionality.
+	storagesuites.InitSubPathTestSuite,
+	storagesuites.InitTopologyTestSuite,     // No specs run.
+	storagesuites.InitVolumeExpandTestSuite, // No specs run.
 	storagesuites.InitVolumeIOTestSuite,
 	storagesuites.InitVolumeStressTestSuite,
-	//storagesuites.InitVolumeLimitsTestSuite, // No specs run.
+	storagesuites.InitVolumeLimitsTestSuite, // No specs run.
 	storagesuites.InitVolumeModeTestSuite,
 }
 
