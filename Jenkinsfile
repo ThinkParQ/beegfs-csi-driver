@@ -171,32 +171,28 @@ pipeline {
                         ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted|\\[Slow\\]'"
                     }
 
-                    sh """
-                        cp deploy/dev/kustomization-template.yaml deploy/dev/kustomization.yaml
-                        sed -i 's+docker.repo.eng.netapp.com/user/beegfs-csi-driver+${remoteImageName}+g' deploy/dev/kustomization.yaml
-                        sed -i 's+latest+${env.BRANCH_NAME}+g' deploy/dev/kustomization.yaml
-                    """
+                    sh "(cd deploy/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
                     integrationEnvironments.each {
                         lock(resource: "${it}") {
                             withCredentials([file(credentialsId: "kubeconfig-${it}", variable: 'KUBECONFIG')]) {
                                 try {
                                     // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
-                                    // running on the cluster. We can't simply delete using -k deploy/dev/ because a previous
+                                    // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
                                     // user might have deployed the driver using a different deployment scheme
                                     sh """
                                         echo 'Running test against ${it}'
                                         kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete sts || true
                                         kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete ds || true
-                                        rm -rf deploy/dev/csi-beegfs-config.yaml
-                                        cp test/manual/${it}/csi-beegfs-config.yaml deploy/dev/csi-beegfs-config.yaml
-                                        cat deploy/dev/csi-beegfs-config.yaml
-                                        cp test/manual/${it}/csi-beegfs-connauth.yaml deploy/dev/csi-beegfs-connauth.yaml
-                                        cat deploy/dev/csi-beegfs-connauth.yaml
-                                        kubectl apply -k deploy/dev/
-                                        go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 30m
+                                        rm -rf deploy/prod/csi-beegfs-config.yaml
+                                        cp test/manual/${it}/csi-beegfs-config.yaml deploy/prod/csi-beegfs-config.yaml
+                                        cat deploy/prod/csi-beegfs-config.yaml
+                                        cp test/manual/${it}/csi-beegfs-connauth.yaml deploy/prod/csi-beegfs-connauth.yaml
+                                        cat deploy/prod/csi-beegfs-connauth.yaml
+                                        kubectl apply -k deploy/prod/
+                                        go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 60m
                                     """
                                 } catch (err) {
-                                    sh "kubectl delete -k deploy/dev || true"
+                                    sh "kubectl delete -k deploy/prod/ || true"
                                     throw err
                                 }
                             }
