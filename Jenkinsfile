@@ -32,7 +32,7 @@ remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
 imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
 
-String[] integrationEnvironments = [ "beegfs-7.1.5", "beegfs-7.2" ]
+String[] integrationEnvironments = [ "beegfs-7.2" ]
 
 pipeline {
     agent any
