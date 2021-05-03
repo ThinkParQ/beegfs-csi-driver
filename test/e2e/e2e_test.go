@@ -1,3 +1,24 @@
+/*
+Copyright 2015, 2018 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+/*
+Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+*/
+
 package e2e
 
 import (
@@ -45,6 +66,10 @@ var beegfsSuitesToRun = []func() storageframework.TestSuite{
 	beegfssuites.InitBeegfsTestSuite,
 }
 
+// This method of preparing Kubernetes tests to run is heavily adapted from the
+// github.com/kubernetes-sigs/aws-ebs-csi-driver/tests/e2e-kubernetes package
+// (https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/v0.10.1/tests/e2e-kubernetes/e2e_test.go#L81-L91).
+// The general structure of this file is loosely adapted from the same package.
 var k8sSuitesToRun = []func() storageframework.TestSuite{
 	storagesuites.InitDisruptiveTestSuite,
 	// Two ephemeral tests fail when WaitForFirstConsumer is enabled.
@@ -115,7 +140,8 @@ var _ = ginkgo.Describe("E2E Tests", func() {
 
 func Test(t *testing.T) {
 	// Much of the code in this function is copied directly from the RunE2ETests function in
-	// the k8s.io/kubernetes/test/e2e package.
+	// the k8s.io/kubernetes/test/e2e package
+	// (https://github.com/kubernetes/kubernetes/blob/v1.19.0/test/e2e/e2e.go#L92-L131).
 
 	config.DefaultReporterConfig.NoColor = true
 	gomega.RegisterFailHandler(ginkgo.Fail)
