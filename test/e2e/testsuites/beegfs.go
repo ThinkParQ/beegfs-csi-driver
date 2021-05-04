@@ -42,6 +42,7 @@ import (
 	"golang.org/x/net/context"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/errors"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
@@ -244,16 +245,16 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		defer cleanup()
 
 		// Get the controller Pod, which could be running in any namespace.
-		pods, err := e2epod.GetPods(f.ClientSet, "", map[string]string{"app": "csi-beegfs-controller"})
-		e2eframework.ExpectNoError(err)
-		e2eframework.ExpectEqual(len(pods), 1, "There should be one controller pod")
-		controllerPod := pods[0]
+		pods, err := e2epod.WaitForPodsWithLabelRunningReady(f.ClientSet, "",
+			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
+		e2eframework.ExpectNoError(err, "There should be exactly one controller pod")
+		controllerPod := pods.Items[0]
 
 		// Get a node Pod, which could be running in any namespace.
-		pods, err = e2epod.GetPods(f.ClientSet, "", map[string]string{"app": "csi-beegfs-node"})
-		e2eframework.ExpectNoError(err)
-		e2eframework.ExpectNotEqual(len(pods), 0, "There should be at least one node pod")
-		nodePod := pods[0]
+		pods, err = e2epod.WaitForPodsWithLabel(f.ClientSet, "",
+			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"}))
+		e2eframework.ExpectNoError(err, "There should be at least one node pod")
+		nodePod := pods.Items[0]
 
 		for _, pod := range []corev1.Pod{controllerPod, nodePod} {
 			execOptions := e2eframework.ExecOptions{
