@@ -200,8 +200,8 @@ pipeline {
                                     // user might have deployed the driver using a different deployment scheme
                                     sh """
                                         echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
-                                        kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete sts || true
-                                        kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete ds || true
+                                        kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
+                                        kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
                                         rm -rf deploy/${deployDir}/csi-beegfs-config.yaml
                                         cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy/${deployDir}/csi-beegfs-config.yaml
                                         cat deploy/${deployDir}/csi-beegfs-config.yaml
@@ -209,10 +209,10 @@ pipeline {
                                         cat deploy/${deployDir}/csi-beegfs-connauth.yaml
                                         kubectl apply -k deploy/${deployDir}/
                                         go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 60m
-                                        kubectl delete -k deploy/${deployDir}/
+                                        kubectl delete --cascade=foreground -k deploy/${deployDir}/
                                     """
                                 } catch (err) {
-                                    sh "kubectl delete -k deploy/${deployDir}/ || true"
+                                    sh "kubectl delete --cascade=foreground -k deploy/${deployDir}/ || true"
                                     throw err
                                 }
                             }

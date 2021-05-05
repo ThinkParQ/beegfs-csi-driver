@@ -41,6 +41,7 @@ import (
 	"github.com/onsi/gomega"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
@@ -97,15 +98,16 @@ var _ = ginkgo.BeforeSuite(func() {
 	cs, err := e2eframework.LoadClientset()
 	e2eframework.ExpectNoError(err, "expected to load a client set")
 
-	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace).
-	controllerPods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-controller"})
-	e2eframework.ExpectNoError(err, "expected to find controller Pod")
-	e2eframework.ExpectEqual(len(controllerPods), 1, "expected only one controller pod")
+	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace). Wait for it to be
+	// running so we don't read the stale ConfigMap from a terminated deployment.
+	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(cs, "",
+		labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
+	e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
 
 	// Get the name of the ConfigMap from the controller Pod.
 	var driverCMName string
-	controllerNS := controllerPods[0].ObjectMeta.Namespace
-	for _, volume := range controllerPods[0].Spec.Volumes {
+	controllerNS := controllerPods.Items[0].ObjectMeta.Namespace
+	for _, volume := range controllerPods.Items[0].Spec.Volumes {
 		if volume.Name == "config-dir" {
 			driverCMName = volume.ConfigMap.Name
 		}
