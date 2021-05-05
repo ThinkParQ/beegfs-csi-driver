@@ -32,8 +32,6 @@ remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
 imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
 
-String[] integrationEnvironments = [ "beegfs-7.2" ]
-
 pipeline {
     agent any
 
@@ -144,7 +142,10 @@ pipeline {
         }
         stage("Integration Testing") {
             when {
-                expression { return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') }
+                expression {
+                    return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') ||
+                        !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()
+                }
             }
             options {
                 timeout(time: 2, unit: 'HOURS')
@@ -163,6 +164,24 @@ pipeline {
                         error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
                     }
 
+                    String[][] testEnvironments = []
+                    if (env.BRANCH_NAME.matches('master')) {
+                        testEnvironments = [
+                            //["1.18", "beegfs-7.1.5", "prod-1.18"], TODO(jbostian): uncomment this once 1.18 manifests issue is resolved
+                            //["1.18", "beegfs-7.2", "prod-1.18"], TODO(jbostian): uncomment this once 1.18 manifests issue is resolved
+                            ["1.19-rdma", "beegfs-7.2-rdma", "prod"],
+                            ["1.20", "beegfs-7.1.5", "prod"],
+                            ["1.20", "beegfs-7.2", "prod"]
+                        ]
+                    }
+                    else {
+                        testEnvironments = [
+                            //["1.18", "beegfs-7.2", "prod-1.18"], TODO(jbostian): uncomment this once 1.18 manifests issue is resolved
+                            ["1.19-rdma", "beegfs-7.2-rdma", "prod"],
+                            ["1.20", "beegfs-7.2", "prod"]
+                        ]
+                    }
+
                     // Always skip the broken subpath test.
                     // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
                     ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted'"
@@ -171,28 +190,29 @@ pipeline {
                         ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted|\\[Slow\\]'"
                     }
 
-                    sh "(cd deploy/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
-                    integrationEnvironments.each {
-                        lock(resource: "${it}") {
-                            withCredentials([file(credentialsId: "kubeconfig-${it}", variable: 'KUBECONFIG')]) {
+                    testEnvironments.each { k8sCluster, beegfsHost, deployDir ->
+                        sh "(cd deploy/${deployDir} && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
+                        lock(resource: "${k8sCluster}") {
+                            withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: 'KUBECONFIG')]) {
                                 try {
                                     // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
                                     // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
                                     // user might have deployed the driver using a different deployment scheme
                                     sh """
-                                        echo 'Running test against ${it}'
+                                        echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
                                         kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete sts || true
                                         kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete ds || true
-                                        rm -rf deploy/prod/csi-beegfs-config.yaml
-                                        cp test/manual/${it}/csi-beegfs-config.yaml deploy/prod/csi-beegfs-config.yaml
-                                        cat deploy/prod/csi-beegfs-config.yaml
-                                        cp test/manual/${it}/csi-beegfs-connauth.yaml deploy/prod/csi-beegfs-connauth.yaml
-                                        cat deploy/prod/csi-beegfs-connauth.yaml
-                                        kubectl apply -k deploy/prod/
+                                        rm -rf deploy/${deployDir}/csi-beegfs-config.yaml
+                                        cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy/${deployDir}/csi-beegfs-config.yaml
+                                        cat deploy/${deployDir}/csi-beegfs-config.yaml
+                                        cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy/${deployDir}/csi-beegfs-connauth.yaml
+                                        cat deploy/${deployDir}/csi-beegfs-connauth.yaml
+                                        kubectl apply -k deploy/${deployDir}/
                                         go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 60m
+                                        kubectl delete -k deploy/${deployDir}/
                                     """
                                 } catch (err) {
-                                    sh "kubectl delete -k deploy/prod/ || true"
+                                    sh "kubectl delete -k deploy/${deployDir}/ || true"
                                     throw err
                                 }
                             }
