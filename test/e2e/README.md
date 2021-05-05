@@ -62,7 +62,7 @@ Certain additional environment attributes increase the coverage of the tests:
 ### Environments
 
 csi-beegfs-config.yaml and csi-beegfs-connauth.yaml files FOR NETAPP INTERNAL 
-TESTING are currently located in test/manual/<beegfs-version>. Deploy the 
+TESTING are currently located in test/env/<beegfs-version>. Deploy the 
 driver to a cluster with one of these files to get started.
 
 NOTE: These files reference NetApp internally available test clusters and file 
