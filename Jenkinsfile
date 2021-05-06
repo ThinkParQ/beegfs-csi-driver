@@ -148,7 +148,7 @@ pipeline {
                 }
             }
             options {
-                timeout(time: 2, unit: 'HOURS')
+                timeout(time: 6, unit: 'HOURS')
             }
             environment {
                 // The disruptive test suite will try to SSH into k8s cluster nodes, defaulting as the jenkins user,
