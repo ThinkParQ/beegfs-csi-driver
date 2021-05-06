@@ -31,9 +31,9 @@ type baseBeegfsDriver struct {
 	perFSConfigs                    []beegfs.FileSystemSpecificConfig
 	fsIndex                         int
 	extraSCParams                   map[string]string
-	dynamicVolDirBasePathBeegfsRoot string // Set once on initialization (e.g. e.g. /e2e-test/dynamic).
+	dynamicVolDirBasePathBeegfsRoot string // Set once on initialization (e.g. /e2e-test/dynamic).
 	staticVolDirBasePathBeegfsRoot  string // Set once on initialization (e.g. /e2e-test/static).
-	staticDirName                   string // Optionally set by a test (e.g.static2).
+	staticDirName                   string // Optionally set by a test (e.g. static2).
 	staticDirNameOriginal           string // Set once on initialization (e.g. static1).
 }
 
