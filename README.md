@@ -19,15 +19,19 @@ file systems](https://blog.netapp.com/beegfs-for-beginners/).
 
 ### Notable Features
 
-* Integration of Storage Classes in Kubernetes with [storage
+* Integration of [Storage Classes in Kubernetes](docs/usage.md#create-a-storage-class) with [storage
   pools](https://doc.beegfs.io/latest/advanced_topics/storage_pools.html) in
   BeeGFS, allowing different tiers of storage within the same file system to be
   exposed to end users. 
 * Management of global and node specific BeeGFS client configuration applied to
   Kubernetes nodes, simplifying use in large environments. 
+* Specify permissions in BeeGFS from Storage Classes in Kubernetes simplifying 
+  integration with [BeeGFS quotas](https://doc.beegfs.io/latest/advanced_topics/quota.html#project-directory-quota-tracking) 
+  and providing [visibility and control over user consumption](docs/quotas.md) 
+  of the shared file system. 
 * Set [striping
   parameters](https://doc.beegfs.io/latest/advanced_topics/striping.html) in
-  BeeGFS from Storage Classes in Kubernetes to optimize for diverse workloads
+  BeeGFS from Storage Classes in Kubernetes to [optimize for diverse workloads](https://netapp.io/2021/04/06/tackling-diverse-workloads-with-beegfs-in-kubernetes/)
   sharing the same file system.
 * Support for ReadWriteOnce, ReadOnlyMany, and ReadWriteMany [access
   modes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes)
@@ -53,7 +57,9 @@ Additional Notes:
 * Deploying the driver requires access to a terminal with kubectl. 
 * The [BeeGFS DKMS
   client](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html) must be
-  preinstalled to each Kubernetes node that needs BeeGFS access. 
+  preinstalled to each Kubernetes node that needs BeeGFS access.
+  * Note: As part of this setup the beegfs-helperd and beegfs-utils packages must 
+  be installed, and the `beegfs-helperd` service must be started and enabled.  
 * Each BeeGFS mount point uses an ephemeral UDP port. On Linux the selected
   ephemeral port is constrained by the values of [IP
   variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).

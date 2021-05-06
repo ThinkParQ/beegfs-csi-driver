@@ -268,6 +268,7 @@ Next Steps:
 * For additional examples see *examples/README.md*. 
 
 ## Managing BeeGFS Client Configuration
+<a name="managing-beegfs-client-configuration"></a>
 
 Currently the only tested and supported container orchestrator (CO) for the
 BeeGFS CSI driver is Kubernetes. Notes in the General Configuration section
@@ -276,6 +277,7 @@ to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap and
 Secret, as described in [Kubernetes Configuration](#kubernetes-configuration).
 
 ### General Configuration
+<a name="general-configuration"></a>
 
 The driver is ready to be used right out of the box, but many environments may
 either require or benefit from additional configuration.
@@ -462,6 +464,12 @@ if specified here.
 * `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
   file.
 
+### Tested
+
+These parameters have been tested and verified to have the desired effect.
+
+* [`quotaEnabled`](quotas.md)
+
 #### Untested
 
 These parameters SHOULD result in the desired effect but have not been tested.
@@ -482,7 +490,6 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `logHelperdIP`
 * `logLevel`
 * `logType`
-* `quotaEnabled`
 * `sysCreateHardlinksAsSymlinks`
 * `sysMountSanityCheckMS`
 * `sysSessionCheckOnClose`

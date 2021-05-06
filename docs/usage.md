@@ -27,10 +27,9 @@ In this version, the driver ignores the capacity requested for a Kubernetes
 Persistent Volume. Consider the definition of a "volume" above. While an entire
 BeeGFS filesystem may have a usable capacity of 100GiB, there is very little
 meaning associated with the "usable capacity" of a directory within a BeeGFS (or
-any POSIX) filesystem. Future versions of this driver may use BeeGFS enterprise
-features like [Quota
-Enforcement](https://doc.beegfs.io/latest/advanced_topics/quota.html) to
-guarantee that the capacity provisioned by the driver is not exceeded.
+any POSIX) filesystem. The driver does provide integration with BeeGFS permissions 
+and quotas which provides ways to limit the capacity consumed by containers. For
+more details refer to the documentation on [Quotas](quotas.md).
 
 ### Static vs Dynamic Provisioning
 
@@ -116,6 +115,7 @@ Node, the driver uses information supplied by the Persistent Volume to mount the
 subdirectory into the Pod's namespace.
 
 ### Create a Storage Class
+<a name="create-a-storage-class"></a>
 
 Who: A Kubernetes administrator working closely with a BeeGFS administrator
 
@@ -147,9 +147,9 @@ additional details.
 By default, the driver creates all new subdirectories with root:root ownership
 and globally read/write/executable 0777 access permissions. This makes it easy
 for an arbitrary Pod to consume a dynamically provisioned volume. However,
-administrators [may want to change this behavior](#Permissions) on a
-per-Storage-Class basis. The following `permissions/` parameters allow this
-fine-grained control:
+administrators may want to [change the default permissions](#permissions) on a 
+per-Storage-Class basis, in particular if [integration with BeeGFS quotas is desired](quotas.md). 
+The following `permissions/` parameters allow this fine-grained control:
 
 | Prefix       | Parameter | Required | Accepted patterns                  | Example     | Default 
 | ------       | --------- | -------- | -----------------                  | -------     | -------
@@ -317,6 +317,9 @@ the Kubernetes nodes themselves (since multiple clients connect to each server).
 Administrators are advised to spec out BeeGFS servers accordingly.
 
 ### Permissions
+<a name="permissions"></a>
+Note: See the section on [Creating a Storage Class](#create-a-storage-class) for
+how to set permissions using the CSI driver.
 
 By default, the driver creates all new subdirectories with root:root ownership
 and globally read/write/executable 0777 access permissions. This works well in a
@@ -337,6 +340,8 @@ example scenarios include:
   associated with a single appropriate GID (as in the 
   [project directory quota tracking](https://doc.beegfs.io/latest/advanced_topics/quota.html#project-directory-quota-tracking))
   example in the BeeGFS documentation.
+  * See the driver documentation on [Quotas](quotas.md) for further guidance 
+  on how to use BeeGFS quotas with the CSI driver.
 * It is important to limit the ability of arbitrary BeeGFS file system users 
   to access dynamically provisioned volumes and the volumes will be accessed 
   by Pods running as a known user or group anyway (see the above note for 
@@ -366,7 +371,7 @@ parameters to allow access:
 Some CSI drivers support a recursive operation in which the permissions and
 ownership of all files and directories in a provisioned volume are changed to
 match the fsGroup parameter of a Security Context on Pod startup. This 
-behavior is generally undesirable for the following reasons:
+behavior is generally undesirable with BeeGFS for the following reasons:
 * Unexpected permissions changes within a BeeGFS file system may be
   confusing to administrators and detrimental to security (especially in the
   static provisioning workflow).
