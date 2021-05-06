@@ -1,29 +1,40 @@
-### Basic Information
+# BeeGFS CSI Driver End-to-End Testing
+
+## Contents
+* [Overview](#overview)
+* [Requirements](#requirements)
+* [CI Environments](#ci-environments)
+* [Test Commands](#test-commands)
+  * [Ginkgo](#ginkgo)
+  * [Go Test](#go-test)
+
+## Overview
 
 The driver package (./driver) provides two TestDriver
 (k8s.io/kubernetes/e2e/storage/testsuites) implementations that are compatible
 with the Kubernetes end-to-end storage tests.
 
 * The BeegfsDriver implementation is capable of testing both the static and 
-  the dynamic provisioning workflow. The below commands test the BeegfsDriver 
-  implementation against beegfs-csi-driver specific tests in the 
-  testsuites(./testsuites) package. 
+  the dynamic provisioning workflow. [Commands given below](#test-commands) 
+  test the BeegfsDriver implementation against beegfs-csi-driver specific tests 
+  in the testsuites (./testsuites) package. 
 * The BeegfsDynamicDriver implementation is only capable of testing the dynamic
-  provisioning workflow. The below commands test the BeegfsDynamicDriver 
-  implementation against many of the Kubernetes end-to-end storage tests.
+  provisioning workflow. [Commands given below](#test-commands) test the 
+  BeegfsDynamicDriver implementation against many of the Kubernetes end-to-end 
+  storage tests.
 
 The Jenkinsfile runs a subset of all possible tests. It uses the environment 
 and command line arguments to ensure the tests run and known slow and/or 
 broken tests are skipped appropriately.
 
-### Requirements
+## Requirements
 
-The below commands must be run from a workstation or CI node in an environment 
+Test commands must be run from a workstation or CI node in an environment 
 that meets the following criteria:
 
 * The workstation or CI node must have kubectl access to a Kubernetes cluster
   and the KUBECONFIG environment variable must be properly set.
-* The accessible Kubernetes cluster must have beegfs-csi-driver deployed.
+* The accessible Kubernetes cluster must have the driver deployed.
 * The csi-beegfs-config.yaml used to deploy the driver to the cluster must 
   EXPLICITLY refer to the sysMgmtdHost of at least one fileSystemSpecificConfig.
 
@@ -59,17 +70,26 @@ Certain additional environment attributes increase the coverage of the tests:
   including a csi-beegfs-connauth.yaml during driver deployment confirms that 
   connAuth features work as expected.
 
-### Environments
+## CI Environments
 
-csi-beegfs-config.yaml and csi-beegfs-connauth.yaml files FOR NETAPP INTERNAL 
-TESTING are currently located in test/env/<beegfs-version>. Deploy the 
-driver to a cluster with one of these files to get started.
+The driver is tested in a variety of environments during the development and 
+release life cycle. csi-beegfs-config.yaml and csi-beegfs-connauth.yaml files 
+FOR NETAPP INTERNAL TESTING are located in test/env/<beegfs-version>. For each 
+test run, Jenkins automatically deploys the driver to a cluster with one set of 
+these files during initialization.
 
-NOTE: These files reference NetApp internally available test clusters and file 
-systems. To run tests externally, provide your own KUBECONFIG, 
-csi-beegfs-config.yaml, and csi-beegfs-connauth.yaml.
+To run end-to-end tests outside of NetApp, provide your own KUBECONFIG 
+(referencing and existing cluster), csi-beegfs-config.yaml, and 
+csi-beegfs-connauth.yaml (referencing an existing BeeGFS file system).
   
-### Test Commands
+## Test Commands
+
+The Kubernetes end-to-end tests are built on top of the 
+[Ginkgo BDD Testing Framework](https://onsi.github.io/ginkgo/). They can be 
+launched using the Ginkgo CLI (if it is installed) or by using the typical 
+`go test` command.
+
+### Ginkgo
 
 Template for `ginkgo` command:
 
@@ -92,6 +112,8 @@ Actual `ginkgo` command that works on a local machine:
 KUBECONFIG=~/.kube/config ginkgo --focus beegfs-suite ./test/e2e -- --report-dir ./junit
 ```
 
+### Go Test
+
 Template for `go test` command:
 
 ```bash
@@ -109,3 +131,6 @@ Actual `go test` command that works on a local machine:
 ```bash
 KUBECONFIG=~/.kube/config go test ./test/e2e/ -ginkgo.focus beegfs-suite -ginkgo.v -test.v -report-dir ./junit
 ```
+
+NOTE: Control which specs run using --focus and --skip as described
+[here](https://onsi.github.io/ginkgo/).
