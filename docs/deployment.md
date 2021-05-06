@@ -51,7 +51,10 @@ Steps:
   * Note by default the beegfs-csi-driver image will be pulled from
     [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver). See [this
     section](#air-gapped-kubernetes-deployment) for guidance deploying in
-    offline environments. 
+    offline environments.
+  * Note that some supported Kubernetes versions may require modified 
+    deployment manifests. Use a version specific overlay from the *deploy/prod* 
+    directory as necessary (e.g. `kubectl apply -k deploy/prod-1.18`).
 * Verify all components are installed and operational: `kubectl get pods -n
   kube-system | grep csi-beegfs`
 
