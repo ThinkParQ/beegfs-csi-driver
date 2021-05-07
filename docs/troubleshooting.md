@@ -1,7 +1,6 @@
-Troubleshooting Guide
----------------------
+# Troubleshooting Guide
 
-This section provides guidance and tips around troubleshooting an issues that
+This section provides guidance and tips around troubleshooting issues that
 come up using the driver. For anything not covered here, please [submit an
 issue](https://github.com/NetApp/beegfs-csi-driver/issues) using the label
 "question". Suspected bugs should be submitted with the label "bug". 

@@ -42,6 +42,7 @@ file systems](https://blog.netapp.com/beegfs-for-beginners/).
 ### Interoperability and CSI Feature Matrix
 | beegfs.csi.netapp.com  | K8s Versions     | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
 | -----------------------| ---------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
+| v1.0.0                 | 1.19             | 7.2, 7.1.5      | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
 | v1.1.0                 | 1.18, 1.19, 1.20 | 7.2.1, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
 
 Additional Notes:
@@ -142,6 +143,7 @@ Apache License 2.0
 
 * Austin Major (@austinmajor).
 * Eric Weber (@ejweber).
+* Jason Eastburn
 * Joe McCormick (@iamjoemccormick).
 * Joey Parnell (@unwieldy0). 
 * Justin Bostian (@jb5n).

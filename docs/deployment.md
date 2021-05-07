@@ -47,7 +47,8 @@ Steps:
     *deploy/prod/csi-beegfs-config-example.yaml*. Please see the section on
     [Managing BeeGFS Client
     Configuration](#managing-beegfs-client-configuration) for full details. 
-* If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) fill in the empty Secret config file at *deploy/prod/csi-beegfs-connauth.yaml*.
+* If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) 
+  fill in the empty Secret config file at *deploy/prod/csi-beegfs-connauth.yaml*.
   * An example Secret config file is provided at 
   *deploy/prod/csi-beegfs-connauth-example.yaml* Please see the section on 
   [ConnAuth Configuration](connauth-configuration) for full details. 
