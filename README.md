@@ -40,15 +40,18 @@ file systems](https://blog.netapp.com/beegfs-for-beginners/).
   access to common datasets.
 
 ### Interoperability and CSI Feature Matrix
-| beegfs.csi.netapp.com  | K8s Versions  | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
-| -----------------------| ------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
-| v1.0.0                 | 1.19          | 7.2, 7.1.5      | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
+| beegfs.csi.netapp.com  | K8s Versions     | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
+| -----------------------| ---------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
+| v1.1.0                 | 1.18, 1.19, 1.20 | 7.2.1, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
 
 Additional Notes:
-* This matrix indicates tested BeeGFS and Kubernetes versions. The driver is
-  expected to work with other versions of Kubernetes, but extensive testing has
-  not been performed, and changes to the deployment manifests are required.
+* This matrix indicates tested BeeGFS and Kubernetes versions. The driver
+  may work with other versions of Kubernetes, but they have not been tested. 
+  Changes to the deployment manifests are likely required, especially for 
+  earlier versions of Kubernetes.
 * The driver has not been tested with SELinux.
+* For environments where the driver is used with both BeeGFS 7.1.x and 
+  7.2.x, Kubernetes nodes should have the 7.2 BeeGFS DKMS client installed.
 
 ## Getting Started 
 
