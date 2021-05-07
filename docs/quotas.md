@@ -48,7 +48,7 @@ following example shows how to set an unrelated parameter (`connUseRDMA: true`)
 on all file systems, then only enable quotas for the BeeGFS file system with a
 management IP of `192.168.1.100`: 
 
-```
+```yaml
 config:
 beegfsClientConf:
     connUseRDMA: true
@@ -138,7 +138,7 @@ described in the last section.
   `setgid` flag by setting `2` at the beginning of `permissions/mode` before
   applying it with `kubectl apply -f beegfs-dyn-sc.yaml`:
 
-```
+```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -156,7 +156,7 @@ allowVolumeExpansion: false
 * To test out the storage class create a file `dyn-pvc.yaml` defining a
   persistent volume claim that references the storage class, and apply it with
   `kubectl apply -f dyn-pvc.yaml`: 
-```
+```yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -172,7 +172,7 @@ spec:
 * To test the PVC create a file `dyn-app.yaml` defining a pod with an Alpine
   container that simply runs a command to create a file in the PVC. Apply it
   with `kubectl apply -f dyn-app.yaml`: 
-```
+```yaml
 kind: Pod
 apiVersion: v1
 metadata:
@@ -200,13 +200,13 @@ spec:
   can verify things are working correctly: 
   * Use `ls -l <PATH_TO_PVC>` to verify the file was created with the
     appropriate group:
-    ```
+    ```bash
     [user@client01 ~]# ls -l /mnt/beegfs/k8s/pvc-db7a3ec0/
     total 0
     -rw-r--r-- 1 root k8s-sc 0 May  5 20:06 touched-by-33342327-1734-4bba-8b95-974aa8eccb3f
     ```
     * Run `beegfs-ctl --getquota --gid 1000` to verify BeeGFS sees the group: 
-    ```
+    ```bash
     [user@client01 ~]# beegfs-ctl --getquota --gid 1000 
 
     Quota information for storage pool Default (ID: 1):
