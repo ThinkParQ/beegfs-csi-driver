@@ -11,7 +11,7 @@ bases:
 images:
   - name: beegfs-csi-driver
     newName: netapp/beegfs-csi-driver
-    newTag: v1.0.0
+    newTag: v1.1.0
   - name: csi-provisioner
     newName: k8s.gcr.io/sig-storage/csi-provisioner
     newTag: v2.0.2

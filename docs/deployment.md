@@ -24,6 +24,7 @@ runs a component of the driver:
   install the following packages: 
   * beegfs-client-dkms
   * beegfs-helperd
+  * beegfs-utils  
 * Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd
   && systemctl enable beegfs-helperd`
 
@@ -46,6 +47,11 @@ Steps:
     *deploy/prod/csi-beegfs-config-example.yaml*. Please see the section on
     [Managing BeeGFS Client
     Configuration](#managing-beegfs-client-configuration) for full details. 
+* If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) 
+  fill in the empty Secret config file at *deploy/prod/csi-beegfs-connauth.yaml*.
+  * An example Secret config file is provided at 
+  *deploy/prod/csi-beegfs-connauth-example.yaml* Please see the section on 
+  [ConnAuth Configuration](connauth-configuration) for full details. 
 * Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
   `kubectl apply -k deploy/prod`
   * Note by default the beegfs-csi-driver image will be pulled from
@@ -268,6 +274,7 @@ Next Steps:
 * For additional examples see *examples/README.md*. 
 
 ## Managing BeeGFS Client Configuration
+<a name="managing-beegfs-client-configuration"></a>
 
 Currently the only tested and supported container orchestrator (CO) for the
 BeeGFS CSI driver is Kubernetes. Notes in the General Configuration section
@@ -276,6 +283,7 @@ to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap and
 Secret, as described in [Kubernetes Configuration](#kubernetes-configuration).
 
 ### General Configuration
+<a name="general-configuration"></a>
 
 The driver is ready to be used right out of the box, but many environments may
 either require or benefit from additional configuration.
@@ -409,19 +417,22 @@ driver on all nodes.
 [General Configuration](#general-configuration) to
   *deploy/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. 
   The resulting deployment will automatically include a correctly formed 
-  ConfigMap.  See *deploy/prod/csi-beegfs-config-example.yaml* for an example 
+  ConfigMap. See *deploy/prod/csi-beegfs-config-example.yaml* for an example 
   file.
 * To pass connAuth configuration to the driver, modify
   *deploy/prod/csi-beegfs-connauth.yaml* (or another overlay) before deploying. 
   The resulting deployment will automatically include a correctly formed
-  Secret. See *deploy/prod/csi-beegfs-config-connauth.yaml* for an example
-  file.
+  Secret. See *deploy/prod/csi-beegfs-config-connauth-example.yaml* for an 
+  example file.
 
 To update configuration after initial deployment, modify
-*deploy/prod/csi-beegfs-config.yaml* and repeat the kubectl deployment step from
-[Kubernetes Deployment](#kubernetes-deployment). Kustomize will automatically
-update all components and restart the driver on all nodes so that it picks up
-the latest changes.
+*deploy/prod/csi-beegfs-config.yaml* or *deploy/prod/csi-beegfs-connauth.yaml*
+and repeat the kubectl deployment step from[Kubernetes Deployment](#kubernetes-deployment). 
+Kustomize will automatically update all components and restart the driver on 
+all nodes so that it picks up the latest changes.
+
+NOTE: To validate the BeeGFS Client configuration file used for a specific PVC, 
+see the [Troubleshooting Guide](troubleshooting.md#determining-the-beegfs-client-configuration-for-a-pvc)
 
 ### BeeGFS Client Parameters (beegfsClientConf)
 
@@ -462,6 +473,12 @@ if specified here.
 * `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
   file.
 
+### Tested
+
+These parameters have been tested and verified to have the desired effect.
+
+* `quotaEnabled` - Documented in [Quotas](quotas.md).
+
 #### Untested
 
 These parameters SHOULD result in the desired effect but have not been tested.
@@ -482,7 +499,6 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `logHelperdIP`
 * `logLevel`
 * `logType`
-* `quotaEnabled`
 * `sysCreateHardlinksAsSymlinks`
 * `sysMountSanityCheckMS`
 * `sysSessionCheckOnClose`
