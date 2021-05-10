@@ -13,7 +13,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
-	e2eskipper "k8s.io/kubernetes/test/e2e/framework/skipper"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 )
 
@@ -61,12 +60,7 @@ func (d *baseBeegfsDriver) GetDriverInfo() *storageframework.DriverInfo {
 
 // baseBeegfsDriver implements the storageframework.TestDriver interface.
 func (d *baseBeegfsDriver) SkipUnsupportedTest(pattern storageframework.TestPattern) {
-	switch pattern.BindingMode {
-	// Late binding ephemeral tests fail unless skipped, but they probably shouldn't.
-	// TODO: Figure out why.
-	case storagev1.VolumeBindingWaitForFirstConsumer:
-		e2eskipper.Skipf("Driver %s does not support binding mode %s", d.driverInfo.Name, pattern.BindingMode)
-	}
+	// Intentionally empty.
 }
 
 // baseBeegfsDriver implements the storageframework.TestDriver interface.
@@ -103,8 +97,10 @@ func initBaseBeegfsDriver() *baseBeegfsDriver {
 				storageframework.CapControllerExpansion: false,
 				storageframework.CapNodeExpansion:       false,
 				storageframework.CapVolumeLimits:        false,
-				storageframework.CapSingleNodeVolume:    false, // TODO: Experiment more. Setting this to true seems to skip some multi-node tests.
-				storageframework.CapTopology:            false,
+				// TODO(webere, A217): Verify CapSingleNodeVolume should be false. Setting it to true seems to skip
+				// some multi-node tests.
+				storageframework.CapSingleNodeVolume: false,
+				storageframework.CapTopology:         false,
 			},
 			// RequiredAccessModes:
 			// TopologyKeys:
@@ -137,7 +133,6 @@ func InitBeegfsDynamicDriver() *BeegfsDynamicDriver {
 // baseBeegfsDriver directly implements the storageframework.DynamicPVTestDriver interface.
 func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframework.PerTestConfig,
 	fsType string) *storagev1.StorageClass {
-	bindingMode := storagev1.VolumeBindingImmediate
 	params := map[string]string{
 		"sysMgmtdHost":   d.perFSConfigs[d.fsIndex].SysMgmtdHost,
 		"volDirBasePath": d.dynamicVolDirBasePathBeegfsRoot,
@@ -147,8 +142,9 @@ func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframew
 			params[k] = v
 		}
 	}
-	return storageframework.GetStorageClass("beegfs.csi.netapp.com", params, &bindingMode,
-		config.Framework.Namespace.Name)
+	// Do not explicitly set volumeBindingMode. By default, this results in VolumeBindingImmediate behavior. Framework
+	// functions overwrite volumeBindingMode from storageframework.TestPattern as needed.
+	return storageframework.GetStorageClass("beegfs.csi.netapp.com", params, nil, config.Framework.Namespace.Name)
 }
 
 // BeegfsDriver implements the storageframework.PreprovisionedVolumeTestDriver interface.

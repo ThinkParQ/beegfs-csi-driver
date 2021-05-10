@@ -73,9 +73,7 @@ var beegfsSuitesToRun = []func() storageframework.TestSuite{
 // The general structure of this file is loosely adapted from the same package.
 var k8sSuitesToRun = []func() storageframework.TestSuite{
 	storagesuites.InitDisruptiveTestSuite,
-	// Two ephemeral tests fail when WaitForFirstConsumer is enabled.
-	// TODO(webere, A201): Enable ephemeral tests.
-	//storagesuites.InitEphemeralTestSuite,
+	storagesuites.InitEphemeralTestSuite,           // No specs run without the GenericEphemeralVolumes feature gate.
 	storagesuites.InitFsGroupChangePolicyTestSuite, // No specs run because Capabilities[CapFsGroup] = false.
 	storagesuites.InitMultiVolumeTestSuite,
 	// TODO(webere, A202): Look for reasons no specs from the provisioning test suite run. Pay special attention to

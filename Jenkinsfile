@@ -164,7 +164,7 @@ pipeline {
                         error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
                     }
 
-                    String[][] testEnvironments = []
+                    String[][] testEnvironments
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             ["1.18", "beegfs-7.1.5", "prod-1.18"],
@@ -183,11 +183,11 @@ pipeline {
                     }
 
                     // Always skip the broken subpath test.
-                    // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
-                    ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted'"
+                    String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
                     // Skip the [Slow] tests except on master.
+                    // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
                     if (!env.BRANCH_NAME.matches('master')) {
-                        ginkgoSkip = "-ginkgo.skip 'should be able to unmount after the subpath directory is deleted|\\[Slow\\]'"
+                        ginkgoSkipRegex += "|\\[Slow\\]"
                     }
 
                     testEnvironments.each { k8sCluster, beegfsHost, deployDir ->
@@ -195,6 +195,13 @@ pipeline {
                         sh "(cd deploy/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
                         lock(resource: "${k8sCluster}") {
                             withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: 'KUBECONFIG')]) {
+                               String clusterGinkgoSkipRegex = ginkgoSkipRegex
+                                if (k8sCluster.contains("1.18")) {
+                                    // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
+                                    // incorrectly identify our v1.18 cluster as being ephemeral-capable.
+                                    clusterGinkgoSkipRegex += "|ephemeral"
+                                }
+
                                 try {
                                     // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
                                     // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
@@ -209,7 +216,7 @@ pipeline {
                                         cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy/prod/csi-beegfs-connauth.yaml
                                         cat deploy/prod/csi-beegfs-connauth.yaml
                                         kubectl apply -k deploy/${deployDir}/
-                                        go test ./test/e2e/ -ginkgo.v ${ginkgoSkip} -test.v -report-dir ./junit -timeout 60m
+                                        go test ./test/e2e/ -ginkgo.v -ginkgo.skip '${clusterGinkgoSkipRegex}' -test.v -report-dir ./junit -timeout 60m
                                         kubectl delete --cascade=foreground -k deploy/${deployDir}/
                                     """
                                 } catch (err) {
