@@ -1,7 +1,7 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
-[1.1.0] - 2021-05-07
+[1.1.0] - 2021-05-10
 --------------------
 ### Added 
 - Automated [end-to-end (E2E) testing](test/e2e/README.md) leveraging the
@@ -11,7 +11,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 - Support for BeeGFS v7.2.1 and Kubernetes v1.18 and v1.20. 
 - The ability to specify [permissions](docs/usage.md#permissions) in BeeGFS from
   Storage Classes in Kubernetes. This simplifies integration with [BeeGFS
-  quotas](Quotas). 
+  quotas](docs/quotas.md). 
 
 ### Changed
 - Explicitly set the CSI driver's `fsGroupPolicy` to `None` disabling

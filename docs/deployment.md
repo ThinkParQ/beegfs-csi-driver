@@ -1,6 +1,8 @@
 # BeeGFS CSI Driver Deployment
 
 ## Contents
+<a name="contents"></a>
+
 * [Deploying to Kubernetes](#deploying-to-kubernetes)
   * [Kubernetes Node Preparation](#kubernetes-node-preparation)
   * [Kubernetes Deployment](#kubernetes-deployment)
@@ -9,12 +11,14 @@
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
   * [Kubernetes Configuration](#kubernetes-configuration)
-  * [BeeGFS Client Parameters](#beegfs-client-parameters-(beeGFSClientConf)) 
+  * [BeeGFS Client Parameters](#beegfs-client-parameters) 
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 ## Deploying to Kubernetes
+<a name="deploying-to-kubernetes"></a>
 
 ### Kubernetes Node Preparation
+<a name="kubernetes-node-preparation"></a>
 The following MUST be completed on any Kubernetes node (master OR worker) that
 runs a component of the driver:
 * Download the [BeeGFS repository
@@ -33,6 +37,7 @@ IMPORTANT: By default the driver uses the beegfs-client.conf file at
 of this file is not currently supported without changing kustomization files. 
 
 ### Kubernetes Deployment
+<a name="kubernetes-deployment"></a>
 Deployment manifests are provided in this repository under *deploy/* along with
 a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply
 -k` (kustomize). 
@@ -50,8 +55,8 @@ Steps:
 * If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) 
   fill in the empty Secret config file at *deploy/prod/csi-beegfs-connauth.yaml*.
   * An example Secret config file is provided at 
-  *deploy/prod/csi-beegfs-connauth-example.yaml* Please see the section on 
-  [ConnAuth Configuration](connauth-configuration) for full details. 
+  *deploy/prod/csi-beegfs-connauth-example.yaml*. Please see the section on 
+  [ConnAuth Configuration](#connauth-configuration) for full details. 
 * Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
   `kubectl apply -k deploy/prod`
   * Note by default the beegfs-csi-driver image will be pulled from
@@ -95,6 +100,7 @@ Next Steps:
   documentation.
 
 ### Air-Gapped Kubernetes Deployment
+<a name="air-gapped-kubernetes-deployment"></a>
 This section provides guidance on deploying the BeeGFS CSI driver in
 environments where Kubernetes nodes do not have internet access. 
 
@@ -117,7 +123,7 @@ exist on the Kubernetes nodes or reference your internal registry. Then follow
 the above commands for Kubernetes deployment.
 
 ## Example Application Deployment
-
+<a name="example-application-deployment"></a>
 Verify that a BeeGFS file system is accessible from the Kubernetes nodes.
 Minimally, verify that the BeeGFS servers are up and listening from a
 workstation that can access them:
@@ -319,7 +325,7 @@ directly out of a beegfs-client.conf configuration file. In particular, the
 beegfs-client.conf file contains a number of references to other files (e.g.
 `connInterfacesFile`). The CSI configuration file instead expects a YAML list,
 which it uses to generate the expected file. See [BeeGFS Client
-Parameters](#beegfs-client-parameters-(beeGFSClientConf)) for more detail about
+Parameters](#beegfs-client-parameters) for more detail about
 supported `beegfsClientConf` parameters.
 
 The order of precedence for configuration option overrides is described by
@@ -382,7 +388,7 @@ nodeSpecificConfigs:  # OPTIONAL
 ```
 
 #### ConnAuth Configuration
-
+<a name="connauth-configuration"></a>
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
 separate file. This file is optional, and should only be used if the
 connAuthFile configuration option is used on a file system's other services.
@@ -403,7 +409,7 @@ per file system level. There is no default connAuth and the concept of a node
 specific connAuth doesn't make sense.
 
 ### Kubernetes Configuration
-
+<a name="kubernetes-configuration"></a>
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
 configuration for all Kubernetes nodes. When the driver starts up on a node, it
 uses the node's name to filter the global ConfigMap down to a node-specific
@@ -427,15 +433,15 @@ driver on all nodes.
 
 To update configuration after initial deployment, modify
 *deploy/prod/csi-beegfs-config.yaml* or *deploy/prod/csi-beegfs-connauth.yaml*
-and repeat the kubectl deployment step from[Kubernetes Deployment](#kubernetes-deployment). 
+and repeat the kubectl deployment step from [Kubernetes Deployment](#kubernetes-deployment). 
 Kustomize will automatically update all components and restart the driver on 
 all nodes so that it picks up the latest changes.
 
 NOTE: To validate the BeeGFS Client configuration file used for a specific PVC, 
-see the [Troubleshooting Guide](troubleshooting.md#determining-the-beegfs-client-configuration-for-a-pvc)
+see the [Troubleshooting Guide](troubleshooting.md#k8s-determining-the-beegfs-client-conf-for-a-pvc)
 
 ### BeeGFS Client Parameters (beegfsClientConf)
-
+<a name="beegfs-client-parameters"></a>
 The following beegfs-client.conf parameters appear in the BeeGFS v7.2
 [beegfs-client.conf
 file](https://git.beegfs.io/pub/v7/-/blob/7.2/client_module/build/dist/etc/beegfs-client.conf).
@@ -443,7 +449,7 @@ Other parameters may exist for newer or older BeeGFS versions. The list a
 parameter falls under determines its level of support in the driver.
 
 #### No Effect
-
+<a name="no-effect"></a>
 These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or
 are determined dynamically and have no effect when specified in the
 `beeGFSClientConf` configuration section.
@@ -461,7 +467,7 @@ are determined dynamically and have no effect when specified in the
 * `connPortShift`
 
 #### Unsupported
-
+<a name="unsupported"></a>
 These parameters are specified elsewhere and may exhibit undocumented behavior
 if specified here.
 
@@ -474,13 +480,13 @@ if specified here.
   file.
 
 ### Tested
-
+<a name="tested"></a>
 These parameters have been tested and verified to have the desired effect.
 
 * `quotaEnabled` - Documented in [Quotas](quotas.md).
 
 #### Untested
-
+<a name="untested"></a>
 These parameters SHOULD result in the desired effect but have not been tested.
 
 * `connHelperdPortTCP`
@@ -515,7 +521,7 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `sysACLsEnabled`
 
 ## Removing the Driver from Kubernetes
-
+<a name="removing-the-driver-from-kubernetes"></a>
 If you're experiencing any issues, find functionality lacking, or our
 documentation is unclear, we'd appreciate if you let us know:
 https://github.com/NetApp/beegfs-csi-driver/issues. 
