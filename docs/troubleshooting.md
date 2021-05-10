@@ -1,14 +1,25 @@
 # Troubleshooting Guide
 
+## Contents
+<a name="contents"></a>
+
+* [Overview](#overview)
+* [Kubernetes](#kubernetes)
+  * [Determining the BeeGFS Client Configuration 
+  for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
+
+## Overview
+<a name="overview"></a>
 This section provides guidance and tips around troubleshooting issues that
 come up using the driver. For anything not covered here, please [submit an
 issue](https://github.com/NetApp/beegfs-csi-driver/issues) using the label
 "question". Suspected bugs should be submitted with the label "bug". 
 
 ## Kubernetes
+<a name="kubernetes"></a>
 
 ### Determining the BeeGFS Client Configuration for a PVC
-<a name="determining-the-beegfs-client-configuration-for-a-pvc"></a>
+<a name="k8s-determining-the-beegfs-client-conf-for-a-pvc"></a>
 
 BeeGFS Client configuration is specified in a Kubernetes ConfigMap, that is
 parsed out to generate the client configuration that applies to a PVC for a
