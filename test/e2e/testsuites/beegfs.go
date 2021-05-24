@@ -87,6 +87,8 @@ func InitBeegfsTestSuite() storageframework.TestSuite {
 func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, pattern storageframework.TestPattern) {
 	f := e2eframework.NewDefaultFramework("beegfs")
 
+	// We can use a single BeegfsDriver for multiple tests because of the way Ginkgo performs parallelization
+	// See test/e2e/README.md for details
 	var (
 		d         *driver.BeegfsDriver
 		resources []*storageframework.VolumeResource
