@@ -112,6 +112,11 @@ Actual `ginkgo` command that works on a local machine:
 KUBECONFIG=~/.kube/config ginkgo --focus beegfs-suite ./test/e2e -- --report-dir ./junit
 ```
 
+Test runs can be parallelized using the `-p` flag. Each test suite will be run serially,
+and within each suite a number of processes will be run in parallel. Tests will be divided between
+these processes, with each process running its share of the test suite serially. These processes
+will not share data, so it is acceptable to use a single BeegfsDriver for a number of tests in a suite.
+
 ### Go Test
 
 Template for `go test` command:

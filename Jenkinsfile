@@ -195,7 +195,7 @@ pipeline {
                         sh "(cd deploy/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
                         lock(resource: "${k8sCluster}") {
                             withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: 'KUBECONFIG')]) {
-                               String clusterGinkgoSkipRegex = ginkgoSkipRegex
+                                String clusterGinkgoSkipRegex = ginkgoSkipRegex
                                 if (k8sCluster.contains("1.18")) {
                                     // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
                                     // incorrectly identify our v1.18 cluster as being ephemeral-capable.
@@ -212,17 +212,20 @@ pipeline {
                                         kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
                                         rm -rf deploy/prod/csi-beegfs-config.yaml
                                         cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy/prod/csi-beegfs-config.yaml
-                                        cat deploy/prod/csi-beegfs-config.yaml
                                         cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy/prod/csi-beegfs-connauth.yaml
-                                        cat deploy/prod/csi-beegfs-connauth.yaml
                                         kubectl apply -k deploy/${deployDir}/
-                                        go test ./test/e2e/ -ginkgo.v -ginkgo.skip '${clusterGinkgoSkipRegex}' -test.v -report-dir ./junit -timeout 60m
+                                        ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -reportFile ./junit/junit-parallel -timeout 60m ./test/e2e/ -- -report-dir ./junit
+                                        ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -reportFile ./junit/junit-serial -timeout 60m ./test/e2e/ -- -report-dir ./junit
                                         kubectl delete --cascade=foreground -k deploy/${deployDir}/
                                     """
                                 } catch (err) {
                                     sh "kubectl delete --cascade=foreground -k deploy/${deployDir}/ || true"
+                                    junit "test/e2e/junit/junit-serial"
+                                    junit "test/e2e/junit/junit-parallel"
                                     throw err
                                 }
+                                junit "test/e2e/junit/junit-serial"
+                                junit "test/e2e/junit/junit-parallel"
                             }
                         }
                     }
