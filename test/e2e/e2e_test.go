@@ -121,6 +121,8 @@ var _ = ginkgo.BeforeSuite(func() {
 	var pluginConfig beegfs.PluginConfig
 	err = yaml.UnmarshalStrict([]byte(driverConfigString), &pluginConfig)
 	e2eframework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
+	e2eframework.ExpectNotEqual(len(pluginConfig.FileSystemSpecificConfigs), 0,
+		"expected csi-beegfs-config.yaml to include at least one config")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 
