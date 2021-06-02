@@ -182,53 +182,18 @@ pipeline {
                         ]
                     }
 
-                    // Always skip the broken subpath test.
-                    String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
-                    // Skip the [Slow] tests except on master.
-                    // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
-                    if (!env.BRANCH_NAME.matches('master')) {
-                        ginkgoSkipRegex += "|\\[Slow\\]"
-                    }
-
+                    def integrationJobs = [:]
                     testEnvironments.each { k8sCluster, beegfsHost, deployDir ->
-                        // Per documentation, always make kustomizations in deploy/prod.
-                        sh "(cd deploy/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})"
-                        lock(resource: "${k8sCluster}") {
-                            withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: 'KUBECONFIG')]) {
-                                String clusterGinkgoSkipRegex = ginkgoSkipRegex
-                                if (k8sCluster.contains("1.18")) {
-                                    // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
-                                    // incorrectly identify our v1.18 cluster as being ephemeral-capable.
-                                    clusterGinkgoSkipRegex += "|ephemeral"
-                                }
-
-                                try {
-                                    // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
-                                    // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
-                                    // user might have deployed the driver using a different deployment scheme.
-                                    sh """
-                                        echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
-                                        kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
-                                        kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
-                                        rm -rf deploy/prod/csi-beegfs-config.yaml
-                                        cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy/prod/csi-beegfs-config.yaml
-                                        cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy/prod/csi-beegfs-connauth.yaml
-                                        kubectl apply -k deploy/${deployDir}/
-                                        ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -reportFile ./junit/junit-parallel -timeout 60m ./test/e2e/ -- -report-dir ./junit
-                                        ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -reportFile ./junit/junit-serial -timeout 60m ./test/e2e/ -- -report-dir ./junit
-                                        kubectl delete --cascade=foreground -k deploy/${deployDir}/
-                                    """
-                                } catch (err) {
-                                    sh "kubectl delete --cascade=foreground -k deploy/${deployDir}/ || true"
-                                    junit "test/e2e/junit/junit-serial"
-                                    junit "test/e2e/junit/junit-parallel"
-                                    throw err
-                                }
-                                junit "test/e2e/junit/junit-serial"
-                                junit "test/e2e/junit/junit-parallel"
-                            }
+                        integrationJobs["kubernetes: ${k8sCluster}, beegfs: ${beegfsHost}"] = {
+                            runIntegrationSuite(k8sCluster, beegfsHost, deployDir)
                         }
                     }
+                    parallel integrationJobs
+                }
+            }
+            post {
+                always {
+                    junit "test/e2e/junit/*.xml"
                 }
             }
         }
@@ -238,6 +203,55 @@ pipeline {
         cleanup {
             sh "docker rmi ${imageTag} ${uniqueImageTag} || true"
             deleteDir()
+        }
+    }
+}
+
+def runIntegrationSuite(k8sCluster, beegfsHost, deployDir) {
+    // Always skip the broken subpath test.
+    String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
+    // Skip the [Slow] tests except on master.
+    // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
+    if (!env.BRANCH_NAME.matches('master')) {
+        ginkgoSkipRegex += "|\\[Slow\\]"
+    }
+
+    def jobID = "${k8sCluster}-${beegfsHost}"
+    // Per documentation, always make kustomizations in deploy/prod.
+    sh """
+        cp -r deploy/ deploy-${jobID}/
+        (cd deploy-${jobID}/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
+    """
+    lock(resource: "${k8sCluster}") {
+        // Credentials variables are always local to the withCredentials block, so multiple
+        // instances of the KUBECONFIG variable can exist without issue when running in parallel
+        withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: "KUBECONFIG")]) {
+            String clusterGinkgoSkipRegex = ginkgoSkipRegex
+            if (k8sCluster.contains("1.18")) {
+                // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
+                // incorrectly identify our v1.18 cluster as being ephemeral-capable.
+                clusterGinkgoSkipRegex += "|ephemeral"
+            }
+
+            try {
+                // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
+                // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
+                // user might have deployed the driver using a different deployment scheme.
+                sh """
+                    echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
+                    kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
+                    kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
+                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy-${jobID}/prod/csi-beegfs-config.yaml
+                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy-${jobID}/prod/csi-beegfs-connauth.yaml
+                    kubectl apply -k deploy-${jobID}/${deployDir}/
+                    ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID}
+                    ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID}
+                    kubectl delete --cascade=foreground -k deploy-${jobID}/${deployDir}/
+                """
+            } catch (err) {
+                sh "kubectl delete --cascade=foreground -k deploy-${jobID}/${deployDir}/ || true"
+                throw err
+            }
         }
     }
 }
