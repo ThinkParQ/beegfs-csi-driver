@@ -76,8 +76,8 @@ var k8sSuitesToRun = []func() storageframework.TestSuite{
 	storagesuites.InitEphemeralTestSuite,           // No specs run without the GenericEphemeralVolumes feature gate.
 	storagesuites.InitFsGroupChangePolicyTestSuite, // No specs run because Capabilities[CapFsGroup] = false.
 	storagesuites.InitMultiVolumeTestSuite,
-	// TODO(webere, A202): Look for reasons no specs from the provisioning test suite run. Pay special attention to
-	// "should provision storage with mount options".
+	// The provisioning suite tests provisioning storage with various options like NTFS and cloning.
+	// The driver currently doesn't support any of these options so it is expected that all provisioning tests will skip.
 	storagesuites.InitProvisioningTestSuite,  // No specs run.
 	storagesuites.InitSnapshottableTestSuite, // No specs run.
 	// One subpath test (should be able to unmount after the subpath directory is deleted [LinuxOnly]) fails

@@ -83,6 +83,7 @@ func initBaseBeegfsDriver() *baseBeegfsDriver {
 			// SupportedSizeRange:
 			SupportedFsType: sets.NewString(""),
 			// Map of string for supported mount option
+			// TODO(jbostian, A141): Determine how to implement mount options.
 			// SupportedMountOption:
 			// RequiredMountOption:
 			Capabilities: map[storageframework.Capability]bool{
