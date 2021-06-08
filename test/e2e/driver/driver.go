@@ -98,8 +98,9 @@ func initBaseBeegfsDriver() *baseBeegfsDriver {
 				storageframework.CapControllerExpansion: false,
 				storageframework.CapNodeExpansion:       false,
 				storageframework.CapVolumeLimits:        false,
-				// TODO(webere, A217): Verify CapSingleNodeVolume should be false. Setting it to true seems to skip
-				// some multi-node tests.
+				// This setting is only used in two places, both in the multivolume test suite. Setting this to true
+				// signals that we *only* support single-node volumes and should skip tests that require a volume to
+				// be shared between two different nodes.
 				storageframework.CapSingleNodeVolume: false,
 				storageframework.CapTopology:         false,
 			},
