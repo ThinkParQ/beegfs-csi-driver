@@ -175,8 +175,15 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config beegfsv1.PluginConf
 
 // mountIfNecessary mounts a BeeGFS file system to vol.mountPath assuming configuration files have been written to
 // vol.mountDirPath by writeClientFiles.
-func mountIfNecessary(ctx context.Context, vol beegfsVolume, mounter mount.Interface) (err error) {
-	mountOpts := []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
+func mountIfNecessary(ctx context.Context, vol beegfsVolume, desiredMountOpts []string, mounter mount.Interface) (err error) {
+	var mountOpts []string
+	if len(desiredMountOpts) == 0 {
+		// If no mount options are specified, use these defaults
+		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
+	} else {
+		// Use all specified mount options, ignoring duplicates
+		mountOpts = append(removeInvalidMountOptions(desiredMountOpts), "cfgFile="+vol.clientConfPath)
+	}
 
 	// Check to make sure file system is not already mounted.
 	notMnt, err := mounter.IsLikelyNotMountPoint(vol.mountPath)
@@ -198,11 +205,37 @@ func mountIfNecessary(ctx context.Context, vol beegfsVolume, mounter mount.Inter
 		return nil
 	}
 
-	LogDebug(ctx, "Mounting volume to path", "volumeID", vol.volumeID, "path", vol.mountPath)
+	LogDebug(ctx, "Mounting volume to path", "volumeID", vol.volumeID, "path", vol.mountPath,
+		"mountOptions", mountOpts)
 	if err = mounter.Mount("beegfs_nodev", vol.mountPath, "beegfs", mountOpts); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// removeInvalidMountOptions takes a slice of mount options and returns the slice, with any duplicates and any other
+// invalid mount options (such as cfgFile) removed
+func removeInvalidMountOptions(inputMountOpts []string) []string {
+	var mountOpts []string
+	for _, opt := range inputMountOpts {
+		if strings.Contains(strings.ToLower(opt), "cfgfile") {
+			// The cfgFile mount option is automatically added by our driver, so we ignore a cfgFile provided by the user
+			LogDebug(nil, "Explicit cfgFile mount option specified. Ignoring.")
+			continue
+		}
+
+		present := false
+		for _, existingOpt := range mountOpts {
+			if opt == existingOpt {
+				present = true
+				break
+			}
+		}
+		if !present {
+			mountOpts = append(mountOpts, opt)
+		}
+	}
+	return mountOpts
 }
 
 // unmountAndCleanUpIfNecessary cleans up a mounted BeeGFS filesystem ONLY if it is not bind mounted somewhere

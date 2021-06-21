@@ -143,7 +143,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
 	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
 	if permissionsConfig.hasSpecialPermissions() {
-		if err := mountIfNecessary(ctx, vol, cs.mounter); err != nil {
+		if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
 		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", permissionsConfig.mode),
@@ -193,7 +193,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(ctx, vol, cs.mounter); err != nil {
+	if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 

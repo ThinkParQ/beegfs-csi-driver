@@ -432,3 +432,19 @@ func TestThreadSafeStringLock(t *testing.T) {
 		}
 	}
 }
+
+func TestRemoveInvalidMountOptions(t *testing.T) {
+	inputOpts := []string{"option1", "option1", "cfgFile", "option2"}
+	expectedOutput := []string{"option1", "option2"}
+	actualOutput := removeInvalidMountOptions(inputOpts)
+	if len(expectedOutput) != len(actualOutput) {
+		t.Fatalf("removeInvalidMountOptions didn't produce expected output. Expected: %v\tActual: %v",
+			expectedOutput, actualOutput)
+	}
+	for i := range expectedOutput {
+		if expectedOutput[i] != actualOutput[i] {
+			t.Fatalf("removeInvalidMountOptions didn't produce expected output. Expected: %v\tActual: %v",
+				expectedOutput, actualOutput)
+		}
+	}
+}

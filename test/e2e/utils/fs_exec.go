@@ -57,7 +57,7 @@ func NewFSExec(cfg *storageframework.PerTestConfig, driver *driver.BeegfsDriver,
 	thisExec.pod, err = e2epod.CreateSecPodWithNodeSelection(cfg.Framework.ClientSet, &podConfig,
 		e2eframework.PodStartTimeout)
 	if err != nil {
-		// If an error occurrs during Pod creation, we can clean up the storageframework.VolumeResource, which has
+		// If an error occurs during Pod creation, we can clean up the storageframework.VolumeResource, which has
 		// non-namespaced objects, as well as the half-created Pod.
 		errs := []error{err}
 		errs = append(errs, thisExec.Cleanup())
