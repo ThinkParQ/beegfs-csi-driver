@@ -167,25 +167,27 @@ pipeline {
                     String[][] testEnvironments
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
-                            ["1.18", "beegfs-7.1.5", "prod-1.18"],
-                            ["1.18", "beegfs-7.2", "prod-1.18"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "prod"],
-                            ["1.20", "beegfs-7.1.5", "prod"],
-                            ["1.20", "beegfs-7.2", "prod"]
+                            // Each cluster must use a different staticVolDirName to avoid collisions.
+                            ["1.18", "beegfs-7.1.5", "prod-1.18", "static1"],
+                            ["1.18", "beegfs-7.2", "prod-1.18", "static1"],
+                            ["1.19-rdma", "beegfs-7.2-rdma", "prod", "static2"],
+                            ["1.20", "beegfs-7.1.5", "prod", "static3"],
+                            ["1.20", "beegfs-7.2", "prod", "static3"]
                         ]
                     }
                     else {
                         testEnvironments = [
-                            ["1.18", "beegfs-7.2", "prod-1.18"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "prod"],
-                            ["1.20", "beegfs-7.2", "prod"]
+                            // Each cluster must use a different staticVolDirName to avoid collisions.
+                            ["1.18", "beegfs-7.2", "prod-1.18", "static1"],
+                            ["1.19-rdma", "beegfs-7.2-rdma", "prod", "static2"],
+                            ["1.20", "beegfs-7.2", "prod", "static3"]
                         ]
                     }
 
                     def integrationJobs = [:]
-                    testEnvironments.each { k8sCluster, beegfsHost, deployDir ->
+                    testEnvironments.each { k8sCluster, beegfsHost, deployDir, staticVolDirName ->
                         integrationJobs["kubernetes: ${k8sCluster}, beegfs: ${beegfsHost}"] = {
-                            runIntegrationSuite(k8sCluster, beegfsHost, deployDir)
+                            runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName)
                         }
                     }
                     parallel integrationJobs
@@ -207,7 +209,7 @@ pipeline {
     }
 }
 
-def runIntegrationSuite(k8sCluster, beegfsHost, deployDir) {
+def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
     // Always skip the broken subpath test.
     String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
     // Skip the [Slow] tests except on master.
@@ -244,8 +246,8 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir) {
                     cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy-${jobID}/prod/csi-beegfs-config.yaml
                     cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy-${jobID}/prod/csi-beegfs-connauth.yaml
                     kubectl apply -k deploy-${jobID}/${deployDir}/
-                    ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID}
-                    ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID}
+                    ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID} -static-vol-dir-name ${staticVolDirName}
+                    ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID} -static-vol-dir-name ${staticVolDirName}
                     kubectl delete --cascade=foreground -k deploy-${jobID}/${deployDir}/
                 """
             } catch (err) {

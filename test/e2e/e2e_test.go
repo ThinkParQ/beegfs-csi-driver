@@ -51,16 +51,21 @@ import (
 // A pointer to a BeegfsDriver is kept here as a global variable so its perFSConfigs can be set with
 // beegfsDriver.SetPerFSConfigs in BeforeSuite. Another option would be to SetPerFSConfigs in beegfsDriver.PrepareTest,
 // but this would cause us to query the K8s API server for every test. There are likely additional strategies for
-// setting the BeegfsDriver's perFSConfigs, but Ginkgo's "order or execution" makes things difficult.
+// setting the BeegfsDriver's perFSConfigs, but Ginkgo's "order of execution" makes things difficult.
 var beegfsDriver *driver.BeegfsDriver
 var beegfsDynamicDriver *driver.BeegfsDynamicDriver
+
+// Variables to be set by flags.
+var dynamicVolDirBasePathBeegfsRoot, staticVolDirBasePathBeegfsRoot, staticVolDirName string
 
 func init() {
 	rand.Seed(time.Now().UTC().UnixNano())
 	e2eframework.RegisterCommonFlags(flag.CommandLine)
 	e2eframework.RegisterClusterFlags(flag.CommandLine)
 	e2eframework.AfterReadingAllFlags(&e2eframework.TestContext)
-
+	flag.StringVar(&dynamicVolDirBasePathBeegfsRoot, "dynamic-vol-dir-base-path", "/e2e-test/dynamic", "Path (from BeeGFS root) to the pre-existing base directory for dynamic provisioning tests. Defaults to /e2e/dynamic.")
+	flag.StringVar(&staticVolDirBasePathBeegfsRoot, "static-vol-dir-base-path", "/e2e-test/static", "Path (from BeeGFS root) to the pre-existing base directory for static provisioning tests. Defaults to /e2e/static.")
+	flag.StringVar(&staticVolDirName, "static-vol-dir-name", "", "Name of the pre-existing directory under static-vol-dir-base-path to be used as a volume for static provisioning tests. Static provisioning tests are skipped if left unset.")
 }
 
 var beegfsSuitesToRun = []func() storageframework.TestSuite{
@@ -125,16 +130,16 @@ var _ = ginkgo.BeforeSuite(func() {
 		"expected csi-beegfs-config.yaml to include at least one config")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
-
 })
 
 var _ = ginkgo.Describe("E2E Tests", func() {
-	beegfsDriver = driver.InitBeegfsDriver()
+	beegfsDriver = driver.InitBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirBasePathBeegfsRoot,
+		staticVolDirName)
 	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDriver), func() {
 		storageframework.DefineTestSuites(beegfsDriver, beegfsSuitesToRun)
 	})
 
-	beegfsDynamicDriver = driver.InitBeegfsDynamicDriver()
+	beegfsDynamicDriver = driver.InitBeegfsDynamicDriver(dynamicVolDirBasePathBeegfsRoot)
 	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
 		storageframework.DefineTestSuites(beegfsDynamicDriver, k8sSuitesToRun)
 	})

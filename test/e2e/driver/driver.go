@@ -13,6 +13,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
+	e2eskipper "k8s.io/kubernetes/test/e2e/framework/skipper"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 )
 
@@ -31,9 +32,7 @@ type baseBeegfsDriver struct {
 	fsIndex                         int
 	extraSCParams                   map[string]string
 	dynamicVolDirBasePathBeegfsRoot string // Set once on initialization (e.g. /e2e-test/dynamic).
-	staticVolDirBasePathBeegfsRoot  string // Set once on initialization (e.g. /e2e-test/static).
-	staticDirName                   string // Optionally set by a test (e.g. static2).
-	staticDirNameOriginal           string // Set once on initialization (e.g. static1).
+	staticVolDirPathBeegfsRoot      string // Set once on initialization (e.g. /e2e-test/static/static1).
 }
 
 // BeegfsDriver is an exported driver that implements the storageframework.TestDriver,
@@ -60,7 +59,9 @@ func (d *baseBeegfsDriver) GetDriverInfo() *storageframework.DriverInfo {
 
 // baseBeegfsDriver implements the storageframework.TestDriver interface.
 func (d *baseBeegfsDriver) SkipUnsupportedTest(pattern storageframework.TestPattern) {
-	// Intentionally empty.
+	if pattern.VolType == storageframework.PreprovisionedPV && d.staticVolDirPathBeegfsRoot == "" {
+		e2eskipper.Skipf("Set staticVolDirPathBeegfsRoot to enable pre-provisioned tests -- skipping")
+	}
 }
 
 // baseBeegfsDriver implements the storageframework.TestDriver interface.
@@ -74,7 +75,7 @@ func (d *baseBeegfsDriver) PrepareTest(f *e2eframework.Framework) (*storageframe
 }
 
 // initBaseBeegfsDriver handles basic initialization shared across all exported drivers.
-func initBaseBeegfsDriver() *baseBeegfsDriver {
+func initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirPathBeegfsRoot string) *baseBeegfsDriver {
 	return &baseBeegfsDriver{
 		driverInfo: storageframework.DriverInfo{
 			Name: "beegfs",
@@ -115,21 +116,25 @@ func initBaseBeegfsDriver() *baseBeegfsDriver {
 		},
 		perFSConfigs:                    make([]beegfs.FileSystemSpecificConfig, 0),
 		fsIndex:                         0,
-		dynamicVolDirBasePathBeegfsRoot: path.Join("e2e-test", "dynamic"),
-		staticVolDirBasePathBeegfsRoot:  path.Join("e2e-test", "static"),
-		staticDirName:                   "static1",
-		staticDirNameOriginal:           "static1",
+		dynamicVolDirBasePathBeegfsRoot: dynamicVolDirBasePathBeegfsRoot,
+		staticVolDirPathBeegfsRoot:      staticVolDirPathBeegfsRoot,
 	}
 }
 
 // InitBeegfsDriver returns a pointer to a BeegfsDriver.
-func InitBeegfsDriver() *BeegfsDriver {
-	return &BeegfsDriver{baseBeegfsDriver: initBaseBeegfsDriver()}
+func InitBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirBasePathBeegfsRoot,
+	staticVolDirName string) *BeegfsDriver {
+	staticVolDirPathBeegfsRoot := ""
+	if staticVolDirBasePathBeegfsRoot != "" && staticVolDirName != "" {
+		staticVolDirPathBeegfsRoot = path.Join(staticVolDirBasePathBeegfsRoot, staticVolDirName)
+	}
+	return &BeegfsDriver{baseBeegfsDriver: initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot,
+		staticVolDirPathBeegfsRoot)}
 }
 
 // InitBeegfsDynamicDriver returns a pointer to a BeegfsDynamicDriver.
-func InitBeegfsDynamicDriver() *BeegfsDynamicDriver {
-	return &BeegfsDynamicDriver{baseBeegfsDriver: initBaseBeegfsDriver()}
+func InitBeegfsDynamicDriver(dynamicVolDirBasePathBeegfsRoot string) *BeegfsDynamicDriver {
+	return &BeegfsDynamicDriver{baseBeegfsDriver: initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, "")}
 }
 
 // baseBeegfsDriver directly implements the storageframework.DynamicPVTestDriver interface.
@@ -154,9 +159,8 @@ func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframew
 // BeeGFS file system known to the driver. Tests can use SetFSIndex and SetStaticDirName to modify its behavior.
 func (d *BeegfsDriver) CreateVolume(config *storageframework.PerTestConfig, volumeType storageframework.TestVolType) storageframework.TestVolume {
 	fsConfig := d.perFSConfigs[d.fsIndex]
-	volDirPathBeegfsRoot := path.Join(d.staticVolDirBasePathBeegfsRoot, d.staticDirName)
 	return beegfsVolume{
-		volumeID: beegfs.NewBeegfsUrl(fsConfig.SysMgmtdHost, volDirPathBeegfsRoot),
+		volumeID: beegfs.NewBeegfsUrl(fsConfig.SysMgmtdHost, d.staticVolDirPathBeegfsRoot),
 	}
 }
 
@@ -220,18 +224,6 @@ func (d *baseBeegfsDriver) SetFSIndexForRDMA() bool {
 // SetPerFSConfigs sets perFSConfigs from a slice of beegfs.FileSystemSpecificConfigs.
 func (d *baseBeegfsDriver) SetPerFSConfigs(perFSConfigs []beegfs.FileSystemSpecificConfig) {
 	d.perFSConfigs = perFSConfigs
-}
-
-// SetStaticDirName controls the volDirPathBeegfsRoot used by CreateVolume and (by extension)
-// getPersistentVolumeSource. Set it to refer to an existing directory under staticVolDirBasePathBeegfsRoot on a BeeGFS
-// file system known to the driver.
-func (d *baseBeegfsDriver) SetStaticDirName(staticDirName string) {
-	d.staticDirName = staticDirName
-}
-
-// UnsetStaticDirName reverses SetStaticDirName.
-func (d *baseBeegfsDriver) UnsetStaticDirName() {
-	d.staticDirName = d.staticDirNameOriginal
 }
 
 // beegfsVolume implements the storageframework.TestVolume interface.

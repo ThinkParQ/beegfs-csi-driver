@@ -98,7 +98,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		var ok bool
 		d, ok = tDriver.(*driver.BeegfsDriver) // These tests use BeegfsDriver specific methods.
 		if !ok {
-			e2eskipper.Skipf("This test only works with a BeegfsDriver")
+			e2eskipper.Skipf("This test only works with a BeegfsDriver -- skipping")
 		}
 		d.SetFSIndex(0)
 		resources = make([]*storageframework.VolumeResource, 0)
