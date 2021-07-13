@@ -323,7 +323,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: docker.repo.eng.netapp.com/webere/beegfs-csi-driver-operator:v1.2.0
+                image: netapp/beegfs-csi-driver-operator:v1.2.0
                 livenessProbe:
                   httpGet:
                     path: /healthz

@@ -19,6 +19,91 @@ spec:
     - description: BeegfsDriver is the Schema for the beegfsdrivers API
       displayName: BeeGFS Driver
       kind: BeegfsDriver
+      name: beegfsdrivers.beegfs.csi.netapp.comchange
+      resources:
+      - kind: ConfigMap
+        name: ""
+        version: v1
+      - kind: DaemonSet
+        name: ""
+        version: v1
+      - kind: Secret
+        name: ""
+        version: v1
+      - kind: StatefulSet
+        name: ""
+        version: v1
+      specDescriptors:
+      - displayName: Default Config
+        path: pluginConfig.config
+      - description: A map of additional key value pairs matching key value pairs
+          in the beegfs-client.conf file. See beegfs-client.conf for more details.
+        displayName: Additional beegfs-client.conf Parameters
+        path: pluginConfig.config.beegfsClientConf
+      - description: A list of subnets in which RDMA communication can/should not
+          be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn TCP Only Filter
+        path: pluginConfig.config.connTcpOnlyFilter
+      - displayName: File System Specific Config
+        path: pluginConfig.fileSystemSpecificConfigs[0].config
+      - description: A map of additional key value pairs matching key value pairs
+          in the beegfs-client.conf file. See beegfs-client.conf for more details.
+        displayName: Additional beegfs-client.conf Parameters
+        path: pluginConfig.fileSystemSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of subnets in which RDMA communication can/should not
+          be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn TCP Only Filter
+        path: pluginConfig.fileSystemSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: The sysMgmtdHost used by the BeeGFS client service to make initial
+          contact with the BeeGFS mgmtd service.
+        displayName: SysMgmtdHost
+        path: pluginConfig.fileSystemSpecificConfigs[0].sysMgmtdHost
+      - displayName: Default Config for Nodes
+        path: pluginConfig.nodeSpecificConfigs[0].config
+      - description: A map of additional key value pairs matching key value pairs
+          in the beegfs-client.conf file. See beegfs-client.conf for more details.
+        displayName: Additional beegfs-client.conf Parameters
+        path: pluginConfig.nodeSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of subnets in which RDMA communication can/should not
+          be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn TCP Only Filter
+        path: pluginConfig.nodeSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: A list of file system specific configurations that override the
+          default configuration for specific file systems on these nodes.
+        displayName: File System Specific Configs for Nodes
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs
+      - displayName: File System Specific Config
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config
+      - description: A map of additional key value pairs matching key value pairs
+          in the beegfs-client.conf file. See beegfs-client.conf for more details.
+        displayName: Additional beegfs-client.conf Parameters
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of subnets in which RDMA communication can/should not
+          be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn TCP Only Filter
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: The sysMgmtdHost used by the BeeGFS client service to make initial
+          contact with the BeeGFS mgmtd service.
+        displayName: SysMgmtdHost
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].sysMgmtdHost
+      - description: The list of nodes this configuration should be applied on. Each
+          entry is the hostname of the node or the name assigned to the node by the
+          container orchestrator (e.g. "node1" or "cluster05-node03").
+        displayName: Node Names
+        path: pluginConfig.nodeSpecificConfigs[0].nodeList
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      version: v1
+    - description: BeegfsDriver is the Schema for the beegfsdrivers API
+      displayName: BeeGFS Driver
+      kind: BeegfsDriver
       name: beegfsdrivers.beegfs.csi.netapp.com
       resources:
       - kind: ConfigMap

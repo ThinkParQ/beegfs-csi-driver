@@ -32,6 +32,14 @@ remoteImageName = "docker.repo.eng.netapp.com/globalcicd/apheleia/${imageName}"
 imageTag = "${remoteImageName}:${env.BRANCH_NAME}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch
 uniqueImageTag = "${imageTag}-${paddedBuildNumber}"  // e.g. .../globalcicd/apheleia/beegfs-csi-driver:my-branch-0005
 
+operatorImageName = "${remoteImageName}-operator"
+operatorImageTag = "${operatorImageName}:${env.BRANCH_NAME}"
+uniqueOperatorImageTag = "${operatorImageTag}-${paddedBuildNumber}"
+
+bundleImageName = "${operatorImageName}-bundle"
+bundleImageTag = "${bundleImageName}:${env.BRANCH_NAME}"
+uniqueBundleImageTag = "${bundleImageTag}-${paddedBuildNumber}"
+
 pipeline {
     agent any
 
@@ -91,6 +99,51 @@ pipeline {
                         docker tag ${uniqueImageTag} ${imageTag}
                         docker push ${uniqueImageTag}
                         docker push ${imageTag}
+                    """
+                }
+            }
+        }
+        // The operator built in this step can be retagged and released to Docker Hub as needed.
+        stage('Build and Push Operator') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+            steps {
+                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                    sh """
+                        cd operator
+                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} build docker-build
+                        # Build bundle without modification to verify that generated code and manifests are up to date.
+                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest bundle
+                        if [[ \$(git diff) ]]
+                        then
+                            # The above make steps have run all generators. The developer making changes should also 
+                            # have run all generators and committed the result. Do not proceed if the generators run 
+                            # here produce different output than the developer committed.
+                            echo "ERROR: Generated code and/or manifests are not up to date"
+                            git diff
+                            exit 1
+                        fi
+                        docker tag ${uniqueOperatorImageTag} ${operatorImageTag}
+                        make -e IMG=${uniqueOperatorImageTag} docker-push
+                        make -e IMG=${operatorImageTag} docker-push
+                    """
+                }
+            }
+        }
+        // The bundle container built in this step can only be used for testing, as it references an operator image tag
+        // that does not exist on Docker Hub. This is fine because a bundle container is not actually used to release
+        // an operator (the pristine bundle directory is used instead).
+        stage('Build and Push Bundle') {
+            options {
+                timeout(time: 5, unit: 'MINUTES')
+            }
+            steps {
+                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                    sh """
+                        cd operator
+                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} -e BUNDLE_IMG=${uniqueBundleImageTag} bundle bundle-build bundle-push
+                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${operatorImageTag} -e BUNDLE_IMG=${bundleImageTag} bundle bundle-build bundle-push
                     """
                 }
             }
@@ -203,7 +256,9 @@ pipeline {
 
     post {
         cleanup {
-            sh "docker rmi ${imageTag} ${uniqueImageTag} || true"
+            sh """
+                docker image list | grep ${env.BRANCH_NAME} | awk '{ print \$1 ":" \$2 }' | xargs -r docker rmi
+            """
             deleteDir()
         }
     }

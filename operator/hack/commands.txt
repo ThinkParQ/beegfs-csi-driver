@@ -17,6 +17,11 @@ These are/were some make commands used to deploy and test.
 
        Assuming inside operator/ directory:
 
+            # Use these if you need the bundle to reference a non-standard (i.e. non-docker.io/netapp) operator image
+            # for testing purposes. Do not commit a bundle built with these.
+            export USERNAME=<sso_username>
+            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver
+
             make bundle
             make docker-build docker-push
             make bundle-build bundle-push
@@ -25,7 +30,9 @@ These are/were some make commands used to deploy and test.
 
     Test operator running in OpenShift (or anywhere OLM is installed):
 
-        operator-sdk run bundle docker.repo.eng.netapp.com/webere/beegfs-csi-driver-operator-bundle:v1.2.0
+        # These commands assume a non-standard bundle built for testing.
+        export USERNAME=<sso_username>
+        operator-sdk run bundle docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver-operator-bundle:v1.2.0
         operator-sdk cleanup beegfs-csi-driver-operator
 
     Test operator installing "from operatorhub.io":
@@ -39,8 +46,14 @@ These are/were some make commands used to deploy and test.
 
         With access to a running OpenShift cluster:
 
+            # Use these if you need the bundle to reference a non-standard (i.e. non-docker.io/netapp) operator image
+            # for testing purposes. Do not commit a bundle built with these.
+            export USERNAME=<sso_username>
+            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver
+
             make bundle bundle-build bundle-push
             make catalog-build catalog-push
+            # Modify image field of hack/test_catalog_source.yaml.
             oc apply -f hack/test_catalog_source.yaml
             # Go to the OpenShift console and experiment on the Operators -> OperatorHub tab.
             oc delete -f hack/test_catalog_source.yaml

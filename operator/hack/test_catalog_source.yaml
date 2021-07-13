@@ -15,7 +15,7 @@ metadata:
   namespace: openshift-marketplace
 spec:
   displayName: NetApp Operators
-  image: docker.repo.eng.netapp.com/webere/beegfs-csi-driver-operator-catalog:v1.2.0
+  image: docker.repo.eng.netapp.com/<username>/beegfs-csi-driver-operator-catalog:v1.2.0
   publisher: NetApp
   sourceType: grpc
   updateStrategy:
