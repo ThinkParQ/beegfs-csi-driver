@@ -1,0 +1,301 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: beegfsdrivers.beegfs.csi.netapp.com
+spec:
+  group: beegfs.csi.netapp.com
+  names:
+    kind: BeegfsDriver
+    listKind: BeegfsDriverList
+    plural: beegfsdrivers
+    singular: beegfsdriver
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: BeegfsDriver is the Schema for the beegfsdrivers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: BeegfsDriverSpec defines the desired state of BeegfsDriver
+            properties:
+              connAuthSecretName:
+                description: The name of a Kubernetes Secret (in this namespace) containing
+                  BeeGFS connauth information formatted according to the deployment
+                  documentation. If no name is provided, a default empty secret named
+                  csi-beegfs-connauth will be created.
+                type: string
+              pluginConfig:
+                description: The top level configuration structure containing default
+                  configuration (applied to all file systems on all nodes), file system
+                  specific configuration, and node specific configuration. Fields
+                  from node and file system specific configurations override fields
+                  from the default configuration. Often not required.
+                properties:
+                  config:
+                    description: The primary configuration structure containing all
+                      of the custom configuration (beegfs-client.conf keys/values
+                      and additional CSI driver specific fields) associated with a
+                      single BeeGFS file system except for sysMgmtdHost, which is
+                      specified elsewhere.
+                    properties:
+                      beegfsClientConf:
+                        additionalProperties:
+                          type: string
+                        description: A map of additional key value pairs matching
+                          key value pairs in the beegfs-client.conf file. See beegfs-client.conf
+                          for more details.
+                        type: object
+                      connInterfaces:
+                        description: A list of interfaces the BeeGFS client service
+                          can communicate over (e.g. "ib0" or "eth0"). Often not required.
+                          See beegfs-client.conf for more details.
+                        items:
+                          type: string
+                        type: array
+                      connNetFilter:
+                        description: A list of subnets the BeeGFS client service can
+                          use for outgoing communication (e.g. "10.10.10.10/24").
+                          Often not required. See beegfs-client.conf for more details.
+                        items:
+                          type: string
+                        type: array
+                      connTcpOnlyFilter:
+                        description: A list of subnets in which RDMA communication
+                          can/should not be established (e.g. "10.10.10.11/24"). Often
+                          not required. See beegfs-client.conf for more details.
+                        items:
+                          type: string
+                        type: array
+                    required:
+                    - beegfsClientConf
+                    - connInterfaces
+                    - connNetFilter
+                    - connTcpOnlyFilter
+                    type: object
+                  fileSystemSpecificConfigs:
+                    description: A list of file system specific configurations that
+                      override the default configuration for specific file systems.
+                    items:
+                      description: A file system specific configuration that overrides
+                        the default configuration for a specific file system.
+                      properties:
+                        config:
+                          description: The primary configuration structure containing
+                            all of the custom configuration (beegfs-client.conf keys/values
+                            and additional CSI driver specific fields) associated
+                            with a single BeeGFS file system except for sysMgmtdHost,
+                            which is specified elsewhere.
+                          properties:
+                            beegfsClientConf:
+                              additionalProperties:
+                                type: string
+                              description: A map of additional key value pairs matching
+                                key value pairs in the beegfs-client.conf file. See
+                                beegfs-client.conf for more details.
+                              type: object
+                            connInterfaces:
+                              description: A list of interfaces the BeeGFS client
+                                service can communicate over (e.g. "ib0" or "eth0").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                            connNetFilter:
+                              description: A list of subnets the BeeGFS client service
+                                can use for outgoing communication (e.g. "10.10.10.10/24").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                            connTcpOnlyFilter:
+                              description: A list of subnets in which RDMA communication
+                                can/should not be established (e.g. "10.10.10.11/24").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - beegfsClientConf
+                          - connInterfaces
+                          - connNetFilter
+                          - connTcpOnlyFilter
+                          type: object
+                        sysMgmtdHost:
+                          description: The sysMgmtdHost used by the BeeGFS client
+                            service to make initial contact with the BeeGFS mgmtd
+                            service.
+                          type: string
+                      required:
+                      - config
+                      - sysMgmtdHost
+                      type: object
+                    type: array
+                  nodeSpecificConfigs:
+                    description: A list of node specific configurations that override
+                      file system specific configurations and the default configuration
+                      on specific nodes.
+                    items:
+                      description: A node specific configuration that overrides file
+                        system specific configurations and the default configuration
+                        on specific nodes.
+                      properties:
+                        config:
+                          description: The primary configuration structure containing
+                            all of the custom configuration (beegfs-client.conf keys/values
+                            and additional CSI driver specific fields) associated
+                            with a single BeeGFS file system except for sysMgmtdHost,
+                            which is specified elsewhere.
+                          properties:
+                            beegfsClientConf:
+                              additionalProperties:
+                                type: string
+                              description: A map of additional key value pairs matching
+                                key value pairs in the beegfs-client.conf file. See
+                                beegfs-client.conf for more details.
+                              type: object
+                            connInterfaces:
+                              description: A list of interfaces the BeeGFS client
+                                service can communicate over (e.g. "ib0" or "eth0").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                            connNetFilter:
+                              description: A list of subnets the BeeGFS client service
+                                can use for outgoing communication (e.g. "10.10.10.10/24").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                            connTcpOnlyFilter:
+                              description: A list of subnets in which RDMA communication
+                                can/should not be established (e.g. "10.10.10.11/24").
+                                Often not required. See beegfs-client.conf for more
+                                details.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - beegfsClientConf
+                          - connInterfaces
+                          - connNetFilter
+                          - connTcpOnlyFilter
+                          type: object
+                        fileSystemSpecificConfigs:
+                          description: A list of file system specific configurations
+                            that override the default configuration for specific file
+                            systems on these nodes.
+                          items:
+                            description: A file system specific configuration that
+                              overrides the default configuration for a specific file
+                              system.
+                            properties:
+                              config:
+                                description: The primary configuration structure containing
+                                  all of the custom configuration (beegfs-client.conf
+                                  keys/values and additional CSI driver specific fields)
+                                  associated with a single BeeGFS file system except
+                                  for sysMgmtdHost, which is specified elsewhere.
+                                properties:
+                                  beegfsClientConf:
+                                    additionalProperties:
+                                      type: string
+                                    description: A map of additional key value pairs
+                                      matching key value pairs in the beegfs-client.conf
+                                      file. See beegfs-client.conf for more details.
+                                    type: object
+                                  connInterfaces:
+                                    description: A list of interfaces the BeeGFS client
+                                      service can communicate over (e.g. "ib0" or
+                                      "eth0"). Often not required. See beegfs-client.conf
+                                      for more details.
+                                    items:
+                                      type: string
+                                    type: array
+                                  connNetFilter:
+                                    description: A list of subnets the BeeGFS client
+                                      service can use for outgoing communication (e.g.
+                                      "10.10.10.10/24"). Often not required. See beegfs-client.conf
+                                      for more details.
+                                    items:
+                                      type: string
+                                    type: array
+                                  connTcpOnlyFilter:
+                                    description: A list of subnets in which RDMA communication
+                                      can/should not be established (e.g. "10.10.10.11/24").
+                                      Often not required. See beegfs-client.conf for
+                                      more details.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - beegfsClientConf
+                                - connInterfaces
+                                - connNetFilter
+                                - connTcpOnlyFilter
+                                type: object
+                              sysMgmtdHost:
+                                description: The sysMgmtdHost used by the BeeGFS client
+                                  service to make initial contact with the BeeGFS
+                                  mgmtd service.
+                                type: string
+                            required:
+                            - config
+                            - sysMgmtdHost
+                            type: object
+                          type: array
+                        nodeList:
+                          description: The list of nodes this configuration should
+                            be applied on. Each entry is the hostname of the node
+                            or the name assigned to the node by the container orchestrator
+                            (e.g. "node1" or "cluster05-node03").
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - config
+                      - fileSystemSpecificConfigs
+                      - nodeList
+                      type: object
+                    type: array
+                required:
+                - config
+                - fileSystemSpecificConfigs
+                - nodeSpecificConfigs
+                type: object
+            type: object
+          status:
+            description: BeegfsDriverStatus defines the observed state of BeegfsDriver
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

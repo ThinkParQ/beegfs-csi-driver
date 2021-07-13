@@ -1,0 +1,24 @@
+# permissions for end users to edit beegfsdrivers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: beegfsdriver-editor-role
+rules:
+- apiGroups:
+  - beegfs.csi.netapp.com
+  resources:
+  - beegfsdrivers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - beegfs.csi.netapp.com
+  resources:
+  - beegfsdrivers/status
+  verbs:
+  - get

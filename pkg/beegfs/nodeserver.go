@@ -25,6 +25,7 @@ import (
 	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -41,12 +42,12 @@ var (
 type nodeServer struct {
 	ctlExec                beegfsCtlExecutorInterface
 	nodeID                 string
-	pluginConfig           PluginConfig
+	pluginConfig           beegfsv1.PluginConfig
 	clientConfTemplatePath string
 	mounter                mount.Interface
 }
 
-func NewNodeServer(nodeId string, pluginConfig PluginConfig, clientConfTemplatePath string) *nodeServer {
+func NewNodeServer(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
 		ctlExec:                &beegfsCtlExecutor{},
 		nodeID:                 nodeId,

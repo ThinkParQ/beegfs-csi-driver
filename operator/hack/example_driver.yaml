@@ -1,0 +1,11 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# TODO(webere): Document the use of or remove this file.
+
+kind: BeegfsDriver
+apiVersion: beegfs.csi.netapp.com/v1
+metadata:
+  name: test-driver
+spec:
+  connAuthSecretName: csi-beegfs-connauth

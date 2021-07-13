@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
 	"k8s.io/utils/mount"
 )
@@ -49,7 +50,7 @@ type beegfs struct {
 	nodeID                 string
 	version                string
 	endpoint               string
-	pluginConfig           PluginConfig
+	pluginConfig           beegfsv1.PluginConfig
 	clientConfTemplatePath string
 	csDataDir              string // directory controller service uses to create BeeGFS config files and mount file systems
 
@@ -83,7 +84,7 @@ type beegfs struct {
 //        |-- volDirBasePathBeegfsRoot
 //            |-- volDirPathBeegfsRoot (same as volDirPath)
 type beegfsVolume struct {
-	config                   beegfsConfig
+	config                   beegfsv1.BeegfsConfig
 	clientConfPath           string // absolute path to beegfs-client.conf from host root (e.g. .../mountDirPath/beegfs-client.conf)
 	mountDirPath             string // absolute path to directory containing configuration files and mount point from node root
 	mountPath                string // absolute path to mount point from host root (e.g. .../mountDirPath/mount)
@@ -161,7 +162,7 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 		vendorVersion = version
 	}
 
-	var pluginConfig PluginConfig
+	var pluginConfig beegfsv1.PluginConfig
 	if configPath != "" {
 		var err error
 		if pluginConfig, err = parseConfigFromFile(configPath, nodeID); err != nil {
@@ -215,7 +216,7 @@ func (b *beegfs) Run() {
 }
 
 // newBeeGFSVolume creates a beegfsVolume from parameters.
-func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pluginConfig PluginConfig) beegfsVolume {
+func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pluginConfig beegfsv1.PluginConfig) beegfsVolume {
 	// These parameters must be constructed outside of the struct literal.
 	mountPath := path.Join(mountDirPath, "mount")
 	volDirPath := path.Join(mountPath, volDirPathBeegfsRoot)
@@ -235,7 +236,7 @@ func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pl
 }
 
 // newBeeGFSVolume creates a beegfsVolume from a volumeID.
-func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig PluginConfig) (beegfsVolume, error) {
+func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig beegfsv1.PluginConfig) (beegfsVolume, error) {
 	sysMgmtdHost, volDirPathBeegfsRoot, err := parseBeegfsUrl(volumeID)
 	if err != nil {
 		return beegfsVolume{}, err

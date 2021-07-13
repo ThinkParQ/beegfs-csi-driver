@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
@@ -47,14 +48,14 @@ type controllerServer struct {
 	ctlExec                beegfsCtlExecutorInterface
 	caps                   []*csi.ControllerServiceCapability
 	nodeID                 string
-	pluginConfig           PluginConfig
+	pluginConfig           beegfsv1.PluginConfig
 	clientConfTemplatePath string
 	mounter                mount.Interface
 	csDataDir              string
 	volumeIDsInFlight      *threadSafeStringLock
 }
 
-func NewControllerServer(nodeID string, pluginConfig PluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
+func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
