@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//+kubebuilder:validation:Optional
+
 package v1
 
 import (
@@ -36,9 +38,18 @@ type BeegfsDriverSpec struct {
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver
 type BeegfsDriverStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	//+operator-sdk:csv:customresourcedefinitions:type=status,xDescriptors={"urn:alm:descriptor:io.kubernetes.conditions"}
+	Conditions []metav1.Condition `json:"conditions"`
 }
+
+const (
+	ConditionControllerServiceReady = "ControllerServiceReady"
+	ConditionNodeServiceReady       = "NodeServiceReady"
+	ReasonServiceNotCreated         = "ServiceNotCreated"
+	ReasonPodsNotScheduled          = "PodsNotScheduled"
+	ReasonPodsNotReady              = "PodsNotReady"
+	ReasonPodsReady                 = "PodsReady"
+)
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -119,6 +130,7 @@ func (c BeegfsConfig) MarshalJSON() ([]byte, error) {
 // A file system specific configuration that overrides the default configuration for a specific file system.
 type FileSystemSpecificConfig struct {
 	// The sysMgmtdHost used by the BeeGFS client service to make initial contact with the BeeGFS mgmtd service.
+	//+kubebuilder:validation:Required
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="SysMgmtdHost"
 	SysMgmtdHost string `yaml:"sysMgmtdHost" json:"sysMgmtdHost"`
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="File System Specific Config"
@@ -130,6 +142,7 @@ type FileSystemSpecificConfig struct {
 type NodeSpecificConfig struct {
 	// The list of nodes this configuration should be applied on. Each entry is the hostname of the node or the name
 	// assigned to the node by the container orchestrator (e.g. "node1" or "cluster05-node03").
+	//+kubebuilder:validation:Required
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node Names"
 	NodeList []string `yaml:"nodeList" json:"nodeList"`
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Default Config for Nodes"

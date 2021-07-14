@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -80,6 +81,106 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Failed to read request object. Requeue and try again.
 		return ctrl.Result{}, err
 	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Start by getting everything we need to generate an up-to-date status, generating the up-to-date status, and
+	// pushing the up-to-date status to the Kubernetes API server.
+
+	sts := new(appsv1.StatefulSet)
+	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller", Namespace: req.Namespace}, sts)
+	statusCondition := metav1.Condition{}
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			// Something we aren't prepared for went wrong.
+			return ctrl.Result{}, err
+		} else {
+			// We didn't find a Stateful Set.
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionControllerServiceReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  beegfsv1.ReasonServiceNotCreated,
+				Message: "controller service stateful set has not been created",
+			}
+		}
+	} else {
+		// We found a Stateful Set. Let's update our status based on its status.
+		if sts.Status.Replicas < 1 {
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionControllerServiceReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  beegfsv1.ReasonPodsNotScheduled,
+				Message: "0/1 controller service pods have been scheduled",
+			}
+		} else if sts.Status.ReadyReplicas < 1 {
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionControllerServiceReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  beegfsv1.ReasonPodsNotReady,
+				Message: "0/1 controller service pods are ready",
+			}
+		} else {
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionControllerServiceReady,
+				Status:  metav1.ConditionTrue,
+				Reason:  beegfsv1.ReasonPodsReady,
+				Message: "1/1 controller service pods are ready",
+			}
+		}
+	}
+	meta.SetStatusCondition(&driver.Status.Conditions, statusCondition)
+
+	ds := new(appsv1.DaemonSet)
+	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-node", Namespace: req.Namespace}, ds)
+	statusCondition = metav1.Condition{}
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			// Something we aren't prepared for went wrong.
+			return ctrl.Result{}, err
+		} else {
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionNodeServiceReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  beegfsv1.ReasonServiceNotCreated,
+				Message: "node service daemon set has not been created",
+			}
+		}
+	} else {
+		// We found a Daemon Set. Let's update our status based on its status.
+		if ds.Status.DesiredNumberScheduled < 1 {
+			statusCondition = metav1.Condition{
+				Type:    beegfsv1.ConditionNodeServiceReady,
+				Status:  metav1.ConditionFalse,
+				Reason:  beegfsv1.ReasonPodsNotScheduled,
+				Message: "0 node service pods have been scheduled",
+			}
+		} else if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
+			statusCondition = metav1.Condition{
+				Type:   beegfsv1.ConditionNodeServiceReady,
+				Status: metav1.ConditionFalse,
+				Reason: beegfsv1.ReasonPodsNotReady,
+				Message: fmt.Sprintf("%d/%d node service pods are ready", ds.Status.NumberReady,
+					ds.Status.DesiredNumberScheduled),
+			}
+		} else {
+			statusCondition = metav1.Condition{
+				Type:   beegfsv1.ConditionNodeServiceReady,
+				Status: metav1.ConditionTrue,
+				Reason: beegfsv1.ReasonPodsReady,
+				Message: fmt.Sprintf("%d/%d node service pods are ready", ds.Status.NumberReady,
+					ds.Status.DesiredNumberScheduled),
+			}
+		}
+	}
+	meta.SetStatusCondition(&driver.Status.Conditions, statusCondition)
+
+	log.Info("Updating status")
+	err = r.Status().Update(ctx, driver)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Now attempt to get the rest of the expected object and push them to the Kubernetes API server as necessary.
 
 	// When managed by this operator, the Config Map is an internal implementation detail (it should not be externally
 	// modified). Any time we reconcile, we ensure the Config Map contains exactly the information we expect.
@@ -242,32 +343,25 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	sts := &appsv1.StatefulSet{}
-	mustUpdate = false
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller", Namespace: req.Namespace}, sts)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			// Something we aren't prepared for went wrong.
+	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
+		beegfsv1.ReasonServiceNotCreated {
+		// The Stateful Set doesn't exist. Let's create it.
+		sts, _ = deploy.GetControllerServiceStatefulSet()
+		if _, err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
 			return ctrl.Result{}, err
-		} else {
-			// The Stateful Set doesn't exist. Let's create it.
-			sts, _ = deploy.GetControllerServiceStatefulSet()
-			if _, err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
-				return ctrl.Result{}, err
-			}
-			setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
-			setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
+		}
+		setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
+		setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
 
-			log.Info("Creating controller service Stateful Set")
-			err = r.Create(ctx, sts)
-			if err != nil {
-				log.Error(err, "Failed to create controller service Stateful Set")
-				return ctrl.Result{}, err
-			}
+		log.Info("Creating controller service Stateful Set")
+		err = r.Create(ctx, sts)
+		if err != nil {
+			log.Error(err, "Failed to create controller service Stateful Set")
+			return ctrl.Result{}, err
 		}
 	} else {
 		// The Stateful Set exists, but it may need to be updated.
-		mustUpdate = mustUpdate || setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
+		mustUpdate = setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
 		mustUpdate = mustUpdate || setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
 		if mustUpdate {
 			log.Info("Updating controller service Stateful Set")
@@ -278,32 +372,25 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	ds := &appsv1.DaemonSet{}
-	mustUpdate = false
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-node", Namespace: req.Namespace}, ds)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			// Something we aren't prepared for went wrong.
+	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
+		beegfsv1.ReasonServiceNotCreated {
+		// The Daemon Set doesn't exist. Let's create it.
+		ds, _ = deploy.GetNodeServiceDaemonSet()
+		if _, err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
 			return ctrl.Result{}, err
-		} else {
-			// The Daemon Set doesn't exist. Let's create it.
-			ds, _ = deploy.GetNodeServiceDaemonSet()
-			if _, err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
-				return ctrl.Result{}, err
-			}
-			setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
-			setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
+		}
+		setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
+		setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
 
-			log.Info("Creating node service Daemon Set")
-			err = r.Create(ctx, ds)
-			if err != nil {
-				log.Error(err, "Failed to create node service Daemon Set")
-				return ctrl.Result{}, err
-			}
+		log.Info("Creating node service Daemon Set")
+		err = r.Create(ctx, ds)
+		if err != nil {
+			log.Error(err, "Failed to create node service Daemon Set")
+			return ctrl.Result{}, err
 		}
 	} else {
 		// The Daemon Set exists, but it may need to be updated.
-		mustUpdate = mustUpdate || setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
+		mustUpdate = setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
 		mustUpdate = mustUpdate || setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
 		if mustUpdate {
 			log.Info("Updating node service Daemon Set")

@@ -95,6 +95,11 @@ spec:
           container orchestrator (e.g. "node1" or "cluster05-node03").
         displayName: Node Names
         path: pluginConfig.nodeSpecificConfigs[0].nodeList
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1
   description: |
     The BeeGFS Container Storage Interface (CSI) driver provides high performing and scalable storage for workloads
