@@ -8,6 +8,7 @@ package driver
 import (
 	"path"
 
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/netapp/beegfs-csi-driver/pkg/beegfs"
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -28,7 +29,7 @@ var _ storageframework.PreprovisionedVolumeTestDriver = &BeegfsDriver{}
 // their underlying data structure and can call its internal methods.
 type baseBeegfsDriver struct {
 	driverInfo                      storageframework.DriverInfo
-	perFSConfigs                    []beegfs.FileSystemSpecificConfig
+	perFSConfigs                    []beegfsv1.FileSystemSpecificConfig
 	fsIndex                         int
 	extraSCParams                   map[string]string
 	dynamicVolDirBasePathBeegfsRoot string // Set once on initialization (e.g. /e2e-test/dynamic).
@@ -114,7 +115,7 @@ func initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirPathBeegf
 			},
 			// VolumeSnapshotStressTestOptions:
 		},
-		perFSConfigs:                    make([]beegfs.FileSystemSpecificConfig, 0),
+		perFSConfigs:                    make([]beegfsv1.FileSystemSpecificConfig, 0),
 		fsIndex:                         0,
 		dynamicVolDirBasePathBeegfsRoot: dynamicVolDirBasePathBeegfsRoot,
 		staticVolDirPathBeegfsRoot:      staticVolDirPathBeegfsRoot,
@@ -222,7 +223,7 @@ func (d *baseBeegfsDriver) SetFSIndexForRDMA() bool {
 }
 
 // SetPerFSConfigs sets perFSConfigs from a slice of beegfs.FileSystemSpecificConfigs.
-func (d *baseBeegfsDriver) SetPerFSConfigs(perFSConfigs []beegfs.FileSystemSpecificConfig) {
+func (d *baseBeegfsDriver) SetPerFSConfigs(perFSConfigs []beegfsv1.FileSystemSpecificConfig) {
 	d.perFSConfigs = perFSConfigs
 }
 
