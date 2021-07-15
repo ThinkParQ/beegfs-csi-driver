@@ -31,7 +31,8 @@ import (
 var fs = afero.NewOsFs()
 var fsutil = afero.Afero{Fs: fs}
 
-// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path.
+// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path. NewBeegfsUrl is
+// exported for use by in test/e2e/driver.
 func NewBeegfsUrl(host string, path string) string {
 	structURL := url.URL{
 		Scheme: "beegfs",
@@ -163,10 +164,10 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 // DefaultConfig.
 func squashConfigForSysMgmtdHost(sysMgmtdHost string, config beegfsv1.PluginConfig) (returnConfig beegfsv1.BeegfsConfig) {
 	returnConfig = *beegfsv1.NewBeegfsConfig()
-	OverwriteBeegfsConfig(&returnConfig, config.DefaultConfig)
+	overWriteBeegfsConfig(&returnConfig, config.DefaultConfig)
 	for _, fileSystemSpecificConfig := range config.FileSystemSpecificConfigs {
 		if sysMgmtdHost == fileSystemSpecificConfig.SysMgmtdHost {
-			OverwriteBeegfsConfig(&returnConfig, fileSystemSpecificConfig.Config)
+			overWriteBeegfsConfig(&returnConfig, fileSystemSpecificConfig.Config)
 		}
 	}
 	return returnConfig

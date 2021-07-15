@@ -401,7 +401,7 @@ func TestOverwriteFromBeegfsClientConfEmptyValue(t *testing.T) {
 			"setKey": "",
 		},
 	}
-	OverwriteBeegfsConfig(&writeTo, writeFrom)
+	overWriteBeegfsConfig(&writeTo, writeFrom)
 	if !reflect.DeepEqual(want, writeTo) {
 		t.Fatalf("expected: %v, got: %v", want, writeTo)
 	}

@@ -68,8 +68,8 @@ func parseConfigFromFile(path, nodeID string) (beegfsv1.PluginConfig, error) {
 			}
 		}
 		if appliesToNode {
-			OverwriteBeegfsConfig(&newPluginConfig.DefaultConfig, nodeConfig.DefaultConfig)
-			newPluginConfig.FileSystemSpecificConfigs = OverwriteFileSystemSpecificConfigs(
+			overWriteBeegfsConfig(&newPluginConfig.DefaultConfig, nodeConfig.DefaultConfig)
+			newPluginConfig.FileSystemSpecificConfigs = overwriteFileSystemSpecificConfigs(
 				newPluginConfig.FileSystemSpecificConfigs, nodeConfig.FileSystemSpecificConfigs)
 		}
 	}
@@ -184,13 +184,13 @@ func stripConfig(plConfig *beegfsv1.PluginConfig) {
 // overwriteFileSystemSpecificConfigs looks for FileSystemSpecificConfigs in writeTo and writeFrom with the same
 // sysMgmtdHost. When it finds a match, overwriteFileSystemSpecificConfigs ONLY overwrites configuration in writeTo
 // that is also defined in writeFrom.
-func OverwriteFileSystemSpecificConfigs(writeTo, writeFrom []beegfsv1.FileSystemSpecificConfig) []beegfsv1.FileSystemSpecificConfig {
+func overwriteFileSystemSpecificConfigs(writeTo, writeFrom []beegfsv1.FileSystemSpecificConfig) []beegfsv1.FileSystemSpecificConfig {
 	for _, writeFromConfig := range writeFrom {
 		writeToHadConfig := false
 		for i, writeToConfig := range writeTo { // use index to modify writeTo in place
 			if writeToConfig.SysMgmtdHost == writeFromConfig.SysMgmtdHost {
 				writeToHadConfig = true
-				OverwriteBeegfsConfig(&writeTo[i].Config, writeFromConfig.Config)
+				overWriteBeegfsConfig(&writeTo[i].Config, writeFromConfig.Config)
 			}
 		}
 		if writeToHadConfig == false {
@@ -200,9 +200,9 @@ func OverwriteFileSystemSpecificConfigs(writeTo, writeFrom []beegfsv1.FileSystem
 	return writeTo
 }
 
-// OverwriteBeegfsConfig ONLY overwrites configuration in the writeTo BeegfsConfig that is also defined in the
+// overWriteBeegfsConfig ONLY overwrites configuration in the writeTo BeegfsConfig that is also defined in the
 // writeFrom BeegfsConfig, while leaving writeFrom untouched.
-func OverwriteBeegfsConfig(writeTo *beegfsv1.BeegfsConfig, writeFrom beegfsv1.BeegfsConfig) {
+func overWriteBeegfsConfig(writeTo *beegfsv1.BeegfsConfig, writeFrom beegfsv1.BeegfsConfig) {
 	if len(writeFrom.ConnInterfaces) != 0 {
 		writeTo.ConnInterfaces = make([]string, len(writeFrom.ConnInterfaces))
 		copy(writeTo.ConnInterfaces, writeFrom.ConnInterfaces)

@@ -181,7 +181,7 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 		return nil, errors.Wrap(err, "failed to create csDataDir")
 	}
 
-	Logger(nil).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
+	logger(nil).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
 
 	var driver beegfs
 	driver = beegfs{
