@@ -22,6 +22,7 @@ spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
+            # TODO(webere, A271): OpenShift cluster can NOT run the controller service on master nodes.
             nodeSelectorTerms:
               - matchExpressions:
                   - key: node-role.kubernetes.io/master

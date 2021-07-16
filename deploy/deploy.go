@@ -11,7 +11,7 @@ package deploy
 // once, in easy to manipulate YAML, and expect that both the Kustomize deployment method and the operator deployment
 // method will pick the changes up.
 
-// TODO(webere, A237): Duplicate the 1.18 Kustomizations in operator code. This change should be made elsewhere, but
+// TODO(webere, A263): Duplicate the 1.18 Kustomizations in operator code. This change should be made elsewhere, but
 // this is an easy place to reference it.
 
 import (

@@ -46,7 +46,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
-# TODO(webere): Restore limits after investigation.
+# TODO(webere, A270): Restore limits after investigation.
 #          limits:
 #            cpu: 100m
 #            memory: 30Mi

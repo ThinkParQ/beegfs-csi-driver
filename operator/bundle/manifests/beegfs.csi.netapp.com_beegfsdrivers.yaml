@@ -35,10 +35,11 @@ spec:
             description: BeegfsDriverSpec defines the desired state of BeegfsDriver
             properties:
               connAuthSecretName:
-                description: The name of a Kubernetes Secret (in this namespace) containing
-                  BeeGFS connauth information formatted according to the deployment
-                  documentation. If no name is provided, a default empty secret named
-                  csi-beegfs-connauth will be created.
+                description: 'The name of a Kubernetes Secret (in this namespace)
+                  containing BeeGFS connauth information formatted according to the
+                  deployment documentation. If no name is provided, a default empty
+                  secret named csi-beegfs-connauth will be created. TODO(webere, A259):
+                  Remove this field.'
                 type: string
               pluginConfig:
                 description: The top level configuration structure containing default

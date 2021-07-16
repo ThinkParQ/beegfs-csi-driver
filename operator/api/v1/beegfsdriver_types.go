@@ -26,12 +26,12 @@ import (
 
 // BeegfsDriverSpec defines the desired state of BeegfsDriver
 type BeegfsDriverSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// TODO(webere, A259): Add additional fields.
 
 	// The name of a Kubernetes Secret (in this namespace) containing BeeGFS connauth information formatted according
 	// to the deployment documentation. If no name is provided, a default empty secret named csi-beegfs-connauth will
 	// be created.
+	// TODO(webere, A259): Remove this field.
 	ConnAuthSecretName   string               `json:"connAuthSecretName,omitempty"`
 	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
 }

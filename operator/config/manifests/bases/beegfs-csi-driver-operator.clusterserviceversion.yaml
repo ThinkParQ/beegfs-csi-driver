@@ -3,7 +3,7 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     alm-examples: '[]'
-    capabilities: Basic Install
+    capabilities: Seamless Upgrades
     categories: Storage
     containerImage: netapp/beegfs-csi-driver-operator:latest
     createdAt: 2021-06-30:03:11:00

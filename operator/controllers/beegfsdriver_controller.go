@@ -220,6 +220,8 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
+	// TODO(webere, A259): Remove ability to handle arbitrarily named secret. Make sure we don't own a secret that we
+	// didn't create.
 	// A connauth Secret is required for driver operation. If a ConnAuthSecretName is provided in the BeegfsDriverSpec,
 	// we make sure it owned by this controller and referenced appropriately. If one is not provided, we create an
 	// empty Secret with a default name and reference it instead. Users can do one of the following:
