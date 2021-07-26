@@ -43,12 +43,15 @@ type BeegfsDriverStatus struct {
 }
 
 const (
+	// Possible values for BeegfsDriverStatus.Conditions[].Type.
 	ConditionControllerServiceReady = "ControllerServiceReady"
 	ConditionNodeServiceReady       = "NodeServiceReady"
-	ReasonServiceNotCreated         = "ServiceNotCreated"
-	ReasonPodsNotScheduled          = "PodsNotScheduled"
-	ReasonPodsNotReady              = "PodsNotReady"
-	ReasonPodsReady                 = "PodsReady"
+
+	// Possible values for BeegfsDriverStatus.Conditions[].Reason.
+	ReasonServiceNotCreated = "ServiceNotCreated"
+	ReasonPodsNotScheduled  = "PodsNotScheduled"
+	ReasonPodsNotReady      = "PodsNotReady"
+	ReasonPodsReady         = "PodsReady"
 )
 
 //+kubebuilder:object:root=true
