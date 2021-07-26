@@ -20,7 +20,7 @@ These are/were some make commands used to deploy and test.
             # Use these if you need the bundle to reference a non-standard (i.e. non-docker.io/netapp) operator image
             # for testing purposes. Do not commit a bundle built with these.
             export USERNAME=<sso_username>
-            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver
+            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver-operator
 
             make bundle
             make docker-build docker-push

@@ -266,6 +266,15 @@ spec:
         - apiGroups:
           - storage.k8s.io
           resources:
+          - csidrivers
+          verbs:
+          - create
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - storage.k8s.io
+          resources:
           - csinodes
           verbs:
           - get

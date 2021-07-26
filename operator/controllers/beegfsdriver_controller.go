@@ -26,6 +26,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,6 +54,7 @@ type BeegfsDriverReconciler struct {
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update
 
@@ -180,7 +182,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
-	// Now attempt to get the rest of the expected object and push them to the Kubernetes API server as necessary.
+	// Now attempt to get the rest of the expected objects and push them to the Kubernetes API server as necessary.
 
 	// When managed by this operator, the Config Map is an internal implementation detail (it should not be externally
 	// modified). Any time we reconcile, we ensure the Config Map contains exactly the information we expect.
@@ -340,6 +342,27 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			err = r.Create(ctx, newSA)
 			if err != nil {
 				log.Error(err, "Failed to create controller service Service Account")
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	d := new(storagev1.CSIDriver)
+	err = r.Get(ctx, types.NamespacedName{Name: "beegfs.csi.netapp.com", Namespace: req.Namespace}, d)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+		} else {
+			// The CSI Driver object doesn't exist. Let's create it.
+			d, _ = deploy.GetCSIDriver()
+			if _, err = r.setCommonObjectMetadata(req, driver, d); err != nil { // We never update CSI Driver objects.
+				return ctrl.Result{}, err
+			}
+
+			log.Info("Creating CSI Driver object")
+			err = r.Create(ctx, d)
+			if err != nil {
+				log.Error(err, "Failed to create CSI Driver object")
 				return ctrl.Result{}, err
 			}
 		}
