@@ -39,7 +39,7 @@ import (
 // BeegfsDriverReconciler reconciles a BeegfsDriver object
 type BeegfsDriverReconciler struct {
 	client.Client
-	Log    logr.Logger // TODO(webere): Reexamine the logger used.
+	Log    logr.Logger // TODO(webere, A277): Reexamine the logger used.
 	Scheme *runtime.Scheme
 }
 
