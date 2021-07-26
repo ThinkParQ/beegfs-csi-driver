@@ -19,7 +19,7 @@ spec:
     - description: BeegfsDriver is the Schema for the beegfsdrivers API
       displayName: BeeGFS Driver
       kind: BeegfsDriver
-      name: beegfsdrivers.beegfs.csi.netapp.comchange
+      name: beegfsdrivers.beegfs.csi.netapp.com
       resources:
       - kind: ConfigMap
         name: ""
