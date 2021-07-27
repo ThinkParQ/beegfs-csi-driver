@@ -455,7 +455,8 @@ func newConfigMap(driver *beegfsv1.BeegfsDriver) (*corev1.ConfigMap, error) {
 }
 
 // setConfigMapData ensures the provided Config Map contains the configuration specified in the provided BeegfsDriver.
-// It returns mustUpdate=true if it makes a change and mustUpdate=false if it does not.
+// It returns mustUpdate=true if it makes a change and mustUpdate=false if it does not. If it returns true, the caller
+// should update the Config Map with the K8s API server.
 func setConfigMapData(driver *beegfsv1.BeegfsDriver, cm *corev1.ConfigMap) (bool, error) {
 	mustUpdate := false
 
@@ -479,9 +480,11 @@ func setConfigMapData(driver *beegfsv1.BeegfsDriver, cm *corev1.ConfigMap) (bool
 
 // setCommonObjectMetadata can be used on any namespaced Kubernetes object to ensure that:
 //   - The object exists in the correct namespace (based on the namespace of the request).
-//   - The object is owned by the BeegfsDriver object (for proper garbage collection).
+//   - The object is owned by the BeegfsDriver object (for proper garbage collection). setCommonObjectMetadata will NOT
+//     set an owner reference if one already exists.
 // setCommonObjectMetadata returns mustUpdate=true if it changes something about the object, mustUpdate=false if it
-// does not, and an error if a change fails.
+// does not, and an error if a change fails. If it returns true, the caller should update the object with the K8s API
+// server.
 // TODO(webere, A265): Handle the fact that cluster scoped resources cannot be owned by our namespaced BeegfsDriver.
 func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, driver *beegfsv1.BeegfsDriver, object metav1.Object) (bool, error) {
 	mustUpdate := false
@@ -503,9 +506,10 @@ func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, drive
 }
 
 // setResourceVersionAnnotations is an important part of our overall configuration scheme. It records the current name
-// and resource version of the Config Map and Secret required by our driver in annotations on a PodTemplateSpec (for
-// either a DaemonSet or a StatefulSet). If nothing changes, setResourceVersionAnnotations returns mustUpdate=false.
-// If it returns true, the caller should update the DaemonSet or StatefulSet that owns the PodTemplateSpec.
+// and resource version of the Config Map and Secret required by our driver in annotations on a Pod Template Spec (for
+// either a Daemon Set or a Stateful Set). If nothing changes, setResourceVersionAnnotations returns mustUpdate=false.
+// If it returns true, the caller should update the Daemon Set or Stateful Set that owns the Pod Template Spec with the
+// K8s API server.
 func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podTemplate *corev1.PodTemplateSpec) (mustUpdate bool) {
 	if podTemplate.Annotations == nil {
 		podTemplate.Annotations = make(map[string]string)
@@ -535,7 +539,7 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 // setVolumeReferences ensures that Pod specs point correctly to Kubernetes objects. In particular, it ensures that
 // the controller service Stateful Set and the node service Daemon Set know which Config Map and Secret (respectively)
 // to reference. If nothing changes, setVolumeReferences returns mustUpdate=false. If it returns true, the caller
-// should update the DaemonSet or StatefulSet that owns the PodSpec.
+// should update the Daemon Set or Stateful Set that owns the Pod Spec with the K8s API server.
 func setVolumeReferences(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podSpec *corev1.PodSpec) (mustUpdate bool) {
 	for _, vol := range podSpec.Volumes {
 		if vol.Name == "config-dir" && vol.ConfigMap.Name != cm.Name {
