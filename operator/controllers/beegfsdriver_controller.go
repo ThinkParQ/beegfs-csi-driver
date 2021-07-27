@@ -534,7 +534,8 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 
 // setVolumeReferences ensures that Pod specs point correctly to Kubernetes objects. In particular, it ensures that
 // the controller service Stateful Set and the node service Daemon Set know which Config Map and Secret (respectively)
-// to reference.
+// to reference. If nothing changes, setVolumeReferences returns mustUpdate=false. If it returns true, the caller
+// should update the DaemonSet or StatefulSet that owns the PodSpec.
 func setVolumeReferences(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podSpec *corev1.PodSpec) (mustUpdate bool) {
 	for _, vol := range podSpec.Volumes {
 		if vol.Name == "config-dir" && vol.ConfigMap.Name != cm.Name {

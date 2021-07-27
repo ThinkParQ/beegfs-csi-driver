@@ -69,15 +69,15 @@ func GetControllerServiceRBAC() (*rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding
 }
 
 func GetControllerServiceStatefulSet() (*appsv1.StatefulSet, error) {
-	cs := new(appsv1.StatefulSet)
-	err := yaml.UnmarshalStrict(csBytes, cs)
-	return cs, err
+	sts:= new(appsv1.StatefulSet)
+	err := yaml.UnmarshalStrict(csBytes, sts)
+	return sts, err
 }
 
 func GetCSIDriver() (*storagev1.CSIDriver, error) {
-	driver := new(storagev1.CSIDriver)
-	err := yaml.UnmarshalStrict(driverBytes, driver)
-	return driver, err
+	d := new(storagev1.CSIDriver)
+	err := yaml.UnmarshalStrict(driverBytes, d)
+	return d, err
 }
 
 func GetNodeServiceDaemonSet() (*appsv1.DaemonSet, error) {
