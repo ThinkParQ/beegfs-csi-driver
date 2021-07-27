@@ -10,8 +10,12 @@ import (
 )
 
 func TestGetControllerServiceRBAC(t *testing.T) {
-	if _, _, _, err := GetControllerServiceRBAC(); err != nil {
+	_, crb, _, err := GetControllerServiceRBAC();
+	if err != nil {
 		t.Fatal(err)
+	}
+	if numSubjects := len(crb.Subjects); numSubjects > 1 {
+		t.Fatalf("the operator expects only 1 subject in a Cluster Role Binding, found %d", numSubjects)
 	}
 }
 
