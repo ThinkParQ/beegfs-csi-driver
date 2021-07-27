@@ -286,6 +286,26 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	sa := new(corev1.ServiceAccount)
+	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller-sa", Namespace: req.Namespace}, sa)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+		} else {
+			// The Service Account doesn't exist. Let's create it.
+			if _, err = r.setCommonObjectMetadata(req, driver, newSA); err != nil { // We never update Service Accounts.
+				return ctrl.Result{}, err
+			}
+
+			log.Info("Creating controller service Service Account")
+			err = r.Create(ctx, newSA)
+			if err != nil {
+				log.Error(err, "Failed to create controller service Service Account")
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
 	cr := new(rbacv1.ClusterRole)
 	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-provisioner-role"}, cr)
 	if err != nil {
@@ -322,26 +342,6 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			err = r.Create(ctx, newCRB)
 			if err != nil {
 				log.Error(err, "Failed to create controller service Cluster Role Binding")
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	sa := new(corev1.ServiceAccount)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller-sa", Namespace: req.Namespace}, sa)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Service Account doesn't exist. Let's create it.
-			if _, err = r.setCommonObjectMetadata(req, driver, newSA); err != nil { // We never update Service Accounts.
-				return ctrl.Result{}, err
-			}
-
-			log.Info("Creating controller service Service Account")
-			err = r.Create(ctx, newSA)
-			if err != nil {
-				log.Error(err, "Failed to create controller service Service Account")
 				return ctrl.Result{}, err
 			}
 		}
