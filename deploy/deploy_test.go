@@ -10,9 +10,18 @@ import (
 )
 
 func TestGetControllerServiceRBAC(t *testing.T) {
-	_, crb, _, err := GetControllerServiceRBAC();
+	cr, crb, sa, err := GetControllerServiceRBAC()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if cr == nil {
+		t.Fatal("no Cluster Role in RBAC manifest")
+	}
+	if crb == nil {
+		t.Fatal("no Cluster Role Binding in RBAC manifest")
+	}
+	if sa == nil {
+		t.Fatal("no Service Account in RBAC manifest")
 	}
 	if numSubjects := len(crb.Subjects); numSubjects > 1 {
 		t.Fatalf("the operator expects only 1 subject in a Cluster Role Binding, found %d", numSubjects)

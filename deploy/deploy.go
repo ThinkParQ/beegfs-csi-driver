@@ -17,7 +17,6 @@ package deploy
 import (
 	"bytes"
 	_ "embed"
-
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,10 +37,14 @@ var dsBytes []byte
 //go:embed base/csi-beegfs-controller-rbac.yaml
 var rbacBytes []byte
 
+// GetControllerServiceRBAC returns a pointer to a Cluster Role, a pointer to a Cluster Role Binding, and a pointer
+// to a Service Account contained in the embedded RBAC manifest. GetControllerServiceRBAC returns an error if it finds
+// multiple of any of these object kinds or if it finds an object kind it does not expect. It returns a nil pointer
+// for if it does not find an expected object.
 func GetControllerServiceRBAC() (*rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding, *corev1.ServiceAccount, error) {
-	cr := new(rbacv1.ClusterRole)
-	crb := new(rbacv1.ClusterRoleBinding)
-	sa := new(corev1.ServiceAccount)
+	var cr *rbacv1.ClusterRole
+	var crb *rbacv1.ClusterRoleBinding
+	var sa *corev1.ServiceAccount
 
 	// cs-beegfs-rbac.yaml includes multiple YAML documents, each with a different structure.
 	splitRBACBytes := bytes.Split(rbacBytes, []byte("---"))
@@ -49,15 +52,27 @@ func GetControllerServiceRBAC() (*rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding
 	for _, singleRBACBytes := range splitRBACBytes {
 		// Consider ClusterRoleBinding first because a typical ClusterRoleBinding includes a reference to a
 		// ClusterRole, but not vice versa.
-		if bytes.Contains(singleRBACBytes, []byte("ClusterRoleBinding")) {
+		if bytes.Contains(singleRBACBytes, []byte("kind: ClusterRoleBinding")) {
+			if crb != nil {
+				return cr, crb, sa, errors.New("multiple Cluster Role Bindings in RBAC manifest")
+			}
+			crb = new(rbacv1.ClusterRoleBinding)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, crb); err != nil {
 				return cr, crb, sa, err
 			}
-		} else if bytes.Contains(singleRBACBytes, []byte("ClusterRole")) {
+		} else if bytes.Contains(singleRBACBytes, []byte("kind: ClusterRole")) {
+			if cr != nil {
+				return cr, crb, sa, errors.New("multiple Cluster Roles in RBAC manifest")
+			}
+			cr = new(rbacv1.ClusterRole)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, cr); err != nil {
 				return cr, crb, sa, err
 			}
-		} else if bytes.Contains(singleRBACBytes, []byte("ServiceAccount")) {
+		} else if bytes.Contains(singleRBACBytes, []byte("kind: ServiceAccount")) {
+			if sa != nil {
+				return cr, crb, sa, errors.New("multiple Service Accounts in RBAC manifest")
+			}
+			sa = new(corev1.ServiceAccount)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, sa); err != nil {
 				return cr, crb, sa, err
 			}
@@ -69,7 +84,7 @@ func GetControllerServiceRBAC() (*rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding
 }
 
 func GetControllerServiceStatefulSet() (*appsv1.StatefulSet, error) {
-	sts:= new(appsv1.StatefulSet)
+	sts := new(appsv1.StatefulSet)
 	err := yaml.UnmarshalStrict(csBytes, sts)
 	return sts, err
 }
