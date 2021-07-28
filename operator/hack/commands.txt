@@ -1,0 +1,59 @@
+Copyright 2021 NetApp, Inc. All Rights Reserved.
+Licensed under the Apache License, Version 2.0.
+
+TODO(webere, A219): Document the use of or remove this file.
+
+These are/were the operator-sdk commands used to scaffold the project and generate code.
+
+    operator-sdk init --domain csi.netapp.com --repo github.com/netapp/beegfs-csi-driver/operator --owner 'NetApp, Inc' --project-name beegfs-csi-driver-operator
+    operator-sdk create api --group beegfs --kind BeegfsDriver --version v1 --resource --controller
+
+    make generate  # Creates required zz_generated.deepcopy.go files. Modify Makefile rule to add necessary paths.
+    make manifests  # Creates/modifies config/ files from Golang markers.
+
+These are/were some make commands used to deploy and test.
+
+   Create the bundle (including the ClusterServiceVersion):
+
+       Assuming inside operator/ directory:
+
+            # Use these if you need the bundle to reference a non-standard (i.e. non-docker.io/netapp) operator image
+            # for testing purposes. Do not commit a bundle built with these.
+            export USERNAME=<sso_username>
+            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver-operator
+
+            make bundle
+            make docker-build docker-push
+            make bundle-build bundle-push
+
+        Add a "-C operator" after "make" if inside project root directory instead.
+
+    Test operator running in OpenShift (or anywhere OLM is installed):
+
+        # These commands assume a non-standard bundle built for testing.
+        export USERNAME=<sso_username>
+        operator-sdk run bundle docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver-operator-bundle:v1.2.0
+        operator-sdk cleanup beegfs-csi-driver-operator
+
+    Test operator installing "from operatorhub.io":
+
+        It is potentially easiest to simply paste the contents of the generated CSV yaml into the OperatorHub.io's
+        preview page:
+
+            make manifests
+            make bundle
+            # Copy bundle/manifests/beegfs-csi-driver-operator.clusterserviceversion.yaml to https://operatorhub.io/preview.
+
+        With access to a running OpenShift cluster:
+
+            # Use these if you need the bundle to reference a non-standard (i.e. non-docker.io/netapp) operator image
+            # for testing purposes. Do not commit a bundle built with these.
+            export USERNAME=<sso_username>
+            export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver
+
+            make bundle bundle-build bundle-push
+            make catalog-build catalog-push
+            # Modify image field of hack/test_catalog_source.yaml.
+            oc apply -f hack/test_catalog_source.yaml
+            # Go to the OpenShift console and experiment on the Operators -> OperatorHub tab.
+            oc delete -f hack/test_catalog_source.yaml

@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"golang.org/x/net/context"
@@ -30,7 +31,8 @@ import (
 var fs = afero.NewOsFs()
 var fsutil = afero.Afero{Fs: fs}
 
-// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path.
+// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path. NewBeegfsUrl is
+// exported for use by in test/e2e/driver.
 func NewBeegfsUrl(host string, path string) string {
 	structURL := url.URL{
 		Scheme: "beegfs",
@@ -115,8 +117,8 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		}
 	}
 
-	if len(vol.config.connAuth) != 0 {
-		connAuthFileContents := vol.config.connAuth + "\n"
+	if len(vol.config.ConnAuth) != 0 {
+		connAuthFileContents := vol.config.ConnAuth + "\n"
 		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", connAuthFilePath); err != nil {
 			return err
 		}
@@ -160,12 +162,12 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 // the PluginConfig contains overrides for the provided sysMgmtdHost, squashConfigForSysMgmtdHost combines them with
 // the DefaultConfig (giving preference to the appropriate FileSystemSpecificConfig). Otherwise, it returns the
 // DefaultConfig.
-func squashConfigForSysMgmtdHost(sysMgmtdHost string, config PluginConfig) (returnConfig beegfsConfig) {
-	returnConfig = *newBeegfsConfig()
-	returnConfig.overwriteFrom(config.DefaultConfig)
+func squashConfigForSysMgmtdHost(sysMgmtdHost string, config beegfsv1.PluginConfig) (returnConfig beegfsv1.BeegfsConfig) {
+	returnConfig = *beegfsv1.NewBeegfsConfig()
+	overWriteBeegfsConfig(&returnConfig, config.DefaultConfig)
 	for _, fileSystemSpecificConfig := range config.FileSystemSpecificConfigs {
 		if sysMgmtdHost == fileSystemSpecificConfig.SysMgmtdHost {
-			returnConfig.overwriteFrom(fileSystemSpecificConfig.Config)
+			overWriteBeegfsConfig(&returnConfig, fileSystemSpecificConfig.Config)
 		}
 	}
 	return returnConfig

@@ -1,0 +1,7 @@
+apiVersion: beegfs.csi.netapp.com/v1
+kind: BeegfsDriver
+metadata:
+  name: beegfsdriver-sample
+spec:
+  # Add fields here
+  foo: bar

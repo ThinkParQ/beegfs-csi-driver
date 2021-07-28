@@ -1,0 +1,23 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# operator-sdk ships with commands to create a catalog image (using Operator Package Manager) and push it, but it does
+# not include a CatalogSource object that references it. Deploy this CatalogSource to OpenShift to simulate the final
+# operatorhub.io installation and/or upgrade workflow.
+
+# See https://github.com/operator-framework/community-operators/blob/master/docs/testing-operators.md#testing-operator-deployment-on-openshift
+# for an in-depth explanation of how this fits into the larger OLM integration testing process.
+
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: netapp-operators
+  namespace: openshift-marketplace
+spec:
+  displayName: NetApp Operators
+  image: docker.repo.eng.netapp.com/<username>/beegfs-csi-driver-operator-catalog:v1.2.0
+  publisher: NetApp
+  sourceType: grpc
+  updateStrategy:
+    registryPoll:
+      interval: 24h  # When polling is enabled, the catalog Pod gets imagePullPolicy: Always. Handy for development.

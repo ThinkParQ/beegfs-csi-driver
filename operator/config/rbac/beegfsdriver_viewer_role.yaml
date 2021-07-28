@@ -1,0 +1,20 @@
+# permissions for end users to view beegfsdrivers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: beegfsdriver-viewer-role
+rules:
+- apiGroups:
+  - beegfs.csi.netapp.com
+  resources:
+  - beegfsdrivers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - beegfs.csi.netapp.com
+  resources:
+  - beegfsdrivers/status
+  verbs:
+  - get

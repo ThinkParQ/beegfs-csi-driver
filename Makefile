@@ -18,7 +18,9 @@
 # Licensed under the Apache License, Version 2.0.
 
 CMDS ?= beegfs-csi-driver
-TEST_GO_FILTER_CMD = -e '/test/e2e'  # Speed up unit testing by explicitly NOT building anything in the e2e folder.
+# Speed up unit testing by explicitly NOT building anything in the e2e folder.
+# Do not run any operator tests during normal testing.
+TEST_GO_FILTER_CMD = -e '/test/e2e' -e '/operator'
 all: build
 
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its

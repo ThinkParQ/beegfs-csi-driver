@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/spf13/afero"
 	"golang.org/x/net/context"
 )
@@ -141,8 +142,8 @@ func TestWriteClientFiles(t *testing.T) {
 	confTemplatePath := path.Join(confTemplateDirPath, "beegfs-client.conf")
 	mountDirPath := "/testvol"
 	sysMgmtdHost := "127.0.0.1"
-	testConfig := PluginConfig{
-		DefaultConfig: beegfsConfig{
+	testConfig := beegfsv1.PluginConfig{
+		DefaultConfig: beegfsv1.BeegfsConfig{
 			ConnInterfaces:    []string{"ib0"},
 			ConnNetFilter:     []string{"127.0.0.0/24"},
 			ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -150,11 +151,11 @@ func TestWriteClientFiles(t *testing.T) {
 				"connMgmtdPortTCP": "8000",
 			},
 		},
-		FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+		FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 			{
 				SysMgmtdHost: sysMgmtdHost,
-				Config: beegfsConfig{
-					connAuth: "secret1",
+				Config: beegfsv1.BeegfsConfig{
+					ConnAuth: "secret1",
 				},
 			},
 		},
@@ -238,13 +239,13 @@ func TestWriteClientFiles(t *testing.T) {
 }
 
 func TestSquashConfigForSysMgmtdHost(t *testing.T) {
-	defaultConfig := *newBeegfsConfig()
+	defaultConfig := *beegfsv1.NewBeegfsConfig()
 	defaultConfig.ConnInterfaces = []string{"ib0"}
-	fileSystemSpecificBeegfsConfig := *newBeegfsConfig()
+	fileSystemSpecificBeegfsConfig := *beegfsv1.NewBeegfsConfig()
 	fileSystemSpecificBeegfsConfig.ConnInterfaces = []string{"ib1"}
-	testConfig := PluginConfig{
+	testConfig := beegfsv1.PluginConfig{
 		DefaultConfig: defaultConfig,
-		FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+		FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 			{
 				SysMgmtdHost: "127.0.0.1",
 				Config:       fileSystemSpecificBeegfsConfig,
@@ -254,7 +255,7 @@ func TestSquashConfigForSysMgmtdHost(t *testing.T) {
 
 	tests := map[string]struct {
 		sysMgmtdHost string
-		want         beegfsConfig
+		want         beegfsv1.BeegfsConfig
 	}{
 		"not matching sysMgmtdHost": {
 			sysMgmtdHost: "127.0.0.0",
@@ -270,7 +271,7 @@ func TestSquashConfigForSysMgmtdHost(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got := squashConfigForSysMgmtdHost(tc.sysMgmtdHost, testConfig)
 			if !reflect.DeepEqual(tc.want, got) {
-				t.Fatalf("expected beegfsConfig: %v, got beegfsConfig: %v", tc.want, got)
+				t.Fatalf("expected BeegfsConfig: %v, got BeegfsConfig: %v", tc.want, got)
 			}
 		})
 	}

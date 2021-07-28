@@ -32,7 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/netapp/beegfs-csi-driver/pkg/beegfs"
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	beegfssuites "github.com/netapp/beegfs-csi-driver/test/e2e/testsuites"
 	"github.com/onsi/ginkgo"
@@ -123,7 +123,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	e2eframework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
 
 	// Unmarshal the ConfigMap and use it to populate the global BeegfsDriver's perFSConfigs.
-	var pluginConfig beegfs.PluginConfig
+	var pluginConfig beegfsv1.PluginConfig
 	err = yaml.UnmarshalStrict([]byte(driverConfigString), &pluginConfig)
 	e2eframework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
 	e2eframework.ExpectNotEqual(len(pluginConfig.FileSystemSpecificConfigs), 0,

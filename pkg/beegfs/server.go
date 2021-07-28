@@ -156,7 +156,7 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 		csi.RegisterNodeServer(server, ns)
 	}
 
-	Logger(nil).Info("Listening for connections", "address", listener.Addr())
+	logger(nil).Info("Listening for connections", "address", listener.Addr())
 
 	if err = server.Serve(listener); err != nil {
 		if err == grpc.ErrServerStopped {
@@ -207,7 +207,7 @@ func generateRequestContext(parent context.Context) context.Context {
 }
 
 // logger returns a klogr logger with as much context as possible
-func Logger(ctx context.Context) logr.Logger {
+func logger(ctx context.Context) logr.Logger {
 	newLogger := klogr.New()
 	if ctx != nil {
 		if ctxRqId, ok := ctx.Value(ctxRequestID).(string); ok {
@@ -220,28 +220,28 @@ func Logger(ctx context.Context) logr.Logger {
 }
 
 func LogDebug(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	l := Logger(ctx).V(LogLevelDebug)
+	l := logger(ctx).V(LogLevelDebug)
 	logr.
 		WithCallDepth(l, 1).
 		Info(msg, keysAndValues...)
 }
 
 func LogVerbose(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	l := Logger(ctx).V(LogLevelVerbose)
+	l := logger(ctx).V(LogLevelVerbose)
 	logr.
 		WithCallDepth(l, 1).
 		Info(msg, keysAndValues...)
 }
 
 func LogError(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
-	l := Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
+	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
 	logr.
 		WithCallDepth(l, 1).
 		Error(err, msg, keysAndValues...)
 }
 
 func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
-	l := Logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
+	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
 	logr.
 		WithCallDepth(l, 1).
 		Error(err, "Fatal: "+msg, keysAndValues...)

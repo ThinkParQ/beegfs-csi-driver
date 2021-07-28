@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 )
@@ -22,22 +23,22 @@ func TestParseConfigFromFile(t *testing.T) {
 	tests := map[string]struct {
 		configFile string
 		nodeID     string
-		want       PluginConfig
+		want       beegfsv1.PluginConfig
 	}{
 		"basic all fields correct": {
 			configFile: "testdata/basic.yaml",
 			nodeID:     "testnode",
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
 					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
 				},
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							ConnInterfaces:    []string{"ib0"},
 							ConnNetFilter:     []string{"127.0.0.0/24"},
 							ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -51,8 +52,8 @@ func TestParseConfigFromFile(t *testing.T) {
 			// because "testnode" is in nodeList, default values should be overridden
 			configFile: "testdata/node-default-override.yaml",
 			nodeID:     "testnode",
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnInterfaces:    []string{"ib1"},
 					ConnNetFilter:     []string{"127.0.0.1/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.1"},
@@ -64,8 +65,8 @@ func TestParseConfigFromFile(t *testing.T) {
 			// because "testnode" is in nodeList, default values should be overridden, then overridden again
 			configFile: "testdata/node-default-override-double.yaml",
 			nodeID:     "testnode",
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnInterfaces:    []string{"ib2"},
 					ConnNetFilter:     []string{"127.0.0.2/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.2"},
@@ -77,8 +78,8 @@ func TestParseConfigFromFile(t *testing.T) {
 			// because "testnode" is NOT in nodeList, default values should NOT be overridden
 			configFile: "testdata/node-default-override.yaml",
 			nodeID:     "nottestnode",
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -90,17 +91,17 @@ func TestParseConfigFromFile(t *testing.T) {
 			// because "testnode" is in nodeList, file system specific values should be overridden
 			configFile: "testdata/node-filesystem-override.yaml",
 			nodeID:     "testnode",
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
 					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
 				},
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.1",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							ConnInterfaces:    []string{"ib1"},
 							ConnNetFilter:     []string{"127.0.0.1/24"},
 							ConnTcpOnlyFilter: []string{"127.0.0.1"},
@@ -125,38 +126,45 @@ func TestParseConfigFromFile(t *testing.T) {
 	}
 }
 
+func TestConnAuthNotParsedFromConfig(t *testing.T) {
+	_, err := parseConfigFromFile("testdata/basic-with-connauth.yaml", "testnode")
+	if err == nil {
+		t.Fatal("should fail to parse configuration file with connAuth information")
+	}
+}
+
 func TestParseConnAuthFromFile(t *testing.T) {
 	fs = afero.NewOsFs()
 	fsutil = afero.Afero{Fs: fs}
 	tests := map[string]struct {
 		path        string
-		startConfig PluginConfig
-		want        PluginConfig
+		startConfig beegfsv1.PluginConfig
+		want        beegfsv1.PluginConfig
 	}{
 		"non-matching file system specific config": {
 			path: "testdata/connauthfile.yaml",
-			startConfig: PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			startConfig: beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.1",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 						},
 					},
 				},
 			},
-			want: PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			want: beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.1",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 						},
 					},
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
-							connAuth: "secret1",
+						Config: beegfsv1.BeegfsConfig{
+							ConnAuth: "secret1",
 						},
 					},
 				},
@@ -164,23 +172,23 @@ func TestParseConnAuthFromFile(t *testing.T) {
 		},
 		"matching file system specific config and no default config": {
 			path: "testdata/connauthfile.yaml",
-			startConfig: PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			startConfig: beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 						},
 					},
 				},
 			},
-			want: PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			want: beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							connAuth:         "secret1",
+							ConnAuth:         "secret1",
 						},
 					},
 				},
@@ -188,27 +196,27 @@ func TestParseConnAuthFromFile(t *testing.T) {
 		},
 		"matching filesystem specific config and default config": {
 			path: "testdata/connauthfile.yaml",
-			startConfig: PluginConfig{
-				DefaultConfig: beegfsConfig{
+			startConfig: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 				},
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 						},
 					},
 				},
 			},
-			want: PluginConfig{
-				DefaultConfig: beegfsConfig{BeegfsClientConf: map[string]string{"testkey": "testvalue"}},
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{BeegfsClientConf: map[string]string{"testkey": "testvalue"}},
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							connAuth:         "secret1",
+							ConnAuth:         "secret1",
 						},
 					},
 				},
@@ -216,12 +224,12 @@ func TestParseConnAuthFromFile(t *testing.T) {
 		},
 		"nil pluginConfig": {
 			path: "testdata/connauthfile.yaml",
-			want: PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			want: beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
-							connAuth: "secret1",
+						Config: beegfsv1.BeegfsConfig{
+							ConnAuth: "secret1",
 						},
 					},
 				},
@@ -250,7 +258,7 @@ func TestValidateConfig(t *testing.T) {
 
 	tests := map[string]struct {
 		expectedError error
-		config        PluginConfig
+		config        beegfsv1.PluginConfig
 	}{
 		"basic config passes validation": {
 			nil,
@@ -258,8 +266,8 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"sysMgmtdHost with domain name": {
 			nil,
-			PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "subdomain.somewebsite.com",
 					},
@@ -268,8 +276,8 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid sysMgmtdHost": {
 			errors.New("invalid SysMgmtdHost testinvalid"),
-			PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "testinvalid",
 					},
@@ -278,11 +286,11 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid connNetFilter": {
 			errors.New("invalid ConnNetFilter testinvalid"),
-			PluginConfig{
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+			beegfsv1.PluginConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
-						Config: beegfsConfig{
+						Config: beegfsv1.BeegfsConfig{
 							ConnNetFilter: []string{"testinvalid"},
 						},
 					},
@@ -291,11 +299,11 @@ func TestValidateConfig(t *testing.T) {
 		},
 		"invalid ConnTCPOnlyFilter": {
 			errors.New("invalid ConnTCPOnlyFilter testinvalid"),
-			PluginConfig{
-				DefaultConfig: beegfsConfig{
+			beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
 					ConnTcpOnlyFilter: []string{"127.0.0.0", "testinvalid"},
 				},
-				FileSystemSpecificConfigs: []FileSystemSpecificConfig{
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
 					},
@@ -305,7 +313,7 @@ func TestValidateConfig(t *testing.T) {
 	}
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := tc.config.validateConfig()
+			err := validateConfig(&tc.config)
 			if (err != nil && tc.expectedError == nil) || (err == nil && tc.expectedError != nil) ||
 				(err != nil && tc.expectedError != nil && err.Error() != tc.expectedError.Error()) {
 				t.Fatalf("expected error: %v, got: %v", tc.expectedError, err)
@@ -329,7 +337,7 @@ func TestStripNoEffectConfig(t *testing.T) {
 		modifiedConfig.DefaultConfig.BeegfsClientConf[noEffectOption] = "noeffectdefaultkey"
 		modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[noEffectOption] = "noeffectfskey"
 	}
-	modifiedConfig.stripConfig()
+	stripConfig(&modifiedConfig)
 	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
 		t.Fatalf("stripConfig() did not strip correctly. Original: %v, Stripped: %v",
 			originalConfig, modifiedConfig)
@@ -346,7 +354,7 @@ func TestStripCleanConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	modifiedConfig.stripConfig()
+	stripConfig(&modifiedConfig)
 	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
 		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %v",
 			originalConfig, modifiedConfig)
@@ -370,7 +378,7 @@ func TestStripUnsupportedConfig(t *testing.T) {
 		modifiedConfig.DefaultConfig.BeegfsClientConf[unsupportedOption] = "unsupporteddefaultkey"
 		modifiedConfig.FileSystemSpecificConfigs[0].Config.BeegfsClientConf[unsupportedOption] = "unsupportedfskey"
 	}
-	modifiedConfig.stripConfig()
+	stripConfig(&modifiedConfig)
 	if !reflect.DeepEqual(originalConfig, modifiedConfig) {
 		t.Fatalf("stripConfig() performed unexpected modification. Original: %v, Stripped: %v",
 			originalConfig, modifiedConfig)
@@ -378,22 +386,22 @@ func TestStripUnsupportedConfig(t *testing.T) {
 }
 
 func TestOverwriteFromBeegfsClientConfEmptyValue(t *testing.T) {
-	writeTo := beegfsConfig{
+	writeTo := beegfsv1.BeegfsConfig{
 		BeegfsClientConf: map[string]string{
 			"setKey": "setValue",
 		},
 	}
-	writeFrom := beegfsConfig{
+	writeFrom := beegfsv1.BeegfsConfig{
 		BeegfsClientConf: map[string]string{
 			"setKey": "",
 		},
 	}
-	want := beegfsConfig{
+	want := beegfsv1.BeegfsConfig{
 		BeegfsClientConf: map[string]string{
 			"setKey": "",
 		},
 	}
-	writeTo.overwriteFrom(writeFrom)
+	overWriteBeegfsConfig(&writeTo, writeFrom)
 	if !reflect.DeepEqual(want, writeTo) {
 		t.Fatalf("expected: %v, got: %v", want, writeTo)
 	}
