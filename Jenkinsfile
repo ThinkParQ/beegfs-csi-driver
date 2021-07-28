@@ -185,6 +185,20 @@ pipeline {
                     --detect.tools=DOCKER \
                     --detect.tools=SIGNATURE_SCAN
                 """
+                synopsys_detect detectProperties: """
+                    --detect.project.name=${hubProjectName} \
+                    --detect.project.version.name=${hubProjectVersion} \
+                    --detect.cleanup=false \
+                    --detect.output.path=blackduck \
+                    --detect.project.code.location.unmap=true \
+                    --detect.detector.search.depth=50 \
+                    --detect.code.location.name=${hubProjectName}_${hubProjectVersion}_operator_container_code \
+                    --detect.bom.aggregate.name=${hubProjectName}_${hubProjectVersion}_operator_container_bom \
+                    --detect.docker.image=${uniqueOperatorImageTag} \
+                    --detect.docker.path=/usr/bin/docker \
+                    --detect.tools=DOCKER \
+                    --detect.tools=SIGNATURE_SCAN
+                """
             }
             post {
                 success {
