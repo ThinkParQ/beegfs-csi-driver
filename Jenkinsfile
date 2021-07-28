@@ -155,6 +155,11 @@ pipeline {
             when {
                 expression { shouldHubScan }
             }
+            environment {
+                // TODO(webere, A251): Stop pinning this version when the issue with skipping directories in >v7.0.0 is
+                // resolved.
+                DETECT_LATEST_RELEASE_VERSION = '6.9.1'
+            }
             steps {
                 // Do not scan the vendor directory. Everything in the vendor director is already discovered by the
                 // GO_MOD detector and scanning it provides duplicate results with erroneous versions.
