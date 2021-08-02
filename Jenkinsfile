@@ -155,6 +155,11 @@ pipeline {
             when {
                 expression { shouldHubScan }
             }
+            environment {
+                // TODO(webere, A251): Stop pinning this version when the issue with skipping directories in >v7.0.0 is
+                // resolved.
+                DETECT_LATEST_RELEASE_VERSION = '6.9.1'
+            }
             steps {
                 // Do not scan the vendor directory. Everything in the vendor director is already discovered by the
                 // GO_MOD detector and scanning it provides duplicate results with erroneous versions.
@@ -181,6 +186,20 @@ pipeline {
                     --detect.bom.aggregate.name=${hubProjectName}_${hubProjectVersion}_container_bom \
                     --detect.docker.image=${uniqueImageTag} \
                     --detect.docker.passthrough.service.distro.default=apk \
+                    --detect.docker.path=/usr/bin/docker \
+                    --detect.tools=DOCKER \
+                    --detect.tools=SIGNATURE_SCAN
+                """
+                synopsys_detect detectProperties: """
+                    --detect.project.name=${hubProjectName} \
+                    --detect.project.version.name=${hubProjectVersion} \
+                    --detect.cleanup=false \
+                    --detect.output.path=blackduck \
+                    --detect.project.code.location.unmap=true \
+                    --detect.detector.search.depth=50 \
+                    --detect.code.location.name=${hubProjectName}_${hubProjectVersion}_operator_container_code \
+                    --detect.bom.aggregate.name=${hubProjectName}_${hubProjectVersion}_operator_container_bom \
+                    --detect.docker.image=${uniqueOperatorImageTag} \
                     --detect.docker.path=/usr/bin/docker \
                     --detect.tools=DOCKER \
                     --detect.tools=SIGNATURE_SCAN
