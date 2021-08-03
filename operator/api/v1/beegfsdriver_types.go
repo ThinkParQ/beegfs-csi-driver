@@ -28,11 +28,6 @@ import (
 type BeegfsDriverSpec struct {
 	// TODO(webere, A259): Add additional fields.
 
-	// The name of a Kubernetes Secret (in this namespace) containing BeeGFS connauth information formatted according
-	// to the deployment documentation. If no name is provided, a default empty secret named csi-beegfs-connauth will
-	// be created.
-	// TODO(webere, A259): Remove this field.
-	ConnAuthSecretName      string                  `json:"connAuthSecretName,omitempty"`
 	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
 	PluginConfigFromFile    PluginConfigFromFile    `json:"pluginConfig,omitempty"`
 }

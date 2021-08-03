@@ -8,7 +8,6 @@ apiVersion: beegfs.csi.netapp.com/v1
 metadata:
   name: test-driver
 spec:
-  connAuthSecretName: csi-beegfs-connauth
   containerImageOverrides:
     beegfsCsiDriver:
       image: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
