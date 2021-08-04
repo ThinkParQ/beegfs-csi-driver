@@ -43,6 +43,62 @@ spec:
                   secret named csi-beegfs-connauth will be created. TODO(webere, A259):
                   Remove this field.'
                 type: string
+              containerImageOverrides:
+                description: A structure that allows for default container images
+                  and tags to be overridden. Use it in air-gapped networks, networks
+                  with private registry mirrors, or to pin a particular container
+                  version. Unless otherwise noted, versions other than the default
+                  are not supported.
+                properties:
+                  beegfsCsiDriver:
+                    description: Defaults to docker.io/netapp/beegfs-csi-driver:<the
+                      operator version>.
+                    properties:
+                      image:
+                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+                          or docker.io/netapp/beegfs-csi-driver).
+                        type: string
+                      tag:
+                        description: A tag (e.g. v2.2.2 or latest).
+                        type: string
+                    type: object
+                  csiNodeDriverRegistrar:
+                    description: Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the
+                      most current version at operator release>.
+                    properties:
+                      image:
+                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+                          or docker.io/netapp/beegfs-csi-driver).
+                        type: string
+                      tag:
+                        description: A tag (e.g. v2.2.2 or latest).
+                        type: string
+                    type: object
+                  csiProvisioner:
+                    description: Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the
+                      most current version at operator release>.
+                    properties:
+                      image:
+                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+                          or docker.io/netapp/beegfs-csi-driver).
+                        type: string
+                      tag:
+                        description: A tag (e.g. v2.2.2 or latest).
+                        type: string
+                    type: object
+                  livenessProbe:
+                    description: Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the
+                      most current version at operator release>.
+                    properties:
+                      image:
+                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+                          or docker.io/netapp/beegfs-csi-driver).
+                        type: string
+                      tag:
+                        description: A tag (e.g. v2.2.2 or latest).
+                        type: string
+                    type: object
+                type: object
               pluginConfig:
                 description: The top level configuration structure containing default
                   configuration (applied to all file systems on all nodes), file system

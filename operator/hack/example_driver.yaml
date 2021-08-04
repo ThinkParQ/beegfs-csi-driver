@@ -9,3 +9,13 @@ metadata:
   name: test-driver
 spec:
   connAuthSecretName: csi-beegfs-connauth
+  containerImageOverrides:
+    beegfsCsiDriver:
+      image: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
+      tag: master
+    csiNodeDriverRegistrar:
+      image: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
+    csiProvisioner:
+      image: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
+    livenessProbe:
+      image: docker.repo.eng.netapp.com/sig-storage/livenessprobe

@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -29,8 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 
