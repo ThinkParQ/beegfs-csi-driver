@@ -29,7 +29,12 @@ type BeegfsDriverSpec struct {
 	// TODO(webere, A259): Add additional fields.
 
 	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
-	PluginConfigFromFile    PluginConfigFromFile    `json:"pluginConfig,omitempty"`
+	//+kubebuilder:validation:Minimum:=0
+	//+kubebuilder:validation:Maximum:=5
+	// The logging level of deployed containers expressed as an integer from 0 (low detail) to 5 (high detail). Empty
+	// results in the BeeGFS CSI driver project default.
+	LogLevel             *int                 `json:"logLevel,omitempty"` // Pointer per https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#optional-vs-required.
+	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
 }
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver

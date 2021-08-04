@@ -18,3 +18,4 @@ spec:
       image: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
     livenessProbe:
       image: docker.repo.eng.netapp.com/sig-storage/livenessprobe
+  logLevel: 5

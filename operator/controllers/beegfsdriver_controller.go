@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -353,6 +354,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
 	setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
+	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
@@ -381,6 +383,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
 	setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
+	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
@@ -575,4 +578,22 @@ func getImageStringWithOverride(imageWithTag string, override beegfsv1.Container
 	}
 
 	return fmt.Sprintf("%s:%s", image, tag)
+}
+
+// setLogLevel sets the value of the environment variable LOG_LEVEL to level for any Container in containers. If a
+// Container does not have the environment variable LOG_LEVEL, setLogLevel does nothing. If level = 0, setLogLevel
+// does nothing. The ultimate result is that all containers with a configurable logging level in the deployment
+// manifest will log at the specified level.
+func setLogLevel(log logr.Logger, level *int, containers []corev1.Container) {
+	if level == nil {
+		return
+	}
+	log.V(5).Info("Setting log level in all Containers", "level", level)
+	for i, container := range containers {
+		for j, envVar := range container.Env {
+			if envVar.Name == "LOG_LEVEL" {
+				containers[i].Env[j].Value = strconv.Itoa(*level)
+			}
+		}
+	}
 }

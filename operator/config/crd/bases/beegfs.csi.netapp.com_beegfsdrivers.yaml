@@ -92,6 +92,13 @@ spec:
                         type: string
                     type: object
                 type: object
+              logLevel:
+                description: The logging level of deployed containers expressed as
+                  an integer from 0 (low detail) to 5 (high detail). Empty results
+                  in the BeeGFS CSI driver project default.
+                maximum: 5
+                minimum: 0
+                type: integer
               pluginConfig:
                 description: The top level configuration structure containing default
                   configuration (applied to all file systems on all nodes), file system

@@ -73,6 +73,53 @@ var _ = Describe("Basic controller unit tests", func() {
 			})
 		})
 	})
+
+	Describe("setLogLevel", func() {
+		var containers []corev1.Container
+
+		BeforeEach(func() {
+			containers = []corev1.Container{
+				// Container with no environment variables.
+				{},
+				// Container with one environment variable.
+				{Env: []corev1.EnvVar{
+					{Name: "LOG_LEVEL", Value: "3"},
+				}},
+				// Container with multiple environment variables.
+				{Env: []corev1.EnvVar{
+					{Name: "NOT_LOG_LEVEL", Value: "we don't care"},
+					{Name: "LOG_LEVEL", Value: "3"},
+				}},
+			}
+		})
+
+		Context("When logLevel is nil", func() {
+			It("should not error and should not change from default", func() {
+				setLogLevel(ctrl.Log, nil, containers)
+				for _, container := range containers {
+					for _, envVar := range container.Env {
+						if envVar.Name == "LOG_LEVEL" {
+							Expect(envVar.Value).To(Equal("3"))
+						}
+					}
+				}
+			})
+		})
+
+		Context("When logLevel is set", func() {
+			It("should change", func() {
+				logLevel := 5
+				setLogLevel(ctrl.Log, &logLevel, containers)
+				for _, container := range containers {
+					for _, envVar := range container.Env {
+						if envVar.Name == "LOG_LEVEL" {
+							Expect(envVar.Value).To(Equal("5"))
+						}
+					}
+				}
+			})
+		})
+	})
 })
 
 // getContainerImageForName is a helper function used only in tests. It returns the image field of a Container in a

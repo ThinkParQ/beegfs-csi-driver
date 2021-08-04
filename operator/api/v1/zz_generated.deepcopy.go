@@ -125,6 +125,11 @@ func (in *BeegfsDriverList) DeepCopyObject() runtime.Object {
 func (in *BeegfsDriverSpec) DeepCopyInto(out *BeegfsDriverSpec) {
 	*out = *in
 	out.ContainerImageOverrides = in.ContainerImageOverrides
+	if in.LogLevel != nil {
+		in, out := &in.LogLevel, &out.LogLevel
+		*out = new(int)
+		**out = **in
+	}
 	in.PluginConfigFromFile.DeepCopyInto(&out.PluginConfigFromFile)
 }
 
