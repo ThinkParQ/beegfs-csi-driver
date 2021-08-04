@@ -7,6 +7,8 @@ package deploy
 
 import (
 	"testing"
+
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 func TestGetControllerServiceRBAC(t *testing.T) {
@@ -29,8 +31,26 @@ func TestGetControllerServiceRBAC(t *testing.T) {
 }
 
 func TestGetControllerServiceStatefulSet(t *testing.T) {
-	if _, err := GetControllerServiceStatefulSet(); err != nil {
+	var sts *appsv1.StatefulSet
+	var err error
+
+	if sts, err = GetControllerServiceStatefulSet(); err != nil {
 		t.Fatal(err)
+	}
+
+	// Ensure that expected containers with expected names exist in the embedded manifest. Some operator logic depends
+	// on these names.
+	for _, containerName := range []string{ContainerNameBeegfsCsiDriver, ContainerNameCsiProvisioner} {
+		foundContainer := false
+		for _, container := range sts.Spec.Template.Spec.Containers {
+			if container.Name == containerName {
+				foundContainer = true
+				break
+			}
+		}
+		if !foundContainer {
+			t.Fatalf("expected a container named %s in Stateful Set", containerName)
+		}
 	}
 }
 
@@ -41,7 +61,25 @@ func TestGetCSIDriver(t *testing.T) {
 }
 
 func TestGetNodeServiceDaemonSet(t *testing.T) {
-	if _, err := GetNodeServiceDaemonSet(); err != nil {
+	var ds *appsv1.DaemonSet
+	var err error
+
+	if ds, err = GetNodeServiceDaemonSet(); err != nil {
 		t.Fatal(err)
+	}
+
+	// Ensure that expected containers with expected names exist in the embedded manifest. Some operator logic depends
+	// on these names.
+	for _, containerName := range []string{ContainerNameBeegfsCsiDriver, ContainerNameLivenessProbe, ContainerNameCsiNodeDriverRegistrar} {
+		foundContainer := false
+		for _, container := range ds.Spec.Template.Spec.Containers {
+			if container.Name == containerName {
+				foundContainer = true
+				break
+			}
+		}
+		if !foundContainer {
+			t.Fatalf("expected a container named %s in Stateful Set", containerName)
+		}
 	}
 }

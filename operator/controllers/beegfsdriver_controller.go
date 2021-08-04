@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/netapp/beegfs-csi-driver/deploy"
@@ -368,16 +369,17 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
+	// Completely recreate the Stateful Set to ensure all fields specified in the deployment manifest are propagated.
+	sts, _ = deploy.GetControllerServiceStatefulSet()
+	if _, err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
+		return ctrl.Result{}, err
+	}
+	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
+	setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
+	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
-		sts, _ = deploy.GetControllerServiceStatefulSet()
-		if _, err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
-			return ctrl.Result{}, err
-		}
-		setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
-		setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
-
 		log.Info("Creating controller service Stateful Set")
 		err = r.Create(ctx, sts)
 		if err != nil {
@@ -385,28 +387,27 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 	} else {
-		// The Stateful Set exists, but it may need to be updated.
-		mustUpdate = setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
-		mustUpdate = mustUpdate || setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
-		if mustUpdate {
-			log.Info("Updating controller service Stateful Set")
-			if err = r.Update(ctx, sts); err != nil {
-				log.Error(err, "Failed to update controller service Stateful Set")
-				return ctrl.Result{}, err
-			}
+		// The Stateful Set exists, but it may need to be updated. Ideally we would only attempt an update if we were
+		// sure there was something "interesting" to modify. In practice, this is very difficult to determine, as a
+		// direct comparison between the old and new Stateful Set reveals many trivial differences (e.g. fields that
+		// are not set in the deployment manifest and set by default on resource creation by the API server).
+		log.Info("Updating controller service Stateful Set")
+		if err = r.Update(ctx, sts); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
+	// Completely recreate the Daemon Set to ensure all fields specified in the deployment manifest are propagated.
+	ds, _ = deploy.GetNodeServiceDaemonSet()
+	if _, err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
+		return ctrl.Result{}, err
+	}
+	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
+	setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
+	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
-		ds, _ = deploy.GetNodeServiceDaemonSet()
-		if _, err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
-			return ctrl.Result{}, err
-		}
-		setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
-		setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
-
 		log.Info("Creating node service Daemon Set")
 		err = r.Create(ctx, ds)
 		if err != nil {
@@ -414,15 +415,13 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err
 		}
 	} else {
-		// The Daemon Set exists, but it may need to be updated.
-		mustUpdate = setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
-		mustUpdate = mustUpdate || setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
-		if mustUpdate {
-			log.Info("Updating node service Daemon Set")
-			if err = r.Update(ctx, ds); err != nil {
-				log.Error(err, "Failed to update node service Daemon Set")
-				return ctrl.Result{}, err
-			}
+		// The Daemon Set exists, but it may need to be updated. Ideally we would only attempt an update if we were
+		// sure there was something "interesting" to modify. In practice, this is very difficult to determine, as a
+		// direct comparison between the old and new Daemon Set reveals many trivial differences (e.g. fields that
+		// are not set in the deployment manifest and set by default on resource creation by the API server).
+		log.Info("Updating node service Daemon Set")
+		if err = r.Update(ctx, ds); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -507,30 +506,21 @@ func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, drive
 
 // setResourceVersionAnnotations is an important part of our overall configuration scheme. It records the current name
 // and resource version of the Config Map and Secret required by our driver in annotations on a Pod Template Spec (for
-// either a Daemon Set or a Stateful Set). If nothing changes, setResourceVersionAnnotations returns mustUpdate=false.
-// If it returns true, the caller should update the Daemon Set or Stateful Set that owns the Pod Template Spec with the
-// K8s API server.
-func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podTemplate *corev1.PodTemplateSpec) (mustUpdate bool) {
+// either a Daemon Set or a Stateful Set).
+func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret,
+	podTemplate *corev1.PodTemplateSpec) {
 	if podTemplate.Annotations == nil {
 		podTemplate.Annotations = make(map[string]string)
 	}
 
 	correctCMNameAndVersion := fmt.Sprintf("%s/%s", cm.Name, cm.ResourceVersion)
-	val, ok := podTemplate.Annotations["beegfs.csi.netapp.com/configMapVersion"]
-	if !ok || val != fmt.Sprintf("%s/%s", cm.Name, cm.ResourceVersion) {
-		podTemplate.Annotations["beegfs.csi.netapp.com/configMapVersion"] = correctCMNameAndVersion
-		log.Info("Config Map changed", "oldMap", val, "newMap", correctCMNameAndVersion)
-		mustUpdate = true
-	}
+	podTemplate.Annotations["beegfs.csi.netapp.com/configMapVersion"] = correctCMNameAndVersion
+	log.V(5).Info("Setting Config Map version annotation", "versionAnnotation", correctCMNameAndVersion)
 
 	if s != nil { // We may not be using a Secret in this deployment of the driver.
 		correctSecretNameAndVersion := fmt.Sprintf("%s/%s", s.Name, s.ResourceVersion)
-		val, ok = podTemplate.Annotations["beegfs.csi.netapp.com/connauthSecretVersion"]
-		if !ok || val != fmt.Sprintf("%s/%s", s.Name, s.ResourceVersion) {
-			podTemplate.Annotations["beegfs.csi.netapp.com/connauthSecretVersion"] = correctSecretNameAndVersion
-			log.Info("Secret changed", "oldSecret", val, "newSecret", correctSecretNameAndVersion)
-			mustUpdate = true
-		}
+		podTemplate.Annotations["beegfs.csi.netapp.com/connauthSecretVersion"] = correctSecretNameAndVersion
+		log.V(5).Info("Setting Secret version annotation", "versionAnnotation", correctSecretNameAndVersion)
 	}
 
 	return
@@ -538,19 +528,65 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 
 // setVolumeReferences ensures that Pod specs point correctly to Kubernetes objects. In particular, it ensures that
 // the controller service Stateful Set and the node service Daemon Set know which Config Map and Secret (respectively)
-// to reference. If nothing changes, setVolumeReferences returns mustUpdate=false. If it returns true, the caller
-// should update the Daemon Set or Stateful Set that owns the Pod Spec with the K8s API server.
-func setVolumeReferences(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podSpec *corev1.PodSpec) (mustUpdate bool) {
+// to reference.
+func setVolumeReferences(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podSpec *corev1.PodSpec) {
 	for _, vol := range podSpec.Volumes {
 		if vol.Name == "config-dir" && vol.ConfigMap.Name != cm.Name {
-			log.Info("Setting reference to a new Config Map")
+			log.V(5).Info("Setting Config Map volume reference")
 			vol.ConfigMap.Name = cm.Name
-			mustUpdate = true
 		} else if vol.Name == "connauth-dir" && vol.Secret.SecretName != s.Name {
-			log.Info("Setting reference to a new Secret")
+			log.V(5).Info("Setting Secret volume reference")
 			vol.Secret.SecretName = s.Name
-			mustUpdate = true
 		}
 	}
 	return
+}
+
+// setImages takes a slice of Container specs (containers) and a slice of ContainerImageOverrides (overrides). If the
+// image field of a spec in containers is overriden in overrides, setImages modifies it. Otherwise, setImages assumes
+// the image field is already correct and leaves it alone.
+func setImages(log logr.Logger, containers []corev1.Container, overrides beegfsv1.ContainerImageOverrides) {
+	// Match fields in overrides to expected container names for ease of lookup. Tests in deploy ensure default
+	// containers maintain these expected names. This is not the only way we could determine whether a container's
+	// image should be overriden (e.g. index in PodTemplateSpec.Containers or hard coding a particular image name we
+	// expect to be overridden), but container name is one of the most reliable fields (i.e. least likely to change) in
+	// the deployment manifests.
+	containerNameToImageOverrideMap := map[string]beegfsv1.ContainerImageOverride{
+		deploy.ContainerNameBeegfsCsiDriver:        overrides.BeegfsCsiDriver,
+		deploy.ContainerNameCsiNodeDriverRegistrar: overrides.CsiNodeDriverRegistrar,
+		deploy.ContainerNameCsiProvisioner:         overrides.CsiProvisioner,
+		deploy.ContainerNameLivenessProbe:          overrides.LivenessProbe,
+	}
+
+	for i, container := range containers {
+		if v, ok := containerNameToImageOverrideMap[container.Name]; ok && (len(v.Image) > 0 || len(v.Tag) > 0) {
+			newImage := getImageStringWithOverride(container.Image, v)
+			log.V(5).Info("Setting Container image", "containerName", container.Name,
+				"containerImage", newImage)
+			containers[i].Image = newImage
+		}
+	}
+}
+
+// getImageStringWithOverride takes an imageString (e.g. k8s.gcr.io/some-image:some-tag) and a ContainerImageOverride
+// (consisting of an image and a tag). The image string it returns includes any non-empty information from the override
+// and information from imageString as required.
+func getImageStringWithOverride(imageWithTag string, override beegfsv1.ContainerImageOverride) string {
+	var image, tag string
+
+	// Split the image from the tag, as they can be overridden separately.
+	imageSlice := strings.SplitN(imageWithTag, ":", 2)
+	image = imageSlice[0]
+	if len(imageSlice) > 1 {
+		tag = imageSlice[1]
+	}
+
+	if len(override.Image) > 0 {
+		image = override.Image
+	}
+	if len(override.Tag) > 0 {
+		tag = override.Tag
+	}
+
+	return fmt.Sprintf("%s:%s", image, tag)
 }

@@ -19,8 +19,8 @@ images:
   - name: netapp/beegfs-csi-driver
     newName: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
     newTag: master
-  - name: csi-provisioner
-    newName: k8s.gcr.io/sig-storage/csi-provisioner
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
     # newTag:
   - name: k8s.gcr.io/sig-storage/livenessprobe
     newName: docker.repo.eng.netapp.com/sig-storage/livenessprobe

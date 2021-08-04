@@ -48,6 +48,18 @@ spec:
         name: ""
         version: v1
       specDescriptors:
+      - description: Defaults to docker.io/netapp/beegfs-csi-driver:<the operator
+          version>.
+        displayName: BeeGFS CSI Driver
+        path: containerImageOverrides.beegfsCsiDriver
+      - description: Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the
+          most current version at operator release>.
+        displayName: CSI Node Driver Registrar
+        path: containerImageOverrides.csiNodeDriverRegistrar
+      - description: Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the most
+          current version at operator release>.
+        displayName: CSI Provisioner
+        path: containerImageOverrides.csiProvisioner
       - displayName: Default Config
         path: pluginConfig.config
       - description: A map of additional key value pairs matching key value pairs

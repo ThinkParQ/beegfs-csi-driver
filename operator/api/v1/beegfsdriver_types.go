@@ -32,8 +32,9 @@ type BeegfsDriverSpec struct {
 	// to the deployment documentation. If no name is provided, a default empty secret named csi-beegfs-connauth will
 	// be created.
 	// TODO(webere, A259): Remove this field.
-	ConnAuthSecretName   string               `json:"connAuthSecretName,omitempty"`
-	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
+	ConnAuthSecretName      string                  `json:"connAuthSecretName,omitempty"`
+	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
+	PluginConfigFromFile    PluginConfigFromFile    `json:"pluginConfig,omitempty"`
 }
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver
@@ -79,6 +80,30 @@ type BeegfsDriverList struct {
 
 func init() {
 	SchemeBuilder.Register(&BeegfsDriver{}, &BeegfsDriverList{})
+}
+
+// A structure that allows for default container images and tags to be overridden. Use it in air-gapped networks,
+// networks with private registry mirrors, or to pin a particular container version. Unless otherwise noted, versions
+// other than the default are not supported.
+type ContainerImageOverrides struct {
+	// Defaults to docker.io/netapp/beegfs-csi-driver:<the operator version>.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="BeeGFS CSI Driver"
+	BeegfsCsiDriver ContainerImageOverride `json:"beegfsCsiDriver"`
+	// Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the most current version at operator release>.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Node Driver Registrar"
+	CsiNodeDriverRegistrar ContainerImageOverride `json:"csiNodeDriverRegistrar"`
+	// Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the most current version at operator release>.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Provisioner"
+	CsiProvisioner ContainerImageOverride `json:"csiProvisioner"`
+	// Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the most current version at operator release>.
+	LivenessProbe ContainerImageOverride `json:"livenessProbe"`
+}
+
+type ContainerImageOverride struct {
+	// A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner or docker.io/netapp/beegfs-csi-driver).
+	Image string `json:"image"`
+	// A tag (e.g. v2.2.2 or latest).
+	Tag string `json:"tag"`
 }
 
 // The primary configuration structure containing all of the custom configuration (beegfs-client.conf keys/values and

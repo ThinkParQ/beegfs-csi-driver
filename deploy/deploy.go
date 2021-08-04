@@ -17,6 +17,7 @@ package deploy
 import (
 	"bytes"
 	_ "embed"
+
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +37,16 @@ var dsBytes []byte
 
 //go:embed base/csi-beegfs-controller-rbac.yaml
 var rbacBytes []byte
+
+// These are expected container names within the Stateful Set and Daemon Set manifests. Some operator logic is based
+// off the expectation that containers have these names. deploy_test.go attempts to ensure that a developer can not
+// change these names without understanding that operator code must be refactored.
+const (
+	ContainerNameBeegfsCsiDriver        = "beegfs"
+	ContainerNameCsiNodeDriverRegistrar = "node-driver-registrar"
+	ContainerNameCsiProvisioner         = "csi-provisioner"
+	ContainerNameLivenessProbe          = "liveness-probe"
+)
 
 // GetControllerServiceRBAC returns a pointer to a Cluster Role, a pointer to a Cluster Role Binding, and a pointer
 // to a Service Account contained in the embedded RBAC manifest. GetControllerServiceRBAC returns an error if it finds

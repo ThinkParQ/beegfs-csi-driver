@@ -22,9 +22,8 @@ These are/were some make commands used to deploy and test.
             export USERNAME=<sso_username>
             export IMAGE_TAG_BASE=docker.repo.eng.netapp.com/$USERNAME/beegfs-csi-driver-operator
 
-            make bundle
-            make docker-build docker-push
-            make bundle-build bundle-push
+            make build docker-build docker-push
+            make bundle bundle-build bundle-push
 
         Add a "-C operator" after "make" if inside project root directory instead.
 
