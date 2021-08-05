@@ -47,7 +47,7 @@ configuration](deployment.md#managing-beegfs-client-configuration).
 
 To enable quotas append `quotaEnabled: true` under `beegfsClientConf` in the
 appropriate section of your BeeGFS CSI driver configuration file (for Kubernetes
-this is at `deploy/prod/csi-beegfs-config.yaml`). The appropriate section
+this is at `deploy/k8s/prod/csi-beegfs-config.yaml`). The appropriate section
 depends if you want it to apply to all BeeGFS file systems, specific file
 systems, or specific clients. See [General
 Configuration](deployment.md#general-configuration) for full details. The
@@ -67,7 +67,7 @@ fileSystemSpecificConfigs:
         quotaEnabled: true
 ```
 
-When deploying to Kubernetes run `kubectl apply -k deploy/prod/` to deploy the
+When deploying to Kubernetes run `kubectl apply -k deploy/k8s/prod/` to deploy the
 driver or update an existing deployment. Note the changes will only take effect
 for new BeeGFS volumes, or when existing volumes are remounted, for example if a
 pod moves between nodes. For any volumes that don't have this setting enabled,

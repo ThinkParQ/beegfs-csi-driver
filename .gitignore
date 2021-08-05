@@ -2,5 +2,5 @@
 *.swp
 .idea/
 ignored/
-deploy/dev/kustomization.yaml
+deploy/k8s/dev/kustomization.yaml
 junit/

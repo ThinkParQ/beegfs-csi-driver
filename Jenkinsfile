@@ -293,10 +293,10 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
     }
 
     def jobID = "${k8sCluster}-${beegfsHost}"
-    // Per documentation, always make kustomizations in deploy/prod.
+    // Per documentation, always make kustomizations in deploy/k8s/prod.
     sh """
         cp -r deploy/ deploy-${jobID}/
-        (cd deploy-${jobID}/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
+        (cd deploy-${jobID}/k8s/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
     """
     lock(resource: "${k8sCluster}") {
         // Credentials variables are always local to the withCredentials block, so multiple
@@ -311,21 +311,21 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
 
             try {
                 // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
-                // running on the cluster. We can't simply delete using -k deploy/prod/ because a previous
+                // running on the cluster. We can't simply delete using -k deploy/k8s/prod/ because a previous
                 // user might have deployed the driver using a different deployment scheme.
                 sh """
                     echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
                     kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
                     kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
-                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy-${jobID}/prod/csi-beegfs-config.yaml
-                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy-${jobID}/prod/csi-beegfs-connauth.yaml
-                    kubectl apply -k deploy-${jobID}/${deployDir}/
+                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy-${jobID}/k8s/prod/csi-beegfs-config.yaml
+                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy-${jobID}/k8s/prod/csi-beegfs-connauth.yaml
+                    kubectl apply -k deploy-${jobID}/k8s/${deployDir}/
                     ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID} -static-vol-dir-name ${staticVolDirName}
                     ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID} -static-vol-dir-name ${staticVolDirName}
-                    kubectl delete --cascade=foreground -k deploy-${jobID}/${deployDir}/
+                    kubectl delete --cascade=foreground -k deploy-${jobID}/k8s/${deployDir}/
                 """
             } catch (err) {
-                sh "kubectl delete --cascade=foreground -k deploy-${jobID}/${deployDir}/ || true"
+                sh "kubectl delete --cascade=foreground -k deploy-${jobID}/k8s/${deployDir}/ || true"
                 throw err
             }
         }
