@@ -6,4 +6,4 @@
 kind: BeegfsDriver
 apiVersion: beegfs.csi.netapp.com/v1
 metadata:
-  name: test-driver
+  name: csi-beegfs-cr  # CR must have this name.

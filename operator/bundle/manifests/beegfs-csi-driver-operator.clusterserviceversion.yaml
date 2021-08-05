@@ -8,11 +8,9 @@ metadata:
           "apiVersion": "beegfs.csi.netapp.com/v1",
           "kind": "BeegfsDriver",
           "metadata": {
-            "name": "beegfsdriver-sample"
+            "name": "csi-beegfs-cr"
           },
-          "spec": {
-            "foo": "bar"
-          }
+          "spec": null
         }
       ]
     capabilities: Seamless Upgrades

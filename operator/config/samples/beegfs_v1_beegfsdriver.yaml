@@ -1,7 +1,6 @@
 apiVersion: beegfs.csi.netapp.com/v1
 kind: BeegfsDriver
 metadata:
-  name: beegfsdriver-sample
+  name: csi-beegfs-cr
 spec:
-  # Add fields here
-  foo: bar
+  # TODO(webere, A264): Fill this sample out.
