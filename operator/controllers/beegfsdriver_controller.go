@@ -581,7 +581,7 @@ func getImageStringWithOverride(imageWithTag string, override beegfsv1.Container
 }
 
 // setLogLevel sets the value of the environment variable LOG_LEVEL to level for any Container in containers. If a
-// Container does not have the environment variable LOG_LEVEL, setLogLevel does nothing. If level = 0, setLogLevel
+// Container does not have the environment variable LOG_LEVEL, setLogLevel does nothing. If level is nil, setLogLevel
 // does nothing. The ultimate result is that all containers with a configurable logging level in the deployment
 // manifest will log at the specified level.
 func setLogLevel(log logr.Logger, level *int, containers []corev1.Container) {

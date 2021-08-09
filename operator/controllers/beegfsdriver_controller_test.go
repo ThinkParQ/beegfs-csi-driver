@@ -87,7 +87,9 @@ var _ = Describe("Basic controller unit tests", func() {
 				}},
 				// Container with multiple environment variables.
 				{Env: []corev1.EnvVar{
-					{Name: "NOT_LOG_LEVEL", Value: "we don't care"},
+					{Name: "SOME_OTHER_VARIABLE", Value: "we don't care"},
+					{Name: "SOME_PREFIX_LOG_LEVEL", Value: "we don't care"},
+					{Name: "LOG_LEVEL_SOME_SUFFIX", Value: "we don't care"},
 					{Name: "LOG_LEVEL", Value: "3"},
 				}},
 			}
@@ -104,6 +106,15 @@ var _ = Describe("Basic controller unit tests", func() {
 					}
 				}
 			})
+			It("should not modify other variables", func() {
+				for _, container := range containers {
+					for _, envVar := range container.Env {
+						if envVar.Name != "LOG_LEVEL" {
+							Expect(envVar.Value).To(Equal("we don't care"))
+						}
+					}
+				}
+			})
 		})
 
 		Context("When logLevel is set", func() {
@@ -114,6 +125,15 @@ var _ = Describe("Basic controller unit tests", func() {
 					for _, envVar := range container.Env {
 						if envVar.Name == "LOG_LEVEL" {
 							Expect(envVar.Value).To(Equal("5"))
+						}
+					}
+				}
+			})
+			It("should not modify other variables", func() {
+				for _, container := range containers {
+					for _, envVar := range container.Env {
+						if envVar.Name != "LOG_LEVEL" {
+							Expect(envVar.Value).To(Equal("we don't care"))
 						}
 					}
 				}

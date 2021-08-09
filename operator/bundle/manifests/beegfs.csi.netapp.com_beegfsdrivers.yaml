@@ -92,8 +92,10 @@ spec:
                 type: object
               logLevel:
                 description: The logging level of deployed containers expressed as
-                  an integer from 0 (low detail) to 5 (high detail). Empty results
-                  in the BeeGFS CSI driver project default.
+                  an integer from 0 (low detail) to 5 (high detail). 0 only logs errors.
+                  3 logs most RPC requests/responses and some detail about driver
+                  actions. 5 logs all RPC requests/responses, including redundant/frequently
+                  occurring ones. Empty defaults to level 3.
                 maximum: 5
                 minimum: 0
                 type: integer
