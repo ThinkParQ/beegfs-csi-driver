@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -193,6 +194,45 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Handle finalizers, either by adding them if they are missing or executing on them if the CR is being deleted.
+
+	// Some resources needed by the BeeGFS CSI driver are cluster-scoped. These resources cannot be owned by our
+	// namespace-scoped CRD and thus cannot be garbage collected. This finalizer enables us to manually delete these
+	// cluster-scoped resources before garbage collection occurs.
+	const clusterResourceDeletionFinalizer = "beegfs.csi.netapp.com/clusterResourceDeletion"
+
+	if driver.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The CR is not being deleted. Let's add our finalizer and update it if necessary.
+		if !containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
+			controllerutil.AddFinalizer(driver, clusterResourceDeletionFinalizer)
+			log.Info("Adding finalizer", "finalizer", clusterResourceDeletionFinalizer)
+			if err = r.Update(ctx, driver); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		// The CR is being deleted. Execute on our finalizer by deleting cluster-scoped resources.
+		if containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
+			log.Info("Deleting cluster-scoped objects")
+			if err = r.Delete(ctx, cr); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if err = r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if err = r.Delete(ctx, d); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(driver, clusterResourceDeletionFinalizer)
+			if err = r.Update(ctx, driver); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		// There is no point in continuing to reconcile a deleting CR.
+		return ctrl.Result{}, nil
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
