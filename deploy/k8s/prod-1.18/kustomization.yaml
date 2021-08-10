@@ -3,7 +3,7 @@
 
 # Use this file for an out-of-the-box deployment to kube-system (assuming working access to k8s.gcr.io) on a v1.18
 # cluster. Do NOT make modifications to this kustomization.yaml file or any other file in this directory. Instead, make
-# modifications in the ../prod directory and deploy with "kubectl apply -k deploy/prod-1.18" (the prod-1.18 deployment
+# modifications in the ../prod directory and deploy with "kubectl apply -k deploy/k8s/prod-1.18" (the prod-1.18 deployment
 # will pick up all modifications).
 
 apiVersion: kustomize.config.k8s.io/v1beta1

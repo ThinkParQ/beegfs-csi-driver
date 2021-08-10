@@ -38,7 +38,7 @@ of this file is not currently supported without changing kustomization files.
 
 ### Kubernetes Deployment
 <a name="kubernetes-deployment"></a>
-Deployment manifests are provided in this repository under *deploy/* along with
+Deployment manifests are provided in this repository under *deploy/k8s/* along with
 a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply
 -k` (kustomize). 
 
@@ -47,25 +47,25 @@ Steps:
   to deploy the BeeGFS CSI driver clone this repository: `git clone
   https://github.com/NetApp/beegfs-csi-driver.git`
 * If you wish to modify the default BeeGFS client configuration fill in the
-  empty ConfigMap at *deploy/prod/csi-beegfs-config.yaml*.
+  empty ConfigMap at *deploy/k8s/prod/csi-beegfs-config.yaml*.
   * An example ConfigMap is provided at
-    *deploy/prod/csi-beegfs-config-example.yaml*. Please see the section on
+    *deploy/k8s/prod/csi-beegfs-config-example.yaml*. Please see the section on
     [Managing BeeGFS Client
     Configuration](#managing-beegfs-client-configuration) for full details. 
 * If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) 
-  fill in the empty Secret config file at *deploy/prod/csi-beegfs-connauth.yaml*.
+  fill in the empty Secret config file at *deploy/k8s/prod/csi-beegfs-connauth.yaml*.
   * An example Secret config file is provided at 
-  *deploy/prod/csi-beegfs-connauth-example.yaml*. Please see the section on 
+  *deploy/k8s/prod/csi-beegfs-connauth-example.yaml*. Please see the section on 
   [ConnAuth Configuration](#connauth-configuration) for full details. 
 * Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
-  `kubectl apply -k deploy/prod`
+  `kubectl apply -k deploy/k8s/prod`
   * Note by default the beegfs-csi-driver image will be pulled from
     [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver). See [this
     section](#air-gapped-kubernetes-deployment) for guidance deploying in
     offline environments.
   * Note that some supported Kubernetes versions may require modified 
-    deployment manifests. Use a version specific overlay from the *deploy/prod* 
-    directory as necessary (e.g. `kubectl apply -k deploy/prod-1.18`).
+    deployment manifests. Use a version specific overlay from the *deploy/k8s/prod* 
+    directory as necessary (e.g. `kubectl apply -k deploy/k8s/prod-1.18`).
 * Verify all components are installed and operational: `kubectl get pods -n
   kube-system | grep csi-beegfs`
 
@@ -75,7 +75,7 @@ Example command outputs:
 -> kubectl cluster-info
 Kubernetes control plane is running at https://some.fqdn.or.ip:6443
 
--> kubectl apply -k deploy/prod
+-> kubectl apply -k deploy/k8s/prod
 serviceaccount/csi-beegfs-controller-sa created
 clusterrole.rbac.authorization.k8s.io/csi-beegfs-provisioner-role created
 clusterrolebinding.rbac.authorization.k8s.io/csi-beegfs-provisioner-binding created
@@ -106,7 +106,7 @@ environments where Kubernetes nodes do not have internet access.
 
 Deploying the CSI driver involves pulling multiple Docker images from various
 Docker registries. You must either ensure all necessary images (see
-*deploy/prod/kustomization.yaml* for a complete list) are available on all
+*deploy/k8s/prod/kustomization.yaml* for a complete list) are available on all
 nodes, or ensure they can be pulled from some internal registry.
 
 If your air-gapped environment does not have a DockerHub mirror, one option is
@@ -116,8 +116,8 @@ with [docker save](https://docs.docker.com/engine/reference/commandline/save/)
 so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker
 load](https://docs.docker.com/engine/reference/commandline/load/).
 
-Once the images are available, either modify *deploy/prod/kustomization.yaml* or
-copy *deploy/prod/* to a new directory (e.g. *deploy/internal*). Adjust the
+Once the images are available, either modify *deploy/k8s/prod/kustomization.yaml* or
+copy *deploy/k8s/prod/* to a new directory (e.g. *deploy/k8s/internal*). Adjust the
 `images[].newTag` fields as necessary to ensure they either match images that
 exist on the Kubernetes nodes or reference your internal registry. Then follow
 the above commands for Kubernetes deployment.
@@ -143,18 +143,18 @@ Storage
 storage-node [ID: 1]: reachable at storage.some.fdqn.or.ip:8003 (protocol: TCP)
 ```
 
-Modify *examples/dyn/dyn-sc.yaml* such that `parameters`:
+Modify *examples/k8s/dyn/dyn-sc.yaml* such that `parameters`:
 - `sysMgmtdHost` is set to an appropriate value (e.g. `mgmtd.some.fqdn.or.ip` in
   the output above)
 - `volDirBasePath` contains a k8s cluster `name` that is unique to this k8s
   cluster among all k8s clusters accessing this BeeGFS file system.
 
 From the project directory, deploy the application files found in the
-*examples/dyn/* directory, including a Storage Class, a PVC, and a pod which
+*examples/k8s/dyn/* directory, including a Storage Class, a PVC, and a pod which
 mounts a volume using the BeeGFS CSI driver:
 
 ```bash
--> kubectl apply -f examples/dyn
+-> kubectl apply -f examples/k8s/dyn
 storageclass.storage.k8s.io/csi-beegfs-dyn-sc created
 persistentvolumeclaim/csi-beegfs-dyn-pvc created
 pod/csi-beegfs-dyn-app created
@@ -277,7 +277,7 @@ touched-by-9154aace-65a3-495d-8266-38eb0b564ddd
 Next Steps:
 * For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md)
   documentation.
-* For additional examples see *examples/README.md*. 
+* For additional examples see *examples/k8s/README.md*. 
 
 ## Managing BeeGFS Client Configuration
 <a name="managing-beegfs-client-configuration"></a>
@@ -311,7 +311,7 @@ configuration than others. This requirement can be handled in one of two ways:
 2. The administrator creates one global configuration file with a
    `nodeSpecificConfigs` section and specifies the `--node-id` CLI flag on each
    node when starting the driver.
-     * Note: Deploying to Kubernetes using the provided manifests in deploy/
+     * Note: Deploying to Kubernetes using the provided manifests in deploy/k8s/
        handles setting this flag and deploying a ConfigMap representing this
        global configuration file.  
 
@@ -421,18 +421,18 @@ driver on all nodes.
 
 * To pass custom configuration to the driver, add the desired parameters from
 [General Configuration](#general-configuration) to
-  *deploy/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. 
+  *deploy/k8s/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. 
   The resulting deployment will automatically include a correctly formed 
-  ConfigMap. See *deploy/prod/csi-beegfs-config-example.yaml* for an example 
+  ConfigMap. See *deploy/k8s/prod/csi-beegfs-config-example.yaml* for an example 
   file.
 * To pass connAuth configuration to the driver, modify
-  *deploy/prod/csi-beegfs-connauth.yaml* (or another overlay) before deploying. 
+  *deploy/k8s/prod/csi-beegfs-connauth.yaml* (or another overlay) before deploying. 
   The resulting deployment will automatically include a correctly formed
-  Secret. See *deploy/prod/csi-beegfs-config-connauth-example.yaml* for an 
+  Secret. See *deploy/k8s/prod/csi-beegfs-config-connauth-example.yaml* for an 
   example file.
 
 To update configuration after initial deployment, modify
-*deploy/prod/csi-beegfs-config.yaml* or *deploy/prod/csi-beegfs-connauth.yaml*
+*deploy/k8s/prod/csi-beegfs-config.yaml* or *deploy/k8s/prod/csi-beegfs-connauth.yaml*
 and repeat the kubectl deployment step from [Kubernetes Deployment](#kubernetes-deployment). 
 Kustomize will automatically update all components and restart the driver on 
 all nodes so that it picks up the latest changes.
@@ -535,4 +535,4 @@ cluster you want to remove the BeeGFS CSI driver from:
 * Set the working directory to the beegfs-csi-driver repository containing the
   manifests used to deploy the driver.
 * Run the following command to remove the driver: `kubectl delete -k
-  deploy/prod`
+  deploy/k8s/prod`

@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/netapp/beegfs-csi-driver/deploy"
+	"github.com/netapp/beegfs-csi-driver/deploy/k8s"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

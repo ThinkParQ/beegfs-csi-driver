@@ -89,14 +89,14 @@ through the full [deployment guide](docs/deployment.md).
    to deploy the BeeGFS CSI driver clone this repository: `git clone
    https://github.com/NetApp/beegfs-csi-driver.git`
 2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
-   `kubectl apply -k deploy/prod`
+   `kubectl apply -k deploy/k8s/prod`
     * Note by default the beegfs-csi-driver image will be pulled from
       [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
 3. Verify all components are installed and operational: `kubectl get pods -n
    kube-system | grep csi-beegfs`
 
 As a one-liner: `git clone https://github.com/NetApp/beegfs-csi-driver.git && cd
-beegfs-csi-driver && kubectl apply -k deploy/prod && kubectl get pods -n
+beegfs-csi-driver && kubectl apply -k deploy/k8s/prod && kubectl get pods -n
 kube-system | grep csi-beegfs`
 
 Provided all Pods are running the driver is now ready for use. See the following
@@ -130,7 +130,7 @@ directory to Kubernetes users and applications.
 
 ### Examples
 <a name="examples"></a>
-[Example Kubernetes manifests](examples/README.md) of how to use the driver are
+[Example Kubernetes manifests](examples/k8s/README.md) of how to use the driver are
 provided. These are meant to be repurposed to simplify creating objects related
 to the driver including Storage Classes, Persistent Volumes, and Persistent
 Volume Claims in your environment.

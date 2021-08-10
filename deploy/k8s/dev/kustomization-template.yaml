@@ -4,9 +4,9 @@
 # This file is a template for dev deployments. Do NOT make local changes to this file unless they would apply
 # to all developers (e.g. the addition of a new resource).
 
-# Copy this file to deploy/dev/kustomization.yaml and define any custom configuration required for your dev deployment.
-# deploy/dev/kustomization.yaml is .gitignored and is safe to modify. When deploy/dev/kustomization-template.yaml
-# changes, consider incorporating the changes into your local deploy/dev/kustomization.yaml.
+# Copy this file to deploy/k8s/dev/kustomization.yaml and define any custom configuration required for your dev deployment.
+# deploy/k8s/dev/kustomization.yaml is .gitignored and is safe to modify. When deploy/k8s/dev/kustomization-template.yaml
+# changes, consider incorporating the changes into your local deploy/k8s/dev/kustomization.yaml.
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
