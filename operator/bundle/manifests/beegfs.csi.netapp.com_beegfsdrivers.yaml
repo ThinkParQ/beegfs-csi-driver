@@ -34,13 +34,6 @@ spec:
           spec:
             description: BeegfsDriverSpec defines the desired state of BeegfsDriver
             properties:
-              connAuthSecretName:
-                description: 'The name of a Kubernetes Secret (in this namespace)
-                  containing BeeGFS connauth information formatted according to the
-                  deployment documentation. If no name is provided, a default empty
-                  secret named csi-beegfs-connauth will be created. TODO(webere, A259):
-                  Remove this field.'
-                type: string
               containerImageOverrides:
                 description: A structure that allows for default container images
                   and tags to be overridden. Use it in air-gapped networks, networks
@@ -97,6 +90,15 @@ spec:
                         type: string
                     type: object
                 type: object
+              logLevel:
+                description: The logging level of deployed containers expressed as
+                  an integer from 0 (low detail) to 5 (high detail). 0 only logs errors.
+                  3 logs most RPC requests/responses and some detail about driver
+                  actions. 5 logs all RPC requests/responses, including redundant/frequently
+                  occurring ones. Empty defaults to level 3.
+                maximum: 5
+                minimum: 0
+                type: integer
               pluginConfig:
                 description: The top level configuration structure containing default
                   configuration (applied to all file systems on all nodes), file system

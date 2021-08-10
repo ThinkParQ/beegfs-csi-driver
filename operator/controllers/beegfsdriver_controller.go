@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -231,54 +232,30 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	//   - Pre-create a Secret with the default name.
 	//   - Pre-create a Secret with a different name and provide ConnAuthSecretName.
 	//   - Update the default Secret (this is somewhat unintuitive, as it involves pasting a base64 encoded .yaml file).
-	sName := "csi-beegfs-connauth" // This is the default name.
-	if len(driver.Spec.ConnAuthSecretName) > 0 {
-		sName = driver.Spec.ConnAuthSecretName
-	}
 	s := new(corev1.Secret)
-	mustUpdate := false
-	err = r.Get(ctx, types.NamespacedName{Name: sName, Namespace: req.Namespace}, s)
+	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-connauth", Namespace: req.Namespace}, s)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
-			if sName == "csi-beegfs-connauth" {
-				// We are using the default Secret name and no such Secret exists. Lets create an empty Secret.
-				s = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: sName,
-					},
-					Data: map[string][]byte{"csi-beegfs-connauth.yaml": nil},
-				}
-				if _, err = r.setCommonObjectMetadata(req, driver, s); err != nil { // We will create, not update.
-					return ctrl.Result{}, err
-				}
-				log.Info("Creating Secret")
-				err = r.Create(ctx, s)
-				if err != nil {
-					log.Error(err, "Failed to create Secret")
-					return ctrl.Result{}, err
-				}
-			} else {
-				// We are using a non-default Secret name and no such Secret exists. Lets populate the name so other
-				// things don't break in this reconcile loop. Eventually the controller and node Pods will fail to
-				// start because the Secret is missing.
-				s.Name = sName
+			// The Secret doesn't exist. Let's create it.
+			s = newSecret()
+			if _, err = r.setCommonObjectMetadata(req, driver, s); err != nil { // We will create, not update.
+				return ctrl.Result{}, err
 			}
-		}
-	} else if sName != "csi-beegfs-connauth" {
-		// We found the Secret using its non-default name. We may need to update its controller reference. If we don't
-		// own the Secret, we won't be notified if it is updated.
-		mustUpdate, err = r.setCommonObjectMetadata(req, driver, s)
-		if err != nil {
-			return ctrl.Result{}, err
-		} else if mustUpdate {
-			log.Info("Updating Secret")
-			if err = r.Update(ctx, s); err != nil {
-				log.Error(err, "Failed to update Secret")
+			log.Info("Creating Secret")
+			err = r.Create(ctx, s)
+			if err != nil {
+				log.Error(err, "Failed to create Secret")
 				return ctrl.Result{}, err
 			}
 		}
+	} else {
+		// Intentionally empty.
+		// Many of the other objects created by this controller may need to be updated to keep them in sync with the
+		// CRD. We expect the Secret to be updated manually and have no meaningful changes to make here. Note that we
+		// explicitly do NOT call setCommonObjectMetadata to add a controller reference to the Secret. If it was pre-
+		// created by something other than the driver, we do not take ownership of it and do not garbage collect it.
 	}
 
 	// Get RBAC related default objects in case we need them.
@@ -377,6 +354,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
 	setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
+	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
@@ -405,6 +383,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
 	setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
+	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
@@ -475,6 +454,16 @@ func setConfigMapData(driver *beegfsv1.BeegfsDriver, cm *corev1.ConfigMap) (bool
 	}
 
 	return mustUpdate, nil
+}
+
+func newSecret() *corev1.Secret {
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "csi-beegfs-connauth",
+		},
+		Data: map[string][]byte{"csi-beegfs-connauth.yaml": nil},
+	}
+	return s
 }
 
 // setCommonObjectMetadata can be used on any namespaced Kubernetes object to ensure that:
@@ -589,4 +578,22 @@ func getImageStringWithOverride(imageWithTag string, override beegfsv1.Container
 	}
 
 	return fmt.Sprintf("%s:%s", image, tag)
+}
+
+// setLogLevel sets the value of the environment variable LOG_LEVEL to level for any Container in containers. If a
+// Container does not have the environment variable LOG_LEVEL, setLogLevel does nothing. If level is nil, setLogLevel
+// does nothing. The ultimate result is that all containers with a configurable logging level in the deployment
+// manifest will log at the specified level.
+func setLogLevel(log logr.Logger, level *int, containers []corev1.Container) {
+	if level == nil {
+		return
+	}
+	log.V(5).Info("Setting log level in all Containers", "level", level)
+	for i, container := range containers {
+		for j, envVar := range container.Env {
+			if envVar.Name == "LOG_LEVEL" {
+				containers[i].Env[j].Value = strconv.Itoa(*level)
+			}
+		}
+	}
 }

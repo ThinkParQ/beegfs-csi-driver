@@ -28,13 +28,14 @@ import (
 type BeegfsDriverSpec struct {
 	// TODO(webere, A259): Add additional fields.
 
-	// The name of a Kubernetes Secret (in this namespace) containing BeeGFS connauth information formatted according
-	// to the deployment documentation. If no name is provided, a default empty secret named csi-beegfs-connauth will
-	// be created.
-	// TODO(webere, A259): Remove this field.
-	ConnAuthSecretName      string                  `json:"connAuthSecretName,omitempty"`
 	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
-	PluginConfigFromFile    PluginConfigFromFile    `json:"pluginConfig,omitempty"`
+	//+kubebuilder:validation:Minimum:=0
+	//+kubebuilder:validation:Maximum:=5
+	// The logging level of deployed containers expressed as an integer from 0 (low detail) to 5 (high detail). 0
+	// only logs errors. 3 logs most RPC requests/responses and some detail about driver actions. 5 logs all RPC
+	// requests/responses, including redundant/frequently occurring ones. Empty defaults to level 3.
+	LogLevel             *int                 `json:"logLevel,omitempty"` // Pointer per https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#optional-vs-required.
+	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
 }
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver

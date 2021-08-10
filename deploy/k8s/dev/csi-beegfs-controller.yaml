@@ -13,5 +13,5 @@ spec:
         - name: beegfs
           imagePullPolicy: Always
           env:
-            - name: LOG_LEVEL_ARG
-              value: -v=3
+            - name: LOG_LEVEL
+              value: '3'

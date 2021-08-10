@@ -18,9 +18,12 @@ spec:
         - name: node-driver-registrar
           image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.2.0
           args:
-            - --v=5
             - --csi-address=/csi/csi.sock
             - --kubelet-registration-path=/var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
+            - -v=$(LOG_LEVEL)
+          env:
+            - name: LOG_LEVEL
+              value: '3'
           securityContext:
             # This is necessary only for systems with SELinux, where
             # non-privileged sidecar containers cannot access unix domain socket
@@ -40,15 +43,15 @@ spec:
             - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
-            - $(LOG_LEVEL_ARG)
+            - -v=$(LOG_LEVEL)
           env:
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-            - name: LOG_LEVEL_ARG
-              value: -v=3
+            - name: LOG_LEVEL
+              value: '3'
           securityContext:
             # Privileged is required for bidirectional mount propagation and to run the mount command.
             # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
