@@ -113,18 +113,18 @@ type ContainerImageOverride struct {
 type BeegfsConfig struct {
 	// A list of interfaces the BeeGFS client service can communicate over (e.g. "ib0" or "eth0"). Often not required.
 	// See beegfs-client.conf for more details.
-	ConnInterfaces []string `yaml:"connInterfaces" json:"connInterfaces"`
+	ConnInterfaces []string `yaml:"connInterfaces" json:"connInterfaces,omitempty"`
 	// A list of subnets the BeeGFS client service can use for outgoing communication (e.g. "10.10.10.10/24"). Often
 	// not required. See beegfs-client.conf for more details.
-	ConnNetFilter []string `yaml:"connNetFilter" json:"connNetFilter"`
+	ConnNetFilter []string `yaml:"connNetFilter" json:"connNetFilter,omitempty"`
 	// A list of subnets in which RDMA communication can/should not be established (e.g. "10.10.10.11/24"). Often not
 	// required. See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Conn TCP Only Filter"
-	ConnTcpOnlyFilter []string `yaml:"connTcpOnlyFilter" json:"connTcpOnlyFilter"`
+	ConnTcpOnlyFilter []string `yaml:"connTcpOnlyFilter" json:"connTcpOnlyFilter,omitempty"`
 	// A map of additional key value pairs matching key value pairs in the beegfs-client.conf file. See
 	// beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Additional beegfs-client.conf Parameters"
-	BeegfsClientConf map[string]string `yaml:"beegfsClientConf" json:"beegfsClientConf"`
+	BeegfsClientConf map[string]string `yaml:"beegfsClientConf" json:"beegfsClientConf,omitempty"`
 	ConnAuth         string            `yaml:"-" json:"-"` // Do not support unmarshalling from a configuration file.
 }
 
@@ -179,7 +179,7 @@ type NodeSpecificConfig struct {
 	// A list of file system specific configurations that override the default configuration for specific file systems
 	// on these nodes.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="File System Specific Configs for Nodes"
-	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs" json:"fileSystemSpecificConfigs"`
+	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs" json:"fileSystemSpecificConfigs,omitempty"`
 }
 
 // The configuration structure containing default configuration (applied to all file systems on all nodes) and file
@@ -190,7 +190,7 @@ type PluginConfig struct {
 	DefaultConfig BeegfsConfig `yaml:"config" json:"config"`
 	// A list of file system specific configurations that override the default configuration for specific file systems.
 	//+operator-sdk:csv:customresourcedefinitions:displayName="Default File System Specific Configs"
-	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs" json:"fileSystemSpecificConfigs"`
+	FileSystemSpecificConfigs []FileSystemSpecificConfig `yaml:"fileSystemSpecificConfigs" json:"fileSystemSpecificConfigs,omitempty"`
 }
 
 // The top level configuration structure containing default configuration (applied to all file systems on all nodes),
@@ -200,7 +200,7 @@ type PluginConfigFromFile struct {
 	PluginConfig `yaml:",inline" json:",inline"` // embedded structs must be inlined
 	// A list of node specific configurations that override file system specific configurations and the default
 	// configuration on specific nodes.
-	NodeSpecificConfigs []NodeSpecificConfig `yaml:"nodeSpecificConfigs" json:"nodeSpecificConfigs"`
+	NodeSpecificConfigs []NodeSpecificConfig `yaml:"nodeSpecificConfigs" json:"nodeSpecificConfigs,omitempty"`
 }
 
 // ConnAuthConfig associates a ConnAuth with a SysMgmtdHost.

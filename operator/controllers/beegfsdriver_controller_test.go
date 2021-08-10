@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/netapp/beegfs-csi-driver/deploy/k8s"
+	deploy "github.com/netapp/beegfs-csi-driver/deploy/k8s"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
