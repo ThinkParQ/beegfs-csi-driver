@@ -7,6 +7,7 @@
   * [Kubernetes Node Preparation](#kubernetes-node-preparation)
   * [Kubernetes Deployment](#kubernetes-deployment)
   * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
+  * [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
 * [Example Application Deployment](#example-application-deployment)
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
@@ -45,29 +46,35 @@ a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply
 Steps:
 * On a machine with kubectl and access to the Kubernetes cluster where you want
   to deploy the BeeGFS CSI driver clone this repository: `git clone
-  https://github.com/NetApp/beegfs-csi-driver.git`
+  https://github.com/NetApp/beegfs-csi-driver.git`.
+* Create a new kustomize overlay (changes made to the default overlay will be 
+  overwritten in subsequent driver versions): `cp deploy/k8s/overlays/default 
+  deploy/k8s/overlays/my-overlay`.
 * If you wish to modify the default BeeGFS client configuration fill in the
-  empty ConfigMap at *deploy/k8s/prod/csi-beegfs-config.yaml*.
+  empty ConfigMap at *deploy/k8s/overlays/my-overlay/csi-beegfs-config.yaml*.
   * An example ConfigMap is provided at
-    *deploy/k8s/prod/csi-beegfs-config-example.yaml*. Please see the section on
-    [Managing BeeGFS Client
+    *deploy/k8s/overlays/examples/csi-beegfs-config.yaml*. Please see the 
+    section on [Managing BeeGFS Client
     Configuration](#managing-beegfs-client-configuration) for full details. 
 * If you are using [BeeGFS Connection Based Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html) 
-  fill in the empty Secret config file at *deploy/k8s/prod/csi-beegfs-connauth.yaml*.
+  fill in the empty Secret config file at 
+  *deploy/k8s/overlays/my-overlay/csi-beegfs-connauth.yaml*.
   * An example Secret config file is provided at 
-  *deploy/k8s/prod/csi-beegfs-connauth-example.yaml*. Please see the section on 
-  [ConnAuth Configuration](#connauth-configuration) for full details. 
+    *deploy/k8s/overlays/examples/csi-beegfs-connauth.yaml*. Please see 
+    the section on [ConnAuth Configuration](#connauth-configuration) for full 
+    details. 
 * Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
-  `kubectl apply -k deploy/k8s/prod`
+  `kubectl apply -k deploy/k8s/overlays/my-overlay`.
   * Note by default the beegfs-csi-driver image will be pulled from
     [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver). See [this
     section](#air-gapped-kubernetes-deployment) for guidance deploying in
     offline environments.
   * Note that some supported Kubernetes versions may require modified 
-    deployment manifests. Use a version specific overlay from the *deploy/k8s/prod* 
-    directory as necessary (e.g. `kubectl apply -k deploy/k8s/prod-1.18`).
+    deployment manifests. Modify the `bases` field in 
+    *deploy/k8s/overlays/my-overlay* as necessary before deployment 
+    (e.g. `../../versions/v1.18`).
 * Verify all components are installed and operational: `kubectl get pods -n
-  kube-system | grep csi-beegfs`
+  kube-system | grep csi-beegfs`.
 
 Example command outputs: 
 
@@ -75,10 +82,12 @@ Example command outputs:
 -> kubectl cluster-info
 Kubernetes control plane is running at https://some.fqdn.or.ip:6443
 
--> kubectl apply -k deploy/k8s/prod
+-> kubectl apply -k deploy/k8s/overlays/my-overlay
 serviceaccount/csi-beegfs-controller-sa created
 clusterrole.rbac.authorization.k8s.io/csi-beegfs-provisioner-role created
 clusterrolebinding.rbac.authorization.k8s.io/csi-beegfs-provisioner-binding created
+configmap/csi-beegfs-config-h5f2662b6c created
+secret/csi-beegfs-connauth-9gkbdgchg9 created
 statefulset.apps/csi-beegfs-controller created
 daemonset.apps/csi-beegfs-node created
 csidriver.storage.k8s.io/beegfs.csi.netapp.com created
@@ -106,8 +115,9 @@ environments where Kubernetes nodes do not have internet access.
 
 Deploying the CSI driver involves pulling multiple Docker images from various
 Docker registries. You must either ensure all necessary images (see
-*deploy/k8s/prod/kustomization.yaml* for a complete list) are available on all
-nodes, or ensure they can be pulled from some internal registry.
+*deploy/k8s/overlays/default* for a complete list) are 
+available on all nodes, or ensure they can be pulled from some internal 
+registry.
 
 If your air-gapped environment does not have a DockerHub mirror, one option is
 pulling the necessary images from a machine with access to the internet
@@ -116,11 +126,26 @@ with [docker save](https://docs.docker.com/engine/reference/commandline/save/)
 so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker
 load](https://docs.docker.com/engine/reference/commandline/load/).
 
-Once the images are available, either modify *deploy/k8s/prod/kustomization.yaml* or
-copy *deploy/k8s/prod/* to a new directory (e.g. *deploy/k8s/internal*). Adjust the
-`images[].newTag` fields as necessary to ensure they either match images that
-exist on the Kubernetes nodes or reference your internal registry. Then follow
-the above commands for Kubernetes deployment.
+Once the images are available, modify *deploy/k8s/overlays/my-overlay* to point 
+to them. Adjust the `images[].newTag` fields as necessary to ensure they either 
+match images that exist on the Kubernetes nodes or reference your internal 
+registry. Then follow the above commands for Kubernetes deployment.
+
+### Upgrading to v1.2.0
+<a name="upgrade-1.2.0-kubernetes-deployment"></a>
+v1.2.0 includes changes to the structure of the deployment manifests. To upgrade
+from v1.1.0, follow these steps:
+
+1. If you have made changes to the csi-beegfs-config.yaml and/or
+   csi-beegfs-connauth.yaml files in the v1.1.0 *deploy/prod* directory, copy
+   these files.
+1. Check out v.1.2.0 of the project: `git checkout v1.2.0`.
+1. Create an overlay as described
+   in [Kubernetes Deployment](#kubernetes-deployment) (i.e. copy 
+   *deploy/k8s/overlays/default* to *deploy/k8s/overlays/my-overlay*).
+1. Paste the copied files into *deploy/k8s/overlays/my-overlay*. This will
+   overwrite the default (empty) files.
+1. Deploy the driver: `kubectl apply -k deploy/k8s/overlays/my-overlay`.
 
 ## Example Application Deployment
 <a name="example-application-deployment"></a>
@@ -421,19 +446,20 @@ driver on all nodes.
 
 * To pass custom configuration to the driver, add the desired parameters from
 [General Configuration](#general-configuration) to
-  *deploy/k8s/prod/csi-beegfs-config.yaml* (or another overlay) before deploying. 
+  *deploy/k8s/overlays/my-overlay/csi-beegfs-config.yaml* before deploying. 
   The resulting deployment will automatically include a correctly formed 
-  ConfigMap. See *deploy/k8s/prod/csi-beegfs-config-example.yaml* for an example 
-  file.
+  ConfigMap. See *deploy/k8s/overlays/examples/csi-beegfs-config.yaml* for an 
+  example file.
 * To pass connAuth configuration to the driver, modify
-  *deploy/k8s/prod/csi-beegfs-connauth.yaml* (or another overlay) before deploying. 
+  *deploy/k8s/overlays/my-overlay/csi-beegfs-connauth.yaml* before deploying. 
   The resulting deployment will automatically include a correctly formed
-  Secret. See *deploy/k8s/prod/csi-beegfs-config-connauth-example.yaml* for an 
+  Secret. See *deploy/k8s/overlays/examples/beegfs-config-connauth.yaml* for an 
   example file.
 
 To update configuration after initial deployment, modify
-*deploy/k8s/prod/csi-beegfs-config.yaml* or *deploy/k8s/prod/csi-beegfs-connauth.yaml*
-and repeat the kubectl deployment step from [Kubernetes Deployment](#kubernetes-deployment). 
+*deploy/k8s/overlays/my-overlay/csi-beegfs-config.yaml* or 
+*deploy/k8s/overlays/my-overlay/csi-beegfs-connauth.yaml* and repeat the 
+kubectl deployment step from [Kubernetes Deployment](#kubernetes-deployment). 
 Kustomize will automatically update all components and restart the driver on 
 all nodes so that it picks up the latest changes.
 
@@ -535,4 +561,4 @@ cluster you want to remove the BeeGFS CSI driver from:
 * Set the working directory to the beegfs-csi-driver repository containing the
   manifests used to deploy the driver.
 * Run the following command to remove the driver: `kubectl delete -k
-  deploy/k8s/prod`
+  deploy/k8s/overlays/my-overlay`

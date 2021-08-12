@@ -1,7 +1,0 @@
-# Copyright 2021 NetApp, Inc. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0.
-
-# Use this file as instructed in the ConnAuth Configuration section of ../../docs/deployment.md. See
-# ../prod/csi-beegfs-config-example.yaml for an example of what to put in this file. Kustomize will automatically
-# transform this file into a correct Secret readable by the deployed driver. If this file is left unmodified,
-# the driver will deploy correctly with no custom configuration.

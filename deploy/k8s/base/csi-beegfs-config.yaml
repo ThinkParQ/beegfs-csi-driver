@@ -1,5 +1,0 @@
-# Copyright 2021 NetApp, Inc. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0.
-
-# This file must exist for kustomization to work correctly, but it is intentionally empty. Do not add configuration to
-# this file. Instead modify csi-beegfs-config.yaml in an appropriate overlay (e.g. dev or prod).

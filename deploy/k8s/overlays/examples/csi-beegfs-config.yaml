@@ -3,7 +3,10 @@
 
 # This is a fairly complicated csi-beegfs-config.yaml representing a great need for custom configuration. Many
 # deployment environments need no custom configuration or very little custom configuration compared to this file. See
-# ../../docs/deplyoment.md for complete instructions on how to use the parameters in this file.
+# /docs/deployment.md for complete instructions on how to use the parameters in this file.
+
+# Editing this file directly has no effect. Either edit csi-beegfs-config.yaml in an overlay or copy this file on top
+# of csi-beegfs-config.yaml in an overlay.
 
 config:
   connInterfaces:

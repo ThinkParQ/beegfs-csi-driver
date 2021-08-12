@@ -2,7 +2,10 @@
 # Licensed under the Apache License, Version 2.0.
 
 # This is a fairly complicated csi-beegfs-connauth.yaml representing multiple file systems that each require a
-# connAuthFile for access. See ../../docs/deployment.md for complete instructions on how to use this file.
+# connAuthFile for access. See /docs/deployment.md for complete instructions on how to use this file.
+
+# Editing this file directly has no effect. Either edit csi-beegfs-connauth.yaml in an overlay or copy this file on top
+# of csi-beegfs-config.yaml in an overlay.
 
 - sysMgmtdHost: some.specific.file.system
   connAuth: some-secret

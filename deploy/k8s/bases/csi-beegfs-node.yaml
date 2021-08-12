@@ -1,5 +1,8 @@
 # Copyright 2021 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:

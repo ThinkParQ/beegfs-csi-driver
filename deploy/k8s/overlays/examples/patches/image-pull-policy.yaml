@@ -1,0 +1,27 @@
+# This file is ignored by default. Do one of the following to enable it:
+#  1) Move it to kustomize-patches and uncomment the reference to it in kustomize-patches/kustomization.yaml.
+#  2) Move it to an overlay and add a reference to it in overlay-<something>/kustomization.yaml.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-node
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always

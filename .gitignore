@@ -2,5 +2,7 @@
 *.swp
 .idea/
 ignored/
-deploy/k8s/dev/kustomization.yaml
+deploy/k8s/overlays/
+!deploy/k8s/overlays/default
+!deploy/k8s/overlays/default-dev
 junit/

@@ -1,5 +1,8 @@
 # Copyright 2021 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
@@ -19,14 +22,6 @@ spec:
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            # TODO(webere, A271): OpenShift cluster can NOT run the controller service on master nodes.
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: node-role.kubernetes.io/master
-                    operator: Exists
       hostNetwork: true # required to find an available connClientPortUDP on the host.
       containers:
         - name: csi-provisioner

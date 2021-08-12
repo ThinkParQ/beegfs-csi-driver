@@ -42,13 +42,14 @@ make REGISTRY_NAME="docker.repo.eng.netapp.com/${USER}" IMAGE_TAGS=devBranchName
 ```
 
 ## Developer Kubernetes Deployment
-Copy deploy/k8s/dev/kustomization-template.yaml to deploy/k8s/dev/kustomization.yaml 
-and edit it as necessary. deploy/k8s/dev/kustomization.yaml is .gitignored, so your 
+Create a new overlay by copying */deploy/k8s/overlays/default-dev/* to 
+*/deploy/k8s/overlays/dev/* (for example) and edit it as necessary. All new 
+directories in */deploy/k8s/overlays/* are .gitignored, so your 
 local changes won't be (and shouldn't be) included in Git commits. For example:
-* Change images\[beegfs-csi-driver\].newTag to whatever tag you are building and 
-  pushing.
-* Change images\[].newName to include whatever repo you can pull from.
-* Change namespace to whatever makes sense.
+* Change `images\[beegfs-csi-driver\].newTag` to whatever tag you are building 
+  and pushing.
+* Change `images\[].newName` to include whatever repo you can pull from.
+* Change `namespace` to whatever makes sense.
 
 You can also download/install kustomize and use "kustomize set ..." commands 
 either from the command line or in a script to modify your deployment as 
@@ -61,12 +62,13 @@ cluster and use "kubectl apply -k" (kustomize).
 -> kubectl cluster-info
 Kubernetes control plane is running at https://some.fqdn.or.ip:6443
 
--> kubectl apply -k deploy/k8s/dev
+-> kubectl apply -k deploy/k8s/overlays/dev
 serviceaccount/csi-beegfs-controller-sa created
 clusterrole.rbac.authorization.k8s.io/csi-beegfs-provisioner-role created
 clusterrolebinding.rbac.authorization.k8s.io/csi-beegfs-provisioner-binding created
+configmap/csi-beegfs-config-57mtcc98f4 created
+secret/csi-beegfs-connauth-m6k27kff96 created
 statefulset.apps/csi-beegfs-controller created
-statefulset.apps/csi-beegfs-socat created
 daemonset.apps/csi-beegfs-node created
 csidriver.storage.k8s.io/beegfs.csi.netapp.com created
 ```

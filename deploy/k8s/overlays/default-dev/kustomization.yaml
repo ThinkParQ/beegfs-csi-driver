@@ -1,0 +1,41 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+bases:
+  - ../../versions/latest  # Modify this to select a specific Kubernetes version.
+patchesStrategicMerge:
+  # See ../examples/patches for additional patch ideas.
+  - patches/image-pull-policy.yaml
+  - patches/node-affinity.yaml
+images:
+  - name: netapp/beegfs-csi-driver
+    newName: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
+    newTag: master
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
+    # newTag:
+  - name: k8s.gcr.io/sig-storage/livenessprobe
+    newName: docker.repo.eng.netapp.com/sig-storage/livenessprobe
+    # newTag:
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
+    # newTag:
+configMapGenerator:
+  # Kustomize will append a hash of the ConfigMap data to this name because it is considered "bad practice" to change
+  # the data held in a live ConfigMap. Kustomize will also change all references to this ConfigMap to include the hash.
+  # It will do this any time a "kubectl apply -k" is used in combination with changed config data, so StatefulSets,
+  # Deployments, etc. are updated and know about the latest changes.
+  - name: csi-beegfs-config
+    files:
+      - csi-beegfs-config.yaml
+secretGenerator:
+  # Kustomize will append a hash of the Secret data to this name because it is considered "bad practice" to change
+  # the data held in a live Secret. Kustomize will also change all references to this Secret to include the hash.
+  # It will do this any time a "kubectl apply -k" is used in combination with changed config data, so StatefulSets,
+  # Deployments, etc. are updated and know about the latest changes.
+  - name: csi-beegfs-connauth
+    files:
+      - csi-beegfs-connauth.yaml

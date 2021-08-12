@@ -26,16 +26,16 @@ import (
 	"sigs.k8s.io/yaml" // The "standard" gopkg.in/yaml.v2 decoder does not work for Kubernetes objects.
 )
 
-//go:embed base/csi-beegfs-controller.yaml
+//go:embed bases/csi-beegfs-controller.yaml
 var csBytes []byte
 
-//go:embed base/csi-beegfs-driverinfo.yaml
+//go:embed bases/csi-beegfs-driverinfo.yaml
 var driverBytes []byte
 
-//go:embed base/csi-beegfs-node.yaml
+//go:embed bases/csi-beegfs-node.yaml
 var dsBytes []byte
 
-//go:embed base/csi-beegfs-controller-rbac.yaml
+//go:embed bases/csi-beegfs-controller-rbac.yaml
 var rbacBytes []byte
 
 // These are expected container names within the Stateful Set and Daemon Set manifests. Some operator logic is based
