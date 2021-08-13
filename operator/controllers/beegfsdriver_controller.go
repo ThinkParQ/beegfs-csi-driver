@@ -329,7 +329,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				return ctrl.Result{}, err
 			}
 		}
-	} else if !equality.Semantic.DeepEqual(cr.Rules, cr.Rules) {
+	} else if !equality.Semantic.DeepEqual(cr.Rules, crFromCluster.Rules) {
 		// The Cluster Role on the cluster needs to be updated.
 		log.Info("Updating controller service Cluster Role")
 		if err = r.Update(ctx, cr); err != nil {
