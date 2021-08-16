@@ -1,0 +1,17 @@
+# The following patch makes the BeegfsDriver CRD a "singleton". It was not scaffolded and is not auto-generated. The
+# basic idea comes from https://github.com/kubernetes-sigs/kubebuilder/issues/1074.
+
+# The purpose of this patch is to ensure only ONE BeegfsDriver object can be created. This BeegfsDriver object must be
+# named "csi-beegfs-cr". A duplicate object or an object by any other name is rejected by the Kubernetes API server.
+
+# The scaffolded patches all use the strategic merge strategy, but the format of the v1 CustomResourceDefinition does
+# not allow for this (a strategic merge patch could only replace the entire spec.versions, but we want to modify
+# spec.version[0]).
+
+- op: add
+  path: /spec/versions/0/schema/openAPIV3Schema/properties/metadata/properties
+  value:
+    name:
+      type: string
+      pattern: ^csi-beegfs-cr$
+      description: Only one driver may exist on a cluster at a time. It MUST be named "csi-beegfs-cr".

@@ -8,11 +8,9 @@ metadata:
           "apiVersion": "beegfs.csi.netapp.com/v1",
           "kind": "BeegfsDriver",
           "metadata": {
-            "name": "beegfsdriver-sample"
+            "name": "csi-beegfs-cr"
           },
-          "spec": {
-            "foo": "bar"
-          }
+          "spec": null
         }
       ]
     capabilities: Seamless Upgrades
@@ -20,7 +18,7 @@ metadata:
     containerImage: netapp/beegfs-csi-driver-operator:latest
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
-    operators.operatorframework.io/builder: operator-sdk-v1.8.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.10.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/netapp/beegfs-csi-driver
     support: NetApp
