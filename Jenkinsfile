@@ -296,7 +296,7 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
     // Per documentation, always make kustomizations in deploy/k8s/prod.
     sh """
         cp -r deploy/ deploy-${jobID}/
-        (cd deploy-${jobID}/k8s/prod && ${HOME}/kustomize edit set image beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
+        (cd deploy-${jobID}/k8s/prod && ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
     """
     lock(resource: "${k8sCluster}") {
         // Credentials variables are always local to the withCredentials block, so multiple
