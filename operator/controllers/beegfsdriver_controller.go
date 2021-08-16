@@ -54,11 +54,11 @@ type BeegfsDriverReconciler struct {
 
 // The operator must have the following permissions to deploy the driver.
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create
-//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create
-//+kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers,verbs=get;list;watch;create
+//+kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update
 

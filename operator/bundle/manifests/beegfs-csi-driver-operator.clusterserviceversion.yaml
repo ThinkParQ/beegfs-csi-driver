@@ -261,6 +261,7 @@ spec:
           - clusterrolebindings
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
@@ -270,6 +271,7 @@ spec:
           - clusterroles
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
@@ -279,6 +281,7 @@ spec:
           - csidrivers
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
