@@ -6,6 +6,8 @@ Licensed under the Apache License, Version 2.0.
 package deploy
 
 import (
+	v1 "k8s.io/api/core/v1"
+	"strings"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,6 +54,9 @@ func TestGetControllerServiceStatefulSet(t *testing.T) {
 			t.Fatalf("expected a container named %s in Stateful Set", containerName)
 		}
 	}
+
+	testForKeysInContainerArgs(t, sts.Spec.Template.Spec.Containers)
+	testForResourceNamesInPodVolumes(t, sts.Spec.Template.Spec.Volumes)
 }
 
 func TestGetCSIDriver(t *testing.T) {
@@ -81,5 +86,46 @@ func TestGetNodeServiceDaemonSet(t *testing.T) {
 		if !foundContainer {
 			t.Fatalf("expected a container named %s in Stateful Set", containerName)
 		}
+	}
+
+	testForKeysInContainerArgs(t, ds.Spec.Template.Spec.Containers)
+	testForResourceNamesInPodVolumes(t, ds.Spec.Template.Spec.Volumes)
+}
+
+func testForKeysInContainerArgs(t *testing.T, containers []v1.Container) {
+	foundCMKey := false
+	foundSKey := false
+	for _, container := range containers {
+		for _, arg := range container.Args {
+			if strings.Contains(arg, KeyNameConfigMap) {
+				foundCMKey = true
+			} else if strings.Contains(arg, KeyNameSecret) {
+				foundSKey = true
+			}
+		}
+	}
+	if !foundCMKey {
+		t.Fatalf("expected to find a reference to %s in Container args", KeyNameConfigMap)
+	}
+	if !foundSKey {
+		t.Fatalf("expected to find a reference to %s in Container args", KeyNameSecret)
+	}
+}
+
+func testForResourceNamesInPodVolumes(t *testing.T, volumes []v1.Volume) {
+	foundCMName := false
+	foundSName := false
+	for _, volume := range volumes {
+		if volume.ConfigMap != nil && volume.ConfigMap.Name == ResourceNameConfigMap {
+			foundCMName = true
+		} else if volume.Secret != nil && volume.Secret.SecretName == ResourceNameSecret {
+			foundSName = true
+		}
+	}
+	if !foundCMName {
+		t.Fatalf("expected to find a reference to %s in Pod volumes", ResourceNameConfigMap)
+	}
+	if !foundSName {
+		t.Fatalf("expected to find a reference to %s in Pod volumes", ResourceNameSecret)
 	}
 }

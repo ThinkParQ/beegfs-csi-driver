@@ -48,6 +48,22 @@ const (
 	ContainerNameLivenessProbe          = "liveness-probe"
 )
 
+// These are expected Kubernetes resource names within the manifests. Some operator logic is based off the expectation
+// that resources have these names. deploy_test.go attempts to ensure that a developer can not change these names
+// without understanding that operator code must be refactored.
+const (
+	ResourceNameConfigMap = "csi-beegfs-config"
+	ResourceNameSecret    = "csi-beegfs-connauth"
+)
+
+// These are expected Config Map and Secret keys within the manifests. Some operator logic is based off the expectation
+// that keys have these names. deploy_test.go attempts to ensure that a developer can not change these names
+//without understanding that operator code must be refactored.
+const (
+	KeyNameConfigMap = "csi-beegfs-config.yaml"
+	KeyNameSecret    = "csi-beegfs-connauth.yaml"
+)
+
 // GetControllerServiceRBAC returns a pointer to a Cluster Role, a pointer to a Cluster Role Binding, and a pointer
 // to a Service Account contained in the embedded RBAC manifest. GetControllerServiceRBAC returns an error if it finds
 // multiple of any of these object kinds or if it finds an object kind it does not expect. It returns a nil pointer

@@ -23,12 +23,13 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/netapp/beegfs-csi-driver/deploy/k8s"
+	deploy "github.com/netapp/beegfs-csi-driver/deploy/k8s"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 )
 
@@ -86,13 +88,21 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	// Get "clean" versions of all objects from deployment manifests.
+	sts, _ := deploy.GetControllerServiceStatefulSet()
+	ds, _ := deploy.GetNodeServiceDaemonSet()
+	cr, crb, sa, _ := deploy.GetControllerServiceRBAC()
+	d, _ := deploy.GetCSIDriver()
+
 	// -----------------------------------------------------------------------------------------------------------------
 	// Start by getting everything we need to generate an up-to-date status, generating the up-to-date status, and
 	// pushing the up-to-date status to the Kubernetes API server.
 
-	sts := new(appsv1.StatefulSet)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller", Namespace: req.Namespace}, sts)
+	oldStatus := *driver.Status.DeepCopy() // Remember previous status for comparison.
+
 	statusCondition := metav1.Condition{}
+	stsFromCluster := new(appsv1.StatefulSet)
+	err = r.Get(ctx, types.NamespacedName{Name: sts.Name, Namespace: req.Namespace}, stsFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			// Something we aren't prepared for went wrong.
@@ -108,14 +118,14 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		// We found a Stateful Set. Let's update our status based on its status.
-		if sts.Status.Replicas < 1 {
+		if stsFromCluster.Status.Replicas < 1 {
 			statusCondition = metav1.Condition{
 				Type:    beegfsv1.ConditionControllerServiceReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  beegfsv1.ReasonPodsNotScheduled,
 				Message: "0/1 controller service pods have been scheduled",
 			}
-		} else if sts.Status.ReadyReplicas < 1 {
+		} else if stsFromCluster.Status.ReadyReplicas < 1 {
 			statusCondition = metav1.Condition{
 				Type:    beegfsv1.ConditionControllerServiceReady,
 				Status:  metav1.ConditionFalse,
@@ -133,9 +143,9 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	meta.SetStatusCondition(&driver.Status.Conditions, statusCondition)
 
-	ds := new(appsv1.DaemonSet)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-node", Namespace: req.Namespace}, ds)
 	statusCondition = metav1.Condition{}
+	dsFromCluster := new(appsv1.DaemonSet)
+	err = r.Get(ctx, types.NamespacedName{Name: ds.Name, Namespace: req.Namespace}, dsFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			// Something we aren't prepared for went wrong.
@@ -150,225 +160,250 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	} else {
 		// We found a Daemon Set. Let's update our status based on its status.
-		if ds.Status.DesiredNumberScheduled < 1 {
+		if dsFromCluster.Status.DesiredNumberScheduled < 1 {
 			statusCondition = metav1.Condition{
 				Type:    beegfsv1.ConditionNodeServiceReady,
 				Status:  metav1.ConditionFalse,
 				Reason:  beegfsv1.ReasonPodsNotScheduled,
 				Message: "0 node service pods have been scheduled",
 			}
-		} else if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
+		} else if dsFromCluster.Status.NumberReady < dsFromCluster.Status.DesiredNumberScheduled {
 			statusCondition = metav1.Condition{
 				Type:   beegfsv1.ConditionNodeServiceReady,
 				Status: metav1.ConditionFalse,
 				Reason: beegfsv1.ReasonPodsNotReady,
-				Message: fmt.Sprintf("%d/%d node service pods are ready", ds.Status.NumberReady,
-					ds.Status.DesiredNumberScheduled),
+				Message: fmt.Sprintf("%d/%d node service pods are ready", dsFromCluster.Status.NumberReady,
+					dsFromCluster.Status.DesiredNumberScheduled),
 			}
 		} else {
 			statusCondition = metav1.Condition{
 				Type:   beegfsv1.ConditionNodeServiceReady,
 				Status: metav1.ConditionTrue,
 				Reason: beegfsv1.ReasonPodsReady,
-				Message: fmt.Sprintf("%d/%d node service pods are ready", ds.Status.NumberReady,
-					ds.Status.DesiredNumberScheduled),
+				Message: fmt.Sprintf("%d/%d node service pods are ready", dsFromCluster.Status.NumberReady,
+					dsFromCluster.Status.DesiredNumberScheduled),
 			}
 		}
 	}
 	meta.SetStatusCondition(&driver.Status.Conditions, statusCondition)
 
-	log.Info("Updating status")
-	err = r.Status().Update(ctx, driver)
-	if err != nil {
-		return ctrl.Result{}, err
+	// Don't bother the Kubernetes API server unless we think the status has changed.
+	if !equality.Semantic.DeepEqual(driver.Status, oldStatus) {
+		log.Info("Updating status")
+		err = r.Status().Update(ctx, driver)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// -----------------------------------------------------------------------------------------------------------------
+	// Handle finalizers, either by adding them if they are missing or executing on them if the CR is being deleted.
+
+	// Some resources needed by the BeeGFS CSI driver are cluster-scoped. These resources cannot be owned by our
+	// namespace-scoped CRD and thus cannot be garbage collected. This finalizer enables us to manually delete these
+	// cluster-scoped resources before garbage collection occurs.
+	const clusterResourceDeletionFinalizer = "beegfs.csi.netapp.com/clusterResourceDeletion"
+
+	if driver.ObjectMeta.DeletionTimestamp.IsZero() {
+		// The CR is not being deleted. Let's add our finalizer and update it if necessary.
+		if !containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
+			controllerutil.AddFinalizer(driver, clusterResourceDeletionFinalizer)
+			log.Info("Adding finalizer", "finalizer", clusterResourceDeletionFinalizer)
+			if err = r.Update(ctx, driver); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		// The CR is being deleted. Execute on our finalizer by deleting cluster-scoped resources.
+		if containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
+			log.Info("Deleting cluster-scoped objects")
+			if err = r.Delete(ctx, cr); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if err = r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			if err = r.Delete(ctx, d); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+			controllerutil.RemoveFinalizer(driver, clusterResourceDeletionFinalizer)
+			if err = r.Update(ctx, driver); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		// There is no point in continuing to reconcile a deleting CR.
+		return ctrl.Result{}, nil
 	}
 
 	// -----------------------------------------------------------------------------------------------------------------
 	// Now attempt to get the rest of the expected objects and push them to the Kubernetes API server as necessary.
 
-	// When managed by this operator, the Config Map is an internal implementation detail (it should not be externally
-	// modified). Any time we reconcile, we ensure the Config Map contains exactly the information we expect.
+	// Completely recreate the Config Map to ensure all fields specified in the deployment manifest are propagated.
 	cm := new(corev1.ConfigMap)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-config", Namespace: req.Namespace}, cm)
+	if cm, err = newConfigMap(driver); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err = r.setCommonObjectMetadata(req, driver, cm); err != nil {
+		return ctrl.Result{}, err
+	}
+	cmFromCluster := new(corev1.ConfigMap)
+	err = r.Get(ctx, types.NamespacedName{Name: cm.Name, Namespace: req.Namespace}, cmFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The Config Map doesn't exist. Let's create it.
-			if cm, err = newConfigMap(driver); err != nil {
-				return ctrl.Result{}, err
-			}
-			if _, err = r.setCommonObjectMetadata(req, driver, cm); err != nil { // We will create, not update.
-				return ctrl.Result{}, err
-			}
-
 			log.Info("Creating Config Map")
-			err = r.Create(ctx, cm)
-			if err != nil {
-				log.Error(err, "Failed to create Config Map")
+			if err = r.Create(ctx, cm); err != nil {
 				return ctrl.Result{}, err
 			}
+		}
+	} else if !equality.Semantic.DeepEqual(cm.Data, cmFromCluster.Data) {
+		// The Config Map needs to be updated.
+		log.Info("Updating Config Map")
+		if err = r.Update(ctx, cm); err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
-		mustUpdate, err := setConfigMapData(driver, cm)
-		if err != nil {
-			return ctrl.Result{}, err
-		} else if mustUpdate {
-			// The Config Map doesn't agree with the configuration in the BeegsDriver. The BeegfsDriver is the source of
-			// truth in an operator-managed deployment. Let's update the Config Map.
-			log.Info("Updating Config Map")
-			err = r.Update(ctx, cm)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
+		cm = cmFromCluster // We need the correct resourceVersion later on.
 	}
 
-	// TODO(webere, A259): Remove ability to handle arbitrarily named secret. Make sure we don't own a secret that we
-	// didn't create.
-	// A connauth Secret is required for driver operation. If a ConnAuthSecretName is provided in the BeegfsDriverSpec,
-	// we make sure it owned by this controller and referenced appropriately. If one is not provided, we create an
-	// empty Secret with a default name and reference it instead. Users can do one of the following:
-	//   - Pre-create a Secret with the default name.
-	//   - Pre-create a Secret with a different name and provide ConnAuthSecretName.
-	//   - Update the default Secret (this is somewhat unintuitive, as it involves pasting a base64 encoded .yaml file).
-	s := new(corev1.Secret)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-connauth", Namespace: req.Namespace}, s)
+	// A connauth Secret named "csi-beegfs-connauth" in the operator's namespace is required for driver operation. If
+	// it does not exist, we create it, own it, and garbage collect it. If it already exists (pre-created by an
+	// administrator) we do nothing.
+	s := newSecret()
+	if err = r.setCommonObjectMetadata(req, driver, s); err != nil {
+		return ctrl.Result{}, err
+	}
+	sFromCluster := new(corev1.Secret)
+	err = r.Get(ctx, types.NamespacedName{Name: s.Name, Namespace: req.Namespace}, sFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The Secret doesn't exist. Let's create it.
-			s = newSecret()
-			if _, err = r.setCommonObjectMetadata(req, driver, s); err != nil { // We will create, not update.
-				return ctrl.Result{}, err
-			}
 			log.Info("Creating Secret")
-			err = r.Create(ctx, s)
-			if err != nil {
-				log.Error(err, "Failed to create Secret")
+			if err = r.Create(ctx, s); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
-		// Intentionally empty.
 		// Many of the other objects created by this controller may need to be updated to keep them in sync with the
-		// CRD. We expect the Secret to be updated manually and have no meaningful changes to make here. Note that we
-		// explicitly do NOT call setCommonObjectMetadata to add a controller reference to the Secret. If it was pre-
-		// created by something other than the driver, we do not take ownership of it and do not garbage collect it.
+		// CRD. We expect the Secret to be updated manually and have no meaningful changes to make here.
+		s = sFromCluster // We need the correct resourceVersion later on.
 	}
 
-	// Get RBAC related default objects in case we need them.
-	newCR, newCRB, newSA, err := deploy.GetControllerServiceRBAC()
-	if err != nil {
+	// Completely recreate the Service Account to ensure all fields specified in the deployment manifest are propagated.
+	if err = r.setCommonObjectMetadata(req, driver, sa); err != nil {
 		return ctrl.Result{}, err
 	}
-
-	sa := new(corev1.ServiceAccount)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-controller-sa", Namespace: req.Namespace}, sa)
+	saFromCluster := new(corev1.ServiceAccount)
+	err = r.Get(ctx, types.NamespacedName{Name: sa.Name, Namespace: req.Namespace}, saFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The Service Account doesn't exist. Let's create it.
-			if _, err = r.setCommonObjectMetadata(req, driver, newSA); err != nil { // We never update Service Accounts.
-				return ctrl.Result{}, err
-			}
-
 			log.Info("Creating controller service Service Account")
-			err = r.Create(ctx, newSA)
-			if err != nil {
-				log.Error(err, "Failed to create controller service Service Account")
+			if err = r.Create(ctx, sa); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+	} else {
+		// Intentionally empty.
+		// We do not monitor and continuously update the Service Account because it doesn't have any useful fields.
 	}
 
-	cr := new(rbacv1.ClusterRole)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-provisioner-role"}, cr)
+	// Completely recreate the Cluster Role to ensure all fields specified in the deployment manifest are propagated.
+	// Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a namespace and our
+	// namespace-scoped CRD can't own it).
+	crFromCluster := new(rbacv1.ClusterRole)
+	err = r.Get(ctx, types.NamespacedName{Name: cr.Name}, crFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The Cluster Role doesn't exist. Let's create it.
-			if _, err = r.setCommonObjectMetadata(req, driver, newCR); err != nil { // We never update Cluster Roles.
-				return ctrl.Result{}, err
-			}
-
 			log.Info("Creating controller service Cluster Role")
-			err = r.Create(ctx, newCR)
-			if err != nil {
-				log.Error(err, "Failed to create controller service Cluster Role")
+			if err = r.Create(ctx, cr); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+	} else if !equality.Semantic.DeepEqual(cr.Rules, crFromCluster.Rules) {
+		// The Cluster Role on the cluster needs to be updated.
+		log.Info("Updating controller service Cluster Role")
+		if err = r.Update(ctx, cr); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
-	crb := new(rbacv1.ClusterRoleBinding)
-	err = r.Get(ctx, types.NamespacedName{Name: "csi-beegfs-provisioner-binding"}, crb)
+	// Completely recreate the Cluster Role Binding to ensure all fields specified in the deployment manifest are
+	// propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a
+	// namespace and our namespace-scoped CRD can't own it).
+	crb.Subjects[0].Namespace = req.Namespace
+	crbFromCluster := new(rbacv1.ClusterRoleBinding)
+	err = r.Get(ctx, types.NamespacedName{Name: crb.Name}, crbFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The Cluster Role Binding doesn't exist. Let's create it.
-			if _, err = r.setCommonObjectMetadata(req, driver, newCRB); err != nil { // We never update Cluster Role Bindings.
-				return ctrl.Result{}, err
-			}
-			newCRB.Subjects[0].Namespace = req.Namespace
-
 			log.Info("Creating controller service Cluster Role Binding")
-			err = r.Create(ctx, newCRB)
-			if err != nil {
-				log.Error(err, "Failed to create controller service Cluster Role Binding")
+			if err = r.Create(ctx, crb); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+	} else if !equality.Semantic.DeepEqual(crb.Subjects, crbFromCluster.Subjects) ||
+		!equality.Semantic.DeepEqual(crb.RoleRef, crbFromCluster.RoleRef) {
+		// The Cluster Role Binding on the cluster needs to be updated.
+		log.Info("Updating controller service Cluster Role Binding")
+		if err = r.Update(ctx, crb); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
-	d := new(storagev1.CSIDriver)
-	err = r.Get(ctx, types.NamespacedName{Name: "beegfs.csi.netapp.com", Namespace: req.Namespace}, d)
+	// Completely recreate the CSI Driver object to ensure all fields specified in the deployment manifest are
+	// propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a
+	// namespace and our namespace-scoped CRD can't own it).
+	dFromCluster := new(storagev1.CSIDriver)
+	err = r.Get(ctx, types.NamespacedName{Name: d.Name}, dFromCluster)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		} else {
 			// The CSI Driver object doesn't exist. Let's create it.
-			d, _ = deploy.GetCSIDriver()
-			if _, err = r.setCommonObjectMetadata(req, driver, d); err != nil { // We never update CSI Driver objects.
-				return ctrl.Result{}, err
-			}
-
 			log.Info("Creating CSI Driver object")
-			err = r.Create(ctx, d)
-			if err != nil {
-				log.Error(err, "Failed to create CSI Driver object")
+			if err = r.Create(ctx, d); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
+	} else {
+		// Intentionally empty.
+		// We do not monitor and continuously update the CSI Driver object for two reasons:
+		//   1. Feature gating makes it very difficult to determine whether the spec on the Kubernetes API server needs
+		//      to be updated. E.g., the API server spec shows fsGroupPolicy=nil even if we set fsGroupPolicy=true when
+		//      the CSIVolumeFSGroupPolicy feature gate is disabled.
+		//   2. Most of the fields in the spec are immutable.
+		// If we anticipate a need to change the CSI Driver object, we should advise users to delete it manually so the
+		// operator can recreate it.
 	}
 
 	// Completely recreate the Stateful Set to ensure all fields specified in the deployment manifest are propagated.
-	sts, _ = deploy.GetControllerServiceStatefulSet()
-	if _, err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, sts); err != nil {
 		return ctrl.Result{}, err
 	}
 	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
-	setVolumeReferences(log, cm, s, &sts.Spec.Template.Spec)
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
 		log.Info("Creating controller service Stateful Set")
-		err = r.Create(ctx, sts)
-		if err != nil {
-			log.Error(err, "Failed to create controller service Stateful Set")
+		if err = r.Create(ctx, sts); err != nil {
 			return ctrl.Result{}, err
 		}
-	} else {
-		// The Stateful Set exists, but it may need to be updated. Ideally we would only attempt an update if we were
-		// sure there was something "interesting" to modify. In practice, this is very difficult to determine, as a
-		// direct comparison between the old and new Stateful Set reveals many trivial differences (e.g. fields that
-		// are not set in the deployment manifest and set by default on resource creation by the API server).
+	} else if !equality.Semantic.DeepDerivative(sts.Spec, stsFromCluster.Spec) {
+		// The Stateful Set needs to be updated.
 		log.Info("Updating controller service Stateful Set")
 		if err = r.Update(ctx, sts); err != nil {
 			return ctrl.Result{}, err
@@ -376,29 +411,22 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Completely recreate the Daemon Set to ensure all fields specified in the deployment manifest are propagated.
-	ds, _ = deploy.GetNodeServiceDaemonSet()
-	if _, err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, ds); err != nil {
 		return ctrl.Result{}, err
 	}
 	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
-	setVolumeReferences(log, cm, s, &ds.Spec.Template.Spec)
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
 		log.Info("Creating node service Daemon Set")
-		err = r.Create(ctx, ds)
-		if err != nil {
-			log.Error(err, "Failed to create node service Daemon Set")
+		if err = r.Create(ctx, ds); err != nil {
 			return ctrl.Result{}, err
 		}
-	} else {
-		// The Daemon Set exists, but it may need to be updated. Ideally we would only attempt an update if we were
-		// sure there was something "interesting" to modify. In practice, this is very difficult to determine, as a
-		// direct comparison between the old and new Daemon Set reveals many trivial differences (e.g. fields that
-		// are not set in the deployment manifest and set by default on resource creation by the API server).
-		log.Info("Updating node service Daemon Set")
+	} else if !equality.Semantic.DeepDerivative(ds.Spec, dsFromCluster.Spec) {
+		// The Daemon Set needs to be updated.
+		log.Info("Updating controller service Daemon Set")
 		if err = r.Update(ctx, ds); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -411,11 +439,9 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *BeegfsDriverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&beegfsv1.BeegfsDriver{}).
+		// Only own (i.e. watch) objects if there is some action we should take if they change.
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&appsv1.DaemonSet{}).
-		Owns(&rbacv1.ClusterRole{}).
-		Owns(&rbacv1.ClusterRoleBinding{}).
-		Owns(&corev1.ServiceAccount{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
@@ -423,45 +449,30 @@ func (r *BeegfsDriverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // newConfigMap creates a new Config Map containing the configuration specified in the provided BeegfsDriver.
 func newConfigMap(driver *beegfsv1.BeegfsDriver) (*corev1.ConfigMap, error) {
+	const warning = "# This file is managed by the BeeGFS CSI driver operator. Do not modify it directly."
+	data, err := yaml.Marshal(driver.Spec.PluginConfigFromFile)
+	if err != nil {
+		return nil, err
+	}
+	stringData := fmt.Sprintf("%s\n%s", warning, string(data))
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-beegfs-config",
+			Name: deploy.ResourceNameConfigMap,
 		},
+		Data: map[string]string{deploy.KeyNameConfigMap: stringData},
 	}
-	_, err := setConfigMapData(driver, cm)
-	return cm, err
+
+	return cm, nil
 }
 
-// setConfigMapData ensures the provided Config Map contains the configuration specified in the provided BeegfsDriver.
-// It returns mustUpdate=true if it makes a change and mustUpdate=false if it does not. If it returns true, the caller
-// should update the Config Map with the K8s API server.
-func setConfigMapData(driver *beegfsv1.BeegfsDriver, cm *corev1.ConfigMap) (bool, error) {
-	mustUpdate := false
-
-	// Add a warning that the Config Map should not be modified directly.
-	const warning = "# This file is managed by the BeeGFS CSI driver operator. Do not modify it directly."
-	newData, err := yaml.Marshal(driver.Spec.PluginConfigFromFile)
-	if err != nil {
-		return false, err
-	}
-	newStringData := fmt.Sprintf("%s\n%s", warning, string(newData))
-
-	if oldStringData, ok := cm.Data["csi-beegfs-config.yaml"]; !ok || // The required key isn't there.
-		len(cm.Data) > 1 || // There is more than one key.
-		newStringData != oldStringData { // The data is stale or has been modified.
-		mustUpdate = true
-		cm.Data = map[string]string{"csi-beegfs-config.yaml": newStringData}
-	}
-
-	return mustUpdate, nil
-}
-
+// newSecret creates the new empty secret required for the BeeGFS CSI driver to operate.
 func newSecret() *corev1.Secret {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "csi-beegfs-connauth",
+			Name: deploy.ResourceNameSecret,
 		},
-		Data: map[string][]byte{"csi-beegfs-connauth.yaml": nil},
+		Data: map[string][]byte{deploy.KeyNameSecret: nil},
 	}
 	return s
 }
@@ -470,27 +481,10 @@ func newSecret() *corev1.Secret {
 //   - The object exists in the correct namespace (based on the namespace of the request).
 //   - The object is owned by the BeegfsDriver object (for proper garbage collection). setCommonObjectMetadata will NOT
 //     set an owner reference if one already exists.
-// setCommonObjectMetadata returns mustUpdate=true if it changes something about the object, mustUpdate=false if it
-// does not, and an error if a change fails. If it returns true, the caller should update the object with the K8s API
-// server.
-// TODO(webere, A265): Handle the fact that cluster scoped resources cannot be owned by our namespaced BeegfsDriver.
-func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, driver *beegfsv1.BeegfsDriver, object metav1.Object) (bool, error) {
-	mustUpdate := false
-
-	if len(object.GetNamespace()) == 0 || object.GetNamespace() != req.Namespace {
-		object.SetNamespace(req.Namespace) // This is only necessary for newly created objects.
-		mustUpdate = true
-	}
-
-	if len(object.GetOwnerReferences()) == 0 {
-		err := ctrl.SetControllerReference(driver, object, r.Scheme)
-		mustUpdate = true
-		if err != nil {
-			return mustUpdate, err
-		}
-	}
-
-	return mustUpdate, nil
+func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, driver *beegfsv1.BeegfsDriver,
+	object metav1.Object) error {
+	object.SetNamespace(req.Namespace)
+	return ctrl.SetControllerReference(driver, object, r.Scheme)
 }
 
 // setResourceVersionAnnotations is an important part of our overall configuration scheme. It records the current name
@@ -511,24 +505,6 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 		podTemplate.Annotations["beegfs.csi.netapp.com/connauthSecretVersion"] = correctSecretNameAndVersion
 		log.V(5).Info("Setting Secret version annotation", "versionAnnotation", correctSecretNameAndVersion)
 	}
-
-	return
-}
-
-// setVolumeReferences ensures that Pod specs point correctly to Kubernetes objects. In particular, it ensures that
-// the controller service Stateful Set and the node service Daemon Set know which Config Map and Secret (respectively)
-// to reference.
-func setVolumeReferences(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, podSpec *corev1.PodSpec) {
-	for _, vol := range podSpec.Volumes {
-		if vol.Name == "config-dir" && vol.ConfigMap.Name != cm.Name {
-			log.V(5).Info("Setting Config Map volume reference")
-			vol.ConfigMap.Name = cm.Name
-		} else if vol.Name == "connauth-dir" && vol.Secret.SecretName != s.Name {
-			log.V(5).Info("Setting Secret volume reference")
-			vol.Secret.SecretName = s.Name
-		}
-	}
-	return
 }
 
 // setImages takes a slice of Container specs (containers) and a slice of ContainerImageOverrides (overrides). If the
@@ -578,6 +554,17 @@ func getImageStringWithOverride(imageWithTag string, override beegfsv1.Container
 	}
 
 	return fmt.Sprintf("%s:%s", image, tag)
+}
+
+// containsString checks if a string is contained in a slice of strings. Its implementation comes from the Kubebuilder
+// book (https://book.kubebuilder.io/reference/using-finalizers.html).
+func containsString(slice []string, s string) bool {
+	for _, item := range slice {
+		if item == s {
+			return true
+		}
+	}
+	return false
 }
 
 // setLogLevel sets the value of the environment variable LOG_LEVEL to level for any Container in containers. If a
