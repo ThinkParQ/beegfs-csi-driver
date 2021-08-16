@@ -3,4 +3,25 @@ kind: BeegfsDriver
 metadata:
   name: csi-beegfs-cr
 spec:
-  # TODO(webere, A264): Fill this sample out.
+  nodeAffinityControllerService:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 50
+        preference:
+          matchExpressions:
+            - key: node-role.kubernetes.io/master
+              operator: Exists
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.openshift.io/os_id
+              operator: NotIn
+              values:
+                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
+  nodeAffinityNodeService:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.openshift.io/os_id
+              operator: NotIn
+              values:
+                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.

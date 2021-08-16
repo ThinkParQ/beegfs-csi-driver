@@ -395,6 +395,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
+	setNodeAffinity(log, &driver.Spec.NodeAffinityControllerService, &sts.Spec.Template.Spec)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
@@ -417,6 +418,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
+	setNodeAffinity(log, &driver.Spec.NodeAffinityNodeService, &ds.Spec.Template.Spec)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
@@ -582,5 +584,17 @@ func setLogLevel(log logr.Logger, level *int, containers []corev1.Container) {
 				containers[i].Env[j].Value = strconv.Itoa(*level)
 			}
 		}
+	}
+}
+
+// setNodeAffinity adds the passed NodeAffinity to the passed PodSpec (or replaces the PodSpec's existing NodeAffinity
+// if it has one).
+func setNodeAffinity(log logr.Logger, affinity *corev1.NodeAffinity, spec *corev1.PodSpec) {
+	if affinity != nil {
+		log.V(5).Info("Setting node affinity", "affinity", affinity)
+		if spec.Affinity == nil {
+			spec.Affinity = new(corev1.Affinity)
+		}
+		spec.Affinity.NodeAffinity = affinity
 	}
 }
