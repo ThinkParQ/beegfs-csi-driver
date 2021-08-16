@@ -14,3 +14,4 @@
     name:
       type: string
       pattern: ^csi-beegfs-cr$
+      description: Only one driver may exist on a cluster at a time. It MUST be named "csi-beegfs-cr".

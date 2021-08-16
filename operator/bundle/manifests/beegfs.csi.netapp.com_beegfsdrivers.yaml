@@ -32,6 +32,8 @@ spec:
           metadata:
             properties:
               name:
+                description: Only one driver may exist on a cluster at a time. It
+                  MUST be named "csi-beegfs-cr".
                 pattern: ^csi-beegfs-cr$
                 type: string
             type: object
