@@ -567,18 +567,6 @@ func containsString(slice []string, s string) bool {
 	return false
 }
 
-// removeString removes a string from a slice of strings. Its implementation comes from the Kubebuilder book
-// (https://book.kubebuilder.io/reference/using-finalizers.html).
-func removeString(slice []string, s string) (result []string) {
-	for _, item := range slice {
-		if item == s {
-			continue
-		}
-		result = append(result, item)
-	}
-	return
-}
-
 // setLogLevel sets the value of the environment variable LOG_LEVEL to level for any Container in containers. If a
 // Container does not have the environment variable LOG_LEVEL, setLogLevel does nothing. If level is nil, setLogLevel
 // does nothing. The ultimate result is that all containers with a configurable logging level in the deployment
