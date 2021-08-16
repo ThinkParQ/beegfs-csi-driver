@@ -243,7 +243,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if cm, err = newConfigMap(driver); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err = r.setCommonObjectMetadata(req, driver, cm); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, cm); err != nil {
 		return ctrl.Result{}, err
 	}
 	cmFromCluster := new(corev1.ConfigMap)
@@ -272,7 +272,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// it does not exist, we create it, own it, and garbage collect it. If it already exists (pre-created by an
 	// administrator) we do nothing.
 	s := newSecret()
-	if err = r.setCommonObjectMetadata(req, driver, s); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, s); err != nil {
 		return ctrl.Result{}, err
 	}
 	sFromCluster := new(corev1.Secret)
@@ -389,7 +389,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Completely recreate the Stateful Set to ensure all fields specified in the deployment manifest are propagated.
-	if err = r.setCommonObjectMetadata(req, driver, sts); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, sts); err != nil {
 		return ctrl.Result{}, err
 	}
 	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
@@ -411,7 +411,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Completely recreate the Daemon Set to ensure all fields specified in the deployment manifest are propagated.
-	if err = r.setCommonObjectMetadata(req, driver, ds); err != nil { // We will create, not update.
+	if err = r.setCommonObjectMetadata(req, driver, ds); err != nil {
 		return ctrl.Result{}, err
 	}
 	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
