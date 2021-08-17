@@ -7,6 +7,7 @@
   * [Kubernetes Node Preparation](#kubernetes-node-preparation)
   * [Kubernetes Deployment](#kubernetes-deployment)
   * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
+  * [Deployment to Kubernetes Clusters with Mixed Nodes](#mixed-kubernetes-deployment)
   * [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
 * [Example Application Deployment](#example-application-deployment)
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
@@ -130,6 +131,46 @@ Once the images are available, modify *deploy/k8s/overlays/my-overlay* to point
 to them. Adjust the `images[].newTag` fields as necessary to ensure they either 
 match images that exist on the Kubernetes nodes or reference your internal 
 registry. Then follow the above commands for Kubernetes deployment.
+
+### Deployment to Kubernetes Clusters With Mixed Nodes
+<a name="mixed-kubernetes-deployment"></a>
+In some Kubernetes clusters, not all nodes are capable of running the BeeGFS 
+CSI driver (or it may not be desirable for all nodes to do so). For example:
+* A cluster may be shared by multiple departments and one department may not 
+  want the BeeGFS client (and its kernel modules) to be installed on a subset 
+  of nodes.
+* Some nodes in a cluster may be running an OS that is not supported for the
+  BeeGFS client (e.g. a specialized Linux distribution or Red Hat CoreOS in an 
+  OpenShift cluster).
+* Some nodes in a cluster may be capable of running the BeeGFS client, but the
+  user installing the driver does not have the permissions required to install 
+  it.
+
+It is possible to patch the driver's deployment manifest so that the BeeGFS CSI 
+driver's controller and node services only run on a subset of nodes. Follow 
+these steps:
+1. Either identify a label shared by nodes you want to install the driver on or 
+   add a label to said nodes. For example:
+   * Most Kubernetes distributions include the `node-role.kubernetes.io/master` 
+     label on all master nodes.
+   * OpenShift clusters include the `node.openshift.io/os_id=rhcos` or 
+     `node.openshift.io/os_id=rhel` labels to distinguish between Red Hat 
+     CoreOS and Red Hat Enterprise Linux nodes.
+   * You may want to add a label like `node-role.your.domain/beegfs` to denote 
+     BeeGFS capable nodes.
+1. Open */deploy/k8s/overlays/my-overlay/patches/node-affinity.yaml* for 
+   editing (where "my-overlay") is the overlay you created in 
+   [Kubernetes Deployment](#kubernetes-deployment).
+1. Edit or uncomment and edit the nodeAffinity field associated with the 
+   controller service, the node service, or both. See the [Kubernetes 
+   documentation](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes-using-node-affinity/) 
+   for more information about nodeAffinity configurations.
+1. Deploy the driver: `kubectl apply -k deploy/k8s/overlays/my-overlay`.
+
+NOTE: When the driver is installed in this way, all workloads (e.g. Pods, 
+StatefulSets, Deployments) that depend on BeeGFS MUST be deployed with the same 
+nodeAffinity assigned to the driver node service. Provide your users with the 
+labels or nodes they must run their workloads on.
 
 ### Upgrading to v1.2.0
 <a name="upgrade-1.2.0-kubernetes-deployment"></a>
