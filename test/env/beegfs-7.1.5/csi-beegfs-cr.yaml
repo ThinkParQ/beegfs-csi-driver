@@ -1,0 +1,41 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# In a typical deployment with the operator, an administrator would pre-create this secret or edit it after it was
+# created. For testing purposes it is easiest to simply deploy it here.
+
+kind: BeegfsDriver
+apiVersion: beegfs.csi.netapp.com/v1
+metadata:
+  name: csi-beegfs-cr  # CR must have this name.
+spec:
+  nodeAffinityControllerService:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 50
+        preference:
+          matchExpressions:
+            - key: node-role.kubernetes.io/master
+              operator: Exists
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.openshift.io/os_id
+              operator: NotIn
+              values:
+                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
+  nodeAffinityNodeService:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: node.openshift.io/os_id
+              operator: NotIn
+              values:
+                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
+  pluginConfig:
+    fileSystemSpecificConfigs:
+      - sysMgmtdHost: scspa2059245001.rtp.openenglab.netapp.com
+      - sysMgmtdHost: scspa2061750001.rtp.openenglab.netapp.com
+        config:
+          beegfsClientConf:
+            connMgmtdPortTCP: '9009'
+            connMgmtdPortUDP: '9009'
