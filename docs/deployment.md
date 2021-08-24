@@ -8,7 +8,6 @@
   * [Kubernetes Deployment](#kubernetes-deployment)
   * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
   * [Deployment to Kubernetes Clusters with Mixed Nodes](#mixed-kubernetes-deployment)
-  * [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
 * [Example Application Deployment](#example-application-deployment)
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
@@ -49,7 +48,7 @@ Steps:
   to deploy the BeeGFS CSI driver clone this repository: `git clone
   https://github.com/NetApp/beegfs-csi-driver.git`.
 * Create a new kustomize overlay (changes made to the default overlay will be 
-  overwritten in subsequent driver versions): `cp deploy/k8s/overlays/default 
+  overwritten in subsequent driver versions): `cp -r deploy/k8s/overlays/default 
   deploy/k8s/overlays/my-overlay`.
 * If you wish to modify the default BeeGFS client configuration fill in the
   empty ConfigMap at *deploy/k8s/overlays/my-overlay/csi-beegfs-config.yaml*.
@@ -171,22 +170,6 @@ NOTE: When the driver is installed in this way, all workloads (e.g. Pods,
 StatefulSets, Deployments) that depend on BeeGFS MUST be deployed with the same 
 nodeAffinity assigned to the driver node service. Provide your users with the 
 labels or nodes they must run their workloads on.
-
-### Upgrading to v1.2.0
-<a name="upgrade-1.2.0-kubernetes-deployment"></a>
-v1.2.0 includes changes to the structure of the deployment manifests. To upgrade
-from v1.1.0, follow these steps:
-
-1. If you have made changes to the csi-beegfs-config.yaml and/or
-   csi-beegfs-connauth.yaml files in the v1.1.0 *deploy/prod* directory, copy
-   these files.
-1. Check out v.1.2.0 of the project: `git checkout v1.2.0`.
-1. Create an overlay as described
-   in [Kubernetes Deployment](#kubernetes-deployment) (i.e. copy 
-   *deploy/k8s/overlays/default* to *deploy/k8s/overlays/my-overlay*).
-1. Paste the copied files into *deploy/k8s/overlays/my-overlay*. This will
-   overwrite the default (empty) files.
-1. Deploy the driver: `kubectl apply -k deploy/k8s/overlays/my-overlay`.
 
 ## Example Application Deployment
 <a name="example-application-deployment"></a>

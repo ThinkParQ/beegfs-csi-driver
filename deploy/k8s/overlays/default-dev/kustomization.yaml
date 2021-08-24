@@ -10,19 +10,6 @@ patchesStrategicMerge:
   # See ../examples/patches for additional patch ideas.
   - patches/image-pull-policy.yaml
   - patches/node-affinity.yaml
-images:
-  - name: netapp/beegfs-csi-driver
-    newName: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
-    newTag: master
-  - name: k8s.gcr.io/sig-storage/csi-provisioner
-    newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
-    # newTag:
-  - name: k8s.gcr.io/sig-storage/livenessprobe
-    newName: docker.repo.eng.netapp.com/sig-storage/livenessprobe
-    # newTag:
-  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
-    newName: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
-    # newTag:
 configMapGenerator:
   # Kustomize will append a hash of the ConfigMap data to this name because it is considered "bad practice" to change
   # the data held in a live ConfigMap. Kustomize will also change all references to this ConfigMap to include the hash.
@@ -39,3 +26,20 @@ secretGenerator:
   - name: csi-beegfs-connauth
     files:
       - csi-beegfs-connauth.yaml
+
+# Uncomment this section and fill it in as appropriate for air-gapped deployments or deployments that require custom
+# container names (e.g. when a private registry is used). The default image names MAY change in a future driver update.
+# Check /deploy/k8s/bases for updated names in the case of a failing upgrade.
+images:
+  - name: netapp/beegfs-csi-driver
+    newName: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
+    newTag: master
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
+    # newTag:
+  - name: k8s.gcr.io/sig-storage/livenessprobe
+    newName: docker.repo.eng.netapp.com/sig-storage/livenessprobe
+    # newTag:
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newName: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
+    # newTag:

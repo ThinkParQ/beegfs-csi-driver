@@ -43,9 +43,9 @@ make REGISTRY_NAME="docker.repo.eng.netapp.com/${USER}" IMAGE_TAGS=devBranchName
 
 ## Developer Kubernetes Deployment
 Create a new overlay by copying */deploy/k8s/overlays/default-dev/* to 
-*/deploy/k8s/overlays/dev/* (for example) and edit it as necessary. All new 
-directories in */deploy/k8s/overlays/* are .gitignored, so your 
-local changes won't be (and shouldn't be) included in Git commits. For example:
+*/deploy/k8s/overlays/dev/* and edit it as necessary. This specific path is 
+.gitignored for convenience, so your local changes won't be (and shouldn't be) 
+included in Git commits. For example:
 * Change `images\[beegfs-csi-driver\].newTag` to whatever tag you are building 
   and pushing.
 * Change `images\[].newName` to include whatever repo you can pull from.
