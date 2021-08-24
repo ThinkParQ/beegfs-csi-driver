@@ -1,0 +1,14 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: beegfs.csi.netapp.com
+spec:
+  attachRequired: false
+  # Supports persistent volumes.
+  volumeLifecycleModes:
+  - Persistent

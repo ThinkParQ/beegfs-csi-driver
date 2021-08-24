@@ -130,6 +130,8 @@ func (in *BeegfsDriverSpec) DeepCopyInto(out *BeegfsDriverSpec) {
 		*out = new(int)
 		**out = **in
 	}
+	in.NodeAffinityControllerService.DeepCopyInto(&out.NodeAffinityControllerService)
+	in.NodeAffinityNodeService.DeepCopyInto(&out.NodeAffinityNodeService)
 	in.PluginConfigFromFile.DeepCopyInto(&out.PluginConfigFromFile)
 }
 

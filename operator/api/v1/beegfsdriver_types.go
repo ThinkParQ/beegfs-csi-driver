@@ -21,6 +21,7 @@ package v1
 import (
 	"encoding/json"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,8 +35,16 @@ type BeegfsDriverSpec struct {
 	// The logging level of deployed containers expressed as an integer from 0 (low detail) to 5 (high detail). 0
 	// only logs errors. 3 logs most RPC requests/responses and some detail about driver actions. 5 logs all RPC
 	// requests/responses, including redundant/frequently occurring ones. Empty defaults to level 3.
-	LogLevel             *int                 `json:"logLevel,omitempty"` // Pointer per https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#optional-vs-required.
-	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
+	LogLevel *int `json:"logLevel,omitempty"` // Pointer per https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#optional-vs-required.
+	// The controller service consists of a single Pod. It preferably runs on an infrastructure/master node, but the
+	// running node must have the beegfs-utils and beegfs-client packages installed. E.g.
+	// "preferred: node-role.kubernetes.io/master Exists" and/or "required: node.openshift.io/os_id NotIn rhcos".
+	NodeAffinityControllerService corev1.NodeAffinity `json:"nodeAffinityControllerService"`
+	// The node service consists of one Pod running on each eligible node. It runs on every node expected to host a
+	// workload that requires BeeGFS. Running nodes must have the beegfs-utils and beegfs-client packages installed.
+	// E.g. "required: node.openshift.io/os_id NotIn rhcos".
+	NodeAffinityNodeService corev1.NodeAffinity  `json:"nodeAffinityNodeService"`
+	PluginConfigFromFile    PluginConfigFromFile `json:"pluginConfig,omitempty"`
 }
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver

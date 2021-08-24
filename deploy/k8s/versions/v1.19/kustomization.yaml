@@ -1,0 +1,11 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+bases:
+  - ../../bases
+patchesStrategicMerge:
+  - fs-group-policy.yaml

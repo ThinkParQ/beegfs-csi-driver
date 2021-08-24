@@ -1,0 +1,14 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
+# In Kubernetes 1.19 and later, fsGroupPolicy can be set on a CSI Driver object. The default fsGroupPolicy for the
+# BeeGFS CSI driver is "None". See /docs/usage.md for details.
+
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: beegfs.csi.netapp.com
+spec:
+  fsGroupPolicy: None

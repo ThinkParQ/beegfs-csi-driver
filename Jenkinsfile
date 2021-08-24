@@ -224,7 +224,7 @@ pipeline {
             }
             environment {
                 // The disruptive test suite will try to SSH into k8s cluster nodes, defaulting as the jenkins user,
-                // which doesn't exist on those nodes. This changes the test suite to SSH as the root user instead
+                // which doesn't exist on those nodes. This changes the test suite to SSH as the root user instead.
                 KUBE_SSH_USER = "root"
             }
             steps {
@@ -240,26 +240,26 @@ pipeline {
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            ["1.18", "beegfs-7.1.5", "prod-1.18", "static1"],
-                            ["1.18", "beegfs-7.2", "prod-1.18", "static1"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "prod", "static2"],
-                            ["1.20", "beegfs-7.1.5", "prod", "static3"],
-                            ["1.20", "beegfs-7.2", "prod", "static3"]
+                            ["1.18", "beegfs-7.1.5", "v1.18", "static1"],
+                            ["1.18", "beegfs-7.2", "v1.18", "static1"],
+                            ["1.19-rdma", "beegfs-7.2-rdma", "v1.19", "static2"],
+                            ["1.20", "beegfs-7.1.5", "v1.19", "static3"],
+                            ["1.20", "beegfs-7.2", "v1.19", "static3"]
                         ]
                     }
                     else {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            ["1.18", "beegfs-7.2", "prod-1.18", "static1"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "prod", "static2"],
-                            ["1.20", "beegfs-7.2", "prod", "static3"]
+                            ["1.18", "beegfs-7.2", "v1.18", "static1"],
+                            ["1.19-rdma", "beegfs-7.2-rdma", "v1.19", "static2"],
+                            ["1.20", "beegfs-7.2", "v1.19", "static3"]
                         ]
                     }
 
                     def integrationJobs = [:]
-                    testEnvironments.each { k8sCluster, beegfsHost, deployDir, staticVolDirName ->
+                    testEnvironments.each { k8sCluster, beegfsHost, k8sversion, staticVolDirName ->
                         integrationJobs["kubernetes: ${k8sCluster}, beegfs: ${beegfsHost}"] = {
-                            runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName)
+                            runIntegrationSuite(k8sCluster, beegfsHost, k8sversion, staticVolDirName)
                         }
                     }
                     parallel integrationJobs
@@ -283,7 +283,7 @@ pipeline {
     }
 }
 
-def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
+def runIntegrationSuite(k8sCluster, beegfsHost, k8sVersion, staticVolDirName) {
     // Always skip the broken subpath test.
     String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
     // Skip the [Slow] tests except on master.
@@ -293,10 +293,12 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
     }
 
     def jobID = "${k8sCluster}-${beegfsHost}"
-    // Per documentation, always make kustomizations in deploy/k8s/prod.
+    def overlay = "deploy/k8s/overlays/${jobID}"
     sh """
-        cp -r deploy/ deploy-${jobID}/
-        (cd deploy-${jobID}/k8s/prod && ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME})
+        cp -r deploy/k8s/overlays/default ${overlay}
+        (cd ${overlay} && \
+        ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME} && \
+        sed -i 's?/versions/latest?/versions/${k8sVersion}?g' kustomization.yaml)
     """
     lock(resource: "${k8sCluster}") {
         // Credentials variables are always local to the withCredentials block, so multiple
@@ -311,21 +313,21 @@ def runIntegrationSuite(k8sCluster, beegfsHost, deployDir, staticVolDirName) {
 
             try {
                 // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
-                // running on the cluster. We can't simply delete using -k deploy/k8s/prod/ because a previous
+                // running on the cluster. We can't simply delete using -k deploy/k8s/overlay-xxx/ because a previous
                 // user might have deployed the driver using a different deployment scheme.
                 sh """
                     echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
                     kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
                     kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
-                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml deploy-${jobID}/k8s/prod/csi-beegfs-config.yaml
-                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml deploy-${jobID}/k8s/prod/csi-beegfs-connauth.yaml
-                    kubectl apply -k deploy-${jobID}/k8s/${deployDir}/
+                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
+                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
+                    kubectl apply -k ${overlay}
                     ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID} -static-vol-dir-name ${staticVolDirName}
                     ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID} -static-vol-dir-name ${staticVolDirName}
-                    kubectl delete --cascade=foreground -k deploy-${jobID}/k8s/${deployDir}/
+                    kubectl delete --cascade=foreground -k ${overlay}
                 """
             } catch (err) {
-                sh "kubectl delete --cascade=foreground -k deploy-${jobID}/k8s/${deployDir}/ || true"
+                sh "kubectl delete --cascade=foreground -k ${overlay} || true"
                 throw err
             }
         }

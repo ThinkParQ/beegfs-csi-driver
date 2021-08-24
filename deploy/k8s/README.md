@@ -1,0 +1,63 @@
+# Kustomize Specific Deployment Details
+
+## Contents
+<a name="contents"></a>
+
+* [Basics](#basics)
+* [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
+
+## Basics
+<a name="basics"></a>
+
+The BeeGFS CSI driver uses [Kustomize](https://kustomize.io/) as its default 
+deployment mechanism. While Kustomize CAN be downloaded, installed, and run as 
+a binary, an older version of Kustomize is built into kubectl. All BeeGFS 
+CSI driver deployment manifests can be deployed using `kubectl apply -k`. For 
+more general information about deploying the BeeGFS CSI driver, see [BeeGFS 
+CSI Driver Deployment](../../docs/deployment.md)
+
+There is no set standard for how Kustomize manifests should be laid out, but 
+the BeeGFS CSI driver project follows some typical conventions. There are three 
+main directories:
+* *bases* contains the base deployment manifests. These manifests contain most 
+  of the information required to deploy the driver. 
+* *versions* contains Kubernetes version-specific patches (e.g. Kubernetes 
+  v1.19 supports the fsGroupPolicy field on a CSIDriver object whereas v1.18 
+  did not) that are applied over top of the base manifests during deployment. 
+* *overlays* contains environment specific patches (e.g. different image names
+  for air-gapped deployments or log levels for debugging) that are applied 
+  over top of the base manifests and version patches during deployment. 
+    * *overlays/default* is an example overlay that is ready for immediate 
+      deployment if no custom configuration is required.
+    * *overlays/examples* contains example configuration files and patches that 
+      could be added to a custom overlay.
+
+All of the above directories are maintained by the development team and may 
+change between driver versions. **Modifying them directly will result in merge 
+conflicts and other difficulties when upgrading the driver.**
+
+As outlined in [BeeGFS CSI Driver Deployment](../../docs/deployment.md), the 
+correct way to deploy the driver is to copy *overlays/default* to create a NEW 
+overlay (e.g. *overlays/my-overlay*). Add patches or modify configuration 
+in this overlay and use `kubectl apply -k overlays/my-overlay/` to deploy.
+Modifications made to this overlay are completely protected. Any changes made 
+by the development team to the base manifests or version patches will be picked 
+up when you pull a new version of the project and your custom modifications will 
+continue to work unless otherwise noted.
+
+### Upgrading to v1.2.0
+<a name="upgrade-1.2.0-kubernetes-deployment"></a>
+
+v1.2.0 includes changes to the structure of the deployment manifests. To upgrade
+from v1.1.0, follow these steps:
+
+1. If you have made changes to the csi-beegfs-config.yaml and/or
+   csi-beegfs-connauth.yaml files in the v1.1.0 *deploy/prod* directory, copy
+   these files.
+1. Check out v.1.2.0 of the project: `git checkout v1.2.0`.
+1. Create an overlay as described
+   in [Kubernetes Deployment](#kubernetes-deployment) (i.e. copy
+   *deploy/k8s/overlays/default* to *deploy/k8s/overlays/my-overlay*).
+1. Paste the copied files into *deploy/k8s/overlays/my-overlay*. This will
+   overwrite the default (empty) files.
+1. Deploy the driver: `kubectl apply -k deploy/k8s/overlays/my-overlay`.

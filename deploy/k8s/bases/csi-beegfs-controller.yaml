@@ -1,0 +1,93 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Do not modify this file. Changes may be overwritten in subsequent driver versions.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  serviceName: "csi-beegfs-controller"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-beegfs-controller
+  template:
+    metadata:
+      labels:
+        app: csi-beegfs-controller
+    spec:
+      serviceAccountName: csi-beegfs-controller-sa
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      hostNetwork: true # required to find an available connClientPortUDP on the host.
+      containers:
+        - name: csi-provisioner
+          image: k8s.gcr.io/sig-storage/csi-provisioner:v2.2.2
+          args:
+            - --csi-address=/csi/csi.sock
+            - --volume-name-uuid-length=8
+            - -v=$(LOG_LEVEL)
+          env:
+            - name: LOG_LEVEL
+              value: '3'
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+        - name: beegfs
+          image: netapp/beegfs-csi-driver:v1.1.0
+          args:
+            - --driver-name=beegfs.csi.netapp.com
+            - --node-id=$(KUBE_NODE_NAME)
+            - --endpoint=unix://csi/csi.sock
+            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
+            - --cs-data-dir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
+            - --config-path=/csi/config/csi-beegfs-config.yaml
+            - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
+            - -v=$(LOG_LEVEL)
+          securityContext:
+            # Privileged is required for bidirectional mount propagation and to run the mount command.
+            # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
+            privileged: true
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: LOG_LEVEL
+              value: '3'
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /csi/config
+              name: config-dir
+            - mountPath: /csi/connauth
+              name: connauth-dir
+            - mountPath: /host
+              name: host-dir
+              readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+            - mountPath: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+              name: plugin-dir
+      volumes:
+        # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
+        - hostPath:
+            path: /
+            type: Directory
+          name: host-dir
+        # The controller service stores client configuration files in this directory. This is the same directory the
+        # node service (csi-beegfs-node.yaml) creates its socket inside.
+        - hostPath:
+            path: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+            type: DirectoryOrCreate
+          name: plugin-dir
+        - emptyDir: { }
+          name: socket-dir
+        - configMap:
+            name: csi-beegfs-config  # kustomized
+          name: config-dir
+        - secret:
+            secretName: csi-beegfs-connauth  # kustomized
+          name: connauth-dir

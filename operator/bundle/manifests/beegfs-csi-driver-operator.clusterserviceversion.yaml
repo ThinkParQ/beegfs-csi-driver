@@ -10,7 +10,55 @@ metadata:
           "metadata": {
             "name": "csi-beegfs-cr"
           },
-          "spec": null
+          "spec": {
+            "nodeAffinityControllerService": {
+              "preferredDuringSchedulingIgnoredDuringExecution": [
+                {
+                  "preference": {
+                    "matchExpressions": [
+                      {
+                        "key": "node-role.kubernetes.io/master",
+                        "operator": "Exists"
+                      }
+                    ]
+                  },
+                  "weight": 50
+                }
+              ],
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchExpressions": [
+                      {
+                        "key": "node.openshift.io/os_id",
+                        "operator": "NotIn",
+                        "values": [
+                          "rhcos"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "nodeAffinityNodeService": {
+              "requiredDuringSchedulingIgnoredDuringExecution": {
+                "nodeSelectorTerms": [
+                  {
+                    "matchExpressions": [
+                      {
+                        "key": "node.openshift.io/os_id",
+                        "operator": "NotIn",
+                        "values": [
+                          "rhcos"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
         }
       ]
     capabilities: Seamless Upgrades
@@ -261,6 +309,7 @@ spec:
           - clusterrolebindings
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
@@ -270,6 +319,7 @@ spec:
           - clusterroles
           verbs:
           - create
+          - delete
           - get
           - list
           - watch
@@ -279,6 +329,7 @@ spec:
           - csidrivers
           verbs:
           - create
+          - delete
           - get
           - list
           - watch

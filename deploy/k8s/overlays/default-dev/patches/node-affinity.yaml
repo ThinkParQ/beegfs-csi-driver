@@ -1,0 +1,44 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                # Prefer to schedule the controller service on master nodes.
+                matchExpressions:
+                  - key: node-role.kubernetes.io/master
+                    operator: Exists  # Change to NotExists to disallow scheduling on master nodes.
+              weight: 50
+          # Uncomment and fill out to enable additional node-label-based scheduling.
+          # requiredDuringSchedulingIgnoredDuringExecution:
+          #   nodeSelectorTerms:
+          #     - matchExpressions:
+          #         - key:       # Fill in with an appropriate key.
+          #          operator: In
+          #          values: []  # Fill in with appropriate values.
+---
+
+# Uncomment and fill out to enable node-label-based scheduling.
+# kind: DaemonSet
+# apiVersion: apps/v1
+# metadata:
+#   name: csi-beegfs-node
+# spec:
+#   template:
+#     spec:
+#       affinity:
+#         nodeAffinity:
+#           requiredDuringSchedulingIgnoredDuringExecution:
+#             nodeSelectorTerms:
+#               - matchExpressions:
+#                   - key:       # Fill in with an appropriate key.
+#                     operator: In
+#                     values: [] # Fill in with appropriate values.

@@ -89,15 +89,15 @@ through the full [deployment guide](docs/deployment.md).
    to deploy the BeeGFS CSI driver clone this repository: `git clone
    https://github.com/NetApp/beegfs-csi-driver.git`
 2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
-   `kubectl apply -k deploy/k8s/prod`
+   `kubectl apply -k deploy/k8s/overlays/default`
     * Note by default the beegfs-csi-driver image will be pulled from
       [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
 3. Verify all components are installed and operational: `kubectl get pods -n
    kube-system | grep csi-beegfs`
 
 As a one-liner: `git clone https://github.com/NetApp/beegfs-csi-driver.git && cd
-beegfs-csi-driver && kubectl apply -k deploy/k8s/prod && kubectl get pods -n
-kube-system | grep csi-beegfs`
+beegfs-csi-driver && kubectl apply -k deploy/k8s/overlays/default && kubectl get 
+pods -n kube-system | grep csi-beegfs`
 
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.

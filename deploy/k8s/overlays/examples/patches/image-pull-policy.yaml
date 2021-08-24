@@ -1,0 +1,29 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# This file is ignored by default. Move it to an overlay and add a reference to it in
+# overlay-<something>/kustomization.yaml to enable it.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-node
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always

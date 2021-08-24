@@ -1,0 +1,29 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# When doing development work, it usually makes sense for images to always be pulled (you can use the same image tag
+# multiple times in quick succession). This file is NOT .gitignored, so it will apply, by default, to all developers.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-node
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          imagePullPolicy: Always
