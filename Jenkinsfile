@@ -3,7 +3,7 @@
 
 // Set up build parameters so any branch can be manually rebuilt with different values.
 properties([
-    parameters ([
+    parameters([
         string(name: 'hubProjectVersion', defaultValue: '', description: 'Set this to force a Black Duck scan and ' +
                'manually tag it to a particular Black Duck version (e.g. 1.0.1).')
     ])
@@ -216,7 +216,7 @@ pipeline {
             when {
                 expression {
                     return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') ||
-                        !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()
+                            !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()
                 }
             }
             options {
@@ -236,30 +236,37 @@ pipeline {
                         error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
                     }
 
-                    String[][] testEnvironments
+                    TestEnvironment[] testEnvironments
+                    // Most Pre-provisioned PV tests use createVolumeResource(), which calls createPVCPV(). createPVCPV()
+                    // creates a PVC and PV that reference a Storage Class with the same name as the test Namespace, but it
+                    // doesn't actually create this Storage Class. The OpenShift Pod admission webhook refuses to allow
+                    // Pods that reference a non-existent storage class. For now, pass staticVolDirName=""
+                    // TODO(webere, A289): Figure out a low-touch way to enable these tests in OpenShift.
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            ["1.18", "beegfs-7.1.5", "v1.18", "static1"],
-                            ["1.18", "beegfs-7.2", "v1.18", "static1"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "v1.19", "static2"],
-                            ["1.20", "beegfs-7.1.5", "v1.19", "static3"],
-                            ["1.20", "beegfs-7.2", "v1.19", "static3"]
+                            new TestEnvironment("1.18", "beegfs-7.1.5", "1.18", "static1", false),
+                            new TestEnvironment("1.18", "beegfs-7.2", "1.18", "static1", false),
+                            new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
+                            new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static3", false),
+                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
+                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.21", "", true),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
                         ]
-                    }
-                    else {
+                    } else {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            ["1.18", "beegfs-7.2", "v1.18", "static1"],
-                            ["1.19-rdma", "beegfs-7.2-rdma", "v1.19", "static2"],
-                            ["1.20", "beegfs-7.2", "v1.19", "static3"]
+                            new TestEnvironment("1.18", "beegfs-7.2", "1.18", "static1", false),
+                            new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
+                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
                         ]
                     }
 
                     def integrationJobs = [:]
-                    testEnvironments.each { k8sCluster, beegfsHost, k8sversion, staticVolDirName ->
-                        integrationJobs["kubernetes: ${k8sCluster}, beegfs: ${beegfsHost}"] = {
-                            runIntegrationSuite(k8sCluster, beegfsHost, k8sversion, staticVolDirName)
+                    testEnvironments.each { testEnv ->
+                        integrationJobs["kubernetes: ${testEnv.k8sCluster}, beegfs: ${testEnv.beegfsHost}"] = {
+                            runIntegrationSuite(testEnv)
                         }
                     }
                     parallel integrationJobs
@@ -283,7 +290,7 @@ pipeline {
     }
 }
 
-def runIntegrationSuite(k8sCluster, beegfsHost, k8sVersion, staticVolDirName) {
+def runIntegrationSuite(TestEnvironment testEnv) {
     // Always skip the broken subpath test.
     String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
     // Skip the [Slow] tests except on master.
@@ -291,45 +298,100 @@ def runIntegrationSuite(k8sCluster, beegfsHost, k8sVersion, staticVolDirName) {
     if (!env.BRANCH_NAME.matches('master')) {
         ginkgoSkipRegex += "|\\[Slow\\]"
     }
+    if (testEnv.k8sVersion == "1.18") {
+        // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
+        // incorrectly identify our v1.18 cluster as being ephemeral-capable.
+        ginkgoSkipRegex += "|ephemeral"
+    }
 
-    def jobID = "${k8sCluster}-${beegfsHost}"
-    def overlay = "deploy/k8s/overlays/${jobID}"
-    sh """
-        cp -r deploy/k8s/overlays/default ${overlay}
-        (cd ${overlay} && \
-        ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME} && \
-        sed -i 's?/versions/latest?/versions/${k8sVersion}?g' kustomization.yaml)
-    """
-    lock(resource: "${k8sCluster}") {
-        // Credentials variables are always local to the withCredentials block, so multiple
-        // instances of the KUBECONFIG variable can exist without issue when running in parallel
-        withCredentials([file(credentialsId: "kubeconfig-${k8sCluster}", variable: "KUBECONFIG")]) {
-            String clusterGinkgoSkipRegex = ginkgoSkipRegex
-            if (k8sCluster.contains("1.18")) {
-                // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
-                // incorrectly identify our v1.18 cluster as being ephemeral-capable.
-                clusterGinkgoSkipRegex += "|ephemeral"
+    def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
+    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID}"
+    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID}"
+    if (testEnv.staticVolDirName) {
+        testCommand += "-static-vol-dir-name ${testEnv.staticVolDirName}"
+        testCommandDisruptive += "-static-vol-dir-name ${testEnv.staticVolDirName}"
+    }
+
+    echo "Running test using kubernetes version ${testEnv.k8sCluster} with beegfs version ${testEnv.beegfsHost}"
+    lock(resource: "${testEnv.k8sCluster}") {
+        if (testEnv.useOperator) {
+            withCredentials([
+                usernamePassword(credentialsId: "credentials-${testEnv.k8sCluster}", usernameVariable: "OC_USERNAME", passwordVariable: "OC_PASSWORD"),
+                string(credentialsId: "address-${testEnv.k8sCluster}", variable: "OC_ADDRESS")]) {
+                try {
+                    // We escape the $ on OC_ADDRESS, etc. to avoid Groovy interpolation for secrets.
+                    sh """                   
+                        export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
+                        oc login \${OC_ADDRESS} --username=\${OC_USERNAME} --password=\${OC_PASSWORD} --insecure-skip-tls-verify=true
+                        oc delete --cascade=foreground -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
+                        operator-sdk cleanup beegfs-csi-driver-operator || true
+                        operator-sdk run bundle ${uniqueBundleImageTag}
+                        oc apply -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml
+                        # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
+                        # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
+                        oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule --overwrite
+                        ${testCommand}
+                        ${testCommandDisruptive}
+                    """
+                } finally {
+                    sh """
+                        export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
+                        # This is a hack to undo the previous hack.
+                        # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
+                        oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule- || true
+                        oc delete -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
+                        operator-sdk cleanup beegfs-csi-driver-operator || true
+                    """
+                }
             }
-
-            try {
-                // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
-                // running on the cluster. We can't simply delete using -k deploy/k8s/overlay-xxx/ because a previous
-                // user might have deployed the driver using a different deployment scheme.
+        } else {
+            withCredentials([file(credentialsId: "kubeconfig-${testEnv.k8sCluster}", variable: "KUBECONFIG")]) {
+                def overlay = "deploy/k8s/overlays/${jobID}"
                 sh """
-                    echo 'Running test using kubernetes version ${k8sCluster} with beegfs version ${beegfsHost}'
-                    kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
-                    kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
-                    cp test/env/${beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
-                    cp test/env/${beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
-                    kubectl apply -k ${overlay}
-                    ginkgo -v -p -nodes 8 -noColor -skip '${clusterGinkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID} -static-vol-dir-name ${staticVolDirName}
-                    ginkgo -v -noColor -skip '${clusterGinkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID} -static-vol-dir-name ${staticVolDirName}
-                    kubectl delete --cascade=foreground -k ${overlay}
+                    cp -r deploy/k8s/overlays/default ${overlay}
+                    (cd ${overlay} && \\
+                    ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME} && \\
+                    sed -i 's?/versions/latest?/versions/v${testEnv.k8sVersion}?g' kustomization.yaml)
                 """
-            } catch (err) {
-                sh "kubectl delete --cascade=foreground -k ${overlay} || true"
-                throw err
+                try {
+                    // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
+                    // running on the cluster. We can't simply delete using -k deploy/k8s/overlay-xxx/ because a previous
+                    // user might have deployed the driver using a different deployment scheme.
+                    sh """                   
+                        kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
+                        kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
+                        cp test/env/${testEnv.beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
+                        cp test/env/${testEnv.beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
+                        kubectl apply -k ${overlay}
+                        ${testCommand}
+                        ${testCommandDisruptive}
+                    """
+                } finally {
+                    sh "kubectl delete --cascade=foreground -k ${overlay} || true"
+                }
             }
         }
+    }
+}
+
+// TestEnvironment is a JavaBean type class used only to store data about a particular test environment. It mainly
+// exists to allow storing strings AND booleans describing a test environment in one structure.
+class TestEnvironment {
+    String k8sCluster
+    String beegfsHost
+    String k8sVersion
+    String staticVolDirName
+    // useOperator could somewhat equivalently be called inOpenShift. When this is true, we assume testing occurs in an
+    // OpenShift cluster (which carries certain extra burdens) AND the driver should be deployed using the operator and
+    // OLM. If we ever increase our test coverage so that we use OLM in a Kubesprayed cluster or deploy to OpenShift
+    // without OLM, we may need to decouple this field into useOperator and inOpenShift.
+    boolean useOperator
+
+    TestEnvironment(String k8sCluster, String beegfsHost, String k8sVersion, String staticVolDirName, boolean useOperator) {
+        this.k8sCluster = k8sCluster
+        this.beegfsHost = beegfsHost
+        this.k8sVersion = k8sVersion
+        this.staticVolDirName = staticVolDirName
+        this.useOperator = useOperator
     }
 }
