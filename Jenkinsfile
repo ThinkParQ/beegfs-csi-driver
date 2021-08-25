@@ -320,6 +320,9 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 string(credentialsId: "address-${testEnv.k8sCluster}", variable: "OC_ADDRESS")]) {
                 try {
                     // We escape the $ on OC_ADDRESS, etc. to avoid Groovy interpolation for secrets.
+                    // We are not using a secret KUBECONFIG here as we do in the non-OpenShift deployment. However,
+                    // we still need to set KUBECONFIG to point to an empty file in the workspace so "oc login" won't
+                    // modify the Jenkins user's ~/.kube/config.
                     sh """                   
                         export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
                         oc login \${OC_ADDRESS} --username=\${OC_USERNAME} --password=\${OC_PASSWORD} --insecure-skip-tls-verify=true
