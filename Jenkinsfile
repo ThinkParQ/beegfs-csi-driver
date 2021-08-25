@@ -348,6 +348,8 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 }
             }
         } else {
+            // Credentials variables are always local to the withCredentials block, so multiple
+            // instances of the KUBECONFIG variable can exist without issue when running in parallel.
             withCredentials([file(credentialsId: "kubeconfig-${testEnv.k8sCluster}", variable: "KUBECONFIG")]) {
                 def overlay = "deploy/k8s/overlays/${jobID}"
                 sh """
