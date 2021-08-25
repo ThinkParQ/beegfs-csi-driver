@@ -329,7 +329,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         oc delete --cascade=foreground -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
                         operator-sdk run bundle ${uniqueBundleImageTag}
-                        oc apply -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml
+                        sed 's/tag: replaced-by-jenkins/tag: ${uniqueImageTag.split(':')[1]}/g' test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml | kubectl apply -f -
                         # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
                         # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
                         oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule --overwrite
