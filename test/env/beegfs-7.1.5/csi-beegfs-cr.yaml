@@ -1,7 +1,8 @@
 # Copyright 2021 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
 
-# TODO(webere, A219): Document the use of or remove this file.
+# In a typical deployment with the operator, an administrator would pre-create this secret or edit it after it was
+# created. For testing purposes it is easiest to simply deploy it here.
 
 kind: BeegfsDriver
 apiVersion: beegfs.csi.netapp.com/v1
@@ -9,15 +10,12 @@ metadata:
   name: csi-beegfs-cr  # CR must have this name.
 spec:
   containerImageOverrides:
+    # This block allows us to use sed to select the driver image tag the operator uses when deployed with Jenkins. We
+    # pass the tag this way (instead of building it into the operator binary) so the operator image Jenkins builds can
+    # remain clean (i.e. it can be retagged and pushed to Docker Hub).
     beegfsCsiDriver:
       image: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
-      tag: master
-    csiNodeDriverRegistrar:
-      image: docker.repo.eng.netapp.com/sig-storage/csi-node-driver-registrar
-    csiProvisioner:
-      image: docker.repo.eng.netapp.com/sig-storage/csi-provisioner
-    livenessProbe:
-      image: docker.repo.eng.netapp.com/sig-storage/livenessprobe
+      tag: replaced-by-jenkins
   nodeAffinityControllerService:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 50
@@ -40,4 +38,11 @@ spec:
               operator: NotIn
               values:
                 - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
-  logLevel: 5
+  pluginConfig:
+    fileSystemSpecificConfigs:
+      - sysMgmtdHost: scspa2059245001.rtp.openenglab.netapp.com
+      - sysMgmtdHost: scspa2061750001.rtp.openenglab.netapp.com
+        config:
+          beegfsClientConf:
+            connMgmtdPortTCP: '9009'
+            connMgmtdPortUDP: '9009'
