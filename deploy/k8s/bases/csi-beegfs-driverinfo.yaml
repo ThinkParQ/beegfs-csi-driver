@@ -9,6 +9,12 @@ metadata:
   name: beegfs.csi.netapp.com
 spec:
   attachRequired: false
+  # Set fsGroupPolicy in base manifest and remove via v1.18 patch because:
+  #   - kubectl validation will not allow the field in a CSI Driver object applied to a 1.18 cluster (must be removed
+  #     via kustomize)
+  #   - client-go in the operator has no problem applying a CSI Driver with the field in a 1.18 cluster; it is simply
+  #     ignored (safe to keep in base).
+  fsGroupPolicy: None
   # Supports persistent volumes.
   volumeLifecycleModes:
   - Persistent
