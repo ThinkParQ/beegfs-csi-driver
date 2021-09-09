@@ -56,11 +56,14 @@ type BeegfsDriverReconciler struct {
 //+kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;delete
+//+kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create
 //+kubebuilder:rbac:groups=storage.k8s.io,resources=csidrivers,verbs=get;list;watch;create;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update
 //+kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update
+//+kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 
 // The operator must have the following permissions in order to grant them to the driver.
 //+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;watch;create;delete
@@ -88,10 +91,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Get "clean" versions of all objects from deployment manifests.
+	// Get "clean" versions of all objects from deployment manifests. Ignore potential errors because unit testing in
+	// the deploy package ensures they will not occur.
 	sts, _ := deploy.GetControllerServiceStatefulSet()
 	ds, _ := deploy.GetNodeServiceDaemonSet()
-	cr, crb, sa, _ := deploy.GetControllerServiceRBAC()
+	rbacInterfaces, _ := deploy.GetRBAC()
 	d, _ := deploy.GetCSIDriver()
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -217,11 +221,19 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// The CR is being deleted. Execute on our finalizer by deleting cluster-scoped resources.
 		if containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
 			log.Info("Deleting cluster-scoped objects")
-			if err = r.Delete(ctx, cr); err != nil && !errors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
-			if err = r.Delete(ctx, crb); err != nil && !errors.IsNotFound(err) {
-				return ctrl.Result{}, err
+			// There are some number of RBAC objects from the deployment manifests on the cluster. We do not hard code
+			// the exact nature of these objects here.
+			for _, i := range rbacInterfaces {
+				switch object := i.(type) {
+				case *rbacv1.ClusterRole:
+					if err = r.Delete(ctx, object); err != nil && !errors.IsNotFound(err) {
+						return ctrl.Result{}, err
+					}
+				case *rbacv1.ClusterRoleBinding:
+					if err = r.Delete(ctx, object); err != nil && !errors.IsNotFound(err) {
+						return ctrl.Result{}, err
+					}
+				}
 			}
 			if err = r.Delete(ctx, d); err != nil && !errors.IsNotFound(err) {
 				return ctrl.Result{}, err
@@ -293,72 +305,139 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		s = sFromCluster // We need the correct resourceVersion later on.
 	}
 
-	// Completely recreate the Service Account to ensure all fields specified in the deployment manifest are propagated.
-	if err = r.setCommonObjectMetadata(req, driver, sa); err != nil {
-		return ctrl.Result{}, err
-	}
-	saFromCluster := new(corev1.ServiceAccount)
-	err = r.Get(ctx, types.NamespacedName{Name: sa.Name, Namespace: req.Namespace}, saFromCluster)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Service Account doesn't exist. Let's create it.
-			log.Info("Creating controller service Service Account")
-			if err = r.Create(ctx, sa); err != nil {
+	// There are some number of RBAC objects from the deployment manifests on the cluster. We do not hard code
+	// the exact nature of these objects here.
+	for _, i := range rbacInterfaces {
+		switch object := i.(type) {
+		// Completely recreate the Service Account to ensure all fields specified in the deployment manifests are
+		// propagated.
+		case *corev1.ServiceAccount:
+			if err = r.setCommonObjectMetadata(req, driver, object); err != nil {
 				return ctrl.Result{}, err
 			}
-		}
-	} else {
-		// Intentionally empty.
-		// We do not monitor and continuously update the Service Account because it doesn't have any useful fields.
-	}
+			saFromCluster := new(corev1.ServiceAccount)
+			err = r.Get(ctx, types.NamespacedName{Name: object.Name, Namespace: req.Namespace}, saFromCluster)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+				} else {
+					// The Service Account doesn't exist. Let's create it.
+					log.Info("Creating Service Account", "name", object.Name)
+					if err = r.Create(ctx, object); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			} else {
+				// Intentionally empty.
+				// We do not monitor and continuously update Service Accounts because they don't have any useful fields.
+			}
 
-	// Completely recreate the Cluster Role to ensure all fields specified in the deployment manifest are propagated.
-	// Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a namespace and our
-	// namespace-scoped CRD can't own it).
-	crFromCluster := new(rbacv1.ClusterRole)
-	err = r.Get(ctx, types.NamespacedName{Name: cr.Name}, crFromCluster)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Cluster Role doesn't exist. Let's create it.
-			log.Info("Creating controller service Cluster Role")
-			if err = r.Create(ctx, cr); err != nil {
-				return ctrl.Result{}, err
+		case *rbacv1.ClusterRole:
+			// Completely recreate the Cluster Role to ensure all fields specified in the deployment manifests are
+			// propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a
+			// namespace and our namespace-scoped CRD can't own it).
+			crFromCluster := new(rbacv1.ClusterRole)
+			err = r.Get(ctx, types.NamespacedName{Name: object.Name}, crFromCluster)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+				} else {
+					// The Cluster Role doesn't exist. Let's create it.
+					log.Info("Creating Cluster Role", "name", object.Name)
+					if err = r.Create(ctx, object); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			} else if !equality.Semantic.DeepEqual(object.Rules, crFromCluster.Rules) {
+				// The Cluster Role on the cluster needs to be updated.
+				log.Info("Updating Cluster Role", "name", object.Name)
+				if err = r.Update(ctx, object); err != nil {
+					return ctrl.Result{}, err
+				}
 			}
-		}
-	} else if !equality.Semantic.DeepEqual(cr.Rules, crFromCluster.Rules) {
-		// The Cluster Role on the cluster needs to be updated.
-		log.Info("Updating controller service Cluster Role")
-		if err = r.Update(ctx, cr); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
 
-	// Completely recreate the Cluster Role Binding to ensure all fields specified in the deployment manifest are
-	// propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't have a
-	// namespace and our namespace-scoped CRD can't own it).
-	crb.Subjects[0].Namespace = req.Namespace
-	crbFromCluster := new(rbacv1.ClusterRoleBinding)
-	err = r.Get(ctx, types.NamespacedName{Name: crb.Name}, crbFromCluster)
-	if err != nil {
-		if !errors.IsNotFound(err) {
-			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Cluster Role Binding doesn't exist. Let's create it.
-			log.Info("Creating controller service Cluster Role Binding")
-			if err = r.Create(ctx, crb); err != nil {
+		case *rbacv1.ClusterRoleBinding:
+			// Completely recreate the Cluster Role Binding to ensure all fields specified in the deployment manifests
+			// are propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't
+			// have a namespace and our namespace-scoped CRD can't own it).
+			for j, _ := range object.Subjects {
+				object.Subjects[j].Namespace = req.Namespace
+			}
+			crbFromCluster := new(rbacv1.ClusterRoleBinding)
+			err = r.Get(ctx, types.NamespacedName{Name: object.Name}, crbFromCluster)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+				} else {
+					// The Cluster Role Binding doesn't exist. Let's create it.
+					log.Info("Creating Cluster Role Binding", "name", object.Name)
+					if err = r.Create(ctx, object); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			} else if !equality.Semantic.DeepEqual(object.Subjects, crbFromCluster.Subjects) ||
+				!equality.Semantic.DeepEqual(object.RoleRef, crbFromCluster.RoleRef) {
+				// The Cluster Role Binding on the cluster needs to be updated.
+				log.Info("Updating Cluster Role Binding", "name", object.Name)
+				if err = r.Update(ctx, object); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
+
+		case *rbacv1.Role:
+			// Completely recreate the Role o ensure all fields specified in the deployment manifest are propagated.
+			if err = r.setCommonObjectMetadata(req, driver, object); err != nil {
 				return ctrl.Result{}, err
 			}
-		}
-	} else if !equality.Semantic.DeepEqual(crb.Subjects, crbFromCluster.Subjects) ||
-		!equality.Semantic.DeepEqual(crb.RoleRef, crbFromCluster.RoleRef) {
-		// The Cluster Role Binding on the cluster needs to be updated.
-		log.Info("Updating controller service Cluster Role Binding")
-		if err = r.Update(ctx, crb); err != nil {
-			return ctrl.Result{}, err
+			rFromCluster := new(rbacv1.Role)
+			err = r.Get(ctx, types.NamespacedName{Name: object.Name, Namespace: req.Namespace}, rFromCluster)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+				} else {
+					// The Role doesn't exist. Let's create it.
+					log.Info("Creating Role", "name", object.Name)
+					if err = r.Create(ctx, object); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			} else if !equality.Semantic.DeepEqual(object.Rules, rFromCluster.Rules) {
+				// The Cluster Role on the cluster needs to be updated.
+				log.Info("Updating Role", "name", object.Name)
+				if err = r.Update(ctx, object); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
+
+		case *rbacv1.RoleBinding:
+			// Completely recreate the Role Binding to ensure all fields specified in the deployment manifest are
+			// propagated.
+			if err = r.setCommonObjectMetadata(req, driver, object); err != nil {
+				return ctrl.Result{}, err
+			}
+			for j, _ := range object.Subjects {
+				object.Subjects[j].Namespace = req.Namespace
+			}
+			crbFromCluster := new(rbacv1.RoleBinding)
+			err = r.Get(ctx, types.NamespacedName{Name: object.Name, Namespace: req.Namespace}, crbFromCluster)
+			if err != nil {
+				if !errors.IsNotFound(err) {
+					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+				} else {
+					// The Role Binding doesn't exist. Let's create it.
+					log.Info("Creating Role Binding", "name", object.Name)
+					if err = r.Create(ctx, object); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			} else if !equality.Semantic.DeepEqual(object.Subjects, crbFromCluster.Subjects) ||
+				!equality.Semantic.DeepEqual(object.RoleRef, crbFromCluster.RoleRef) {
+				// The Role Binding on the cluster needs to be updated.
+				log.Info("Updating Role Binding", "name", object.Name)
+				if err = r.Update(ctx, object); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
 		}
 	}
 

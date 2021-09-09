@@ -6,29 +6,34 @@ Licensed under the Apache License, Version 2.0.
 package deploy
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"strings"
 	"testing"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 )
 
-func TestGetControllerServiceRBAC(t *testing.T) {
-	cr, crb, sa, err := GetControllerServiceRBAC()
+func TestGetRBAC(t *testing.T) {
+	interfaces, err := GetRBAC()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cr == nil {
-		t.Fatal("no Cluster Role in RBAC manifest")
-	}
-	if crb == nil {
-		t.Fatal("no Cluster Role Binding in RBAC manifest")
-	}
-	if sa == nil {
-		t.Fatal("no Service Account in RBAC manifest")
-	}
-	if numSubjects := len(crb.Subjects); numSubjects > 1 {
-		t.Fatalf("the operator expects only 1 subject in a Cluster Role Binding, found %d", numSubjects)
+	for _, i := range interfaces {
+		switch object := i.(type) {
+		case *rbacv1.ClusterRole:
+			continue
+		case *rbacv1.ClusterRoleBinding:
+			continue
+		case *rbacv1.Role:
+			continue
+		case *rbacv1.RoleBinding:
+			continue
+		case *corev1.ServiceAccount:
+			continue
+		default:
+			t.Fatalf("found an RBAC object with an unexpected type: %s", object)
+		}
 	}
 }
 
@@ -92,7 +97,7 @@ func TestGetNodeServiceDaemonSet(t *testing.T) {
 	testForResourceNamesInPodVolumes(t, ds.Spec.Template.Spec.Volumes)
 }
 
-func testForKeysInContainerArgs(t *testing.T, containers []v1.Container) {
+func testForKeysInContainerArgs(t *testing.T, containers []corev1.Container) {
 	foundCMKey := false
 	foundSKey := false
 	for _, container := range containers {
@@ -112,7 +117,7 @@ func testForKeysInContainerArgs(t *testing.T, containers []v1.Container) {
 	}
 }
 
-func testForResourceNamesInPodVolumes(t *testing.T, volumes []v1.Volume) {
+func testForResourceNamesInPodVolumes(t *testing.T, volumes []corev1.Volume) {
 	foundCMName := false
 	foundSName := false
 	for _, volume := range volumes {

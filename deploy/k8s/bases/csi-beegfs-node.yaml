@@ -16,6 +16,7 @@ spec:
       labels:
         app: csi-beegfs-node
     spec:
+      serviceAccountName: csi-beegfs-node-sa
       hostNetwork: true # Required to find an available connClientPortUDP on the host.
       containers:
         - name: node-driver-registrar

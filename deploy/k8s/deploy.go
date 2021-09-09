@@ -35,7 +35,7 @@ var driverBytes []byte
 //go:embed bases/csi-beegfs-node.yaml
 var dsBytes []byte
 
-//go:embed bases/csi-beegfs-controller-rbac.yaml
+//go:embed bases/csi-beegfs-rbac.yaml
 var rbacBytes []byte
 
 // These are expected container names within the Stateful Set and Daemon Set manifests. Some operator logic is based
@@ -64,50 +64,62 @@ const (
 	KeyNameSecret    = "csi-beegfs-connauth.yaml"
 )
 
-// GetControllerServiceRBAC returns a pointer to a Cluster Role, a pointer to a Cluster Role Binding, and a pointer
-// to a Service Account contained in the embedded RBAC manifest. GetControllerServiceRBAC returns an error if it finds
-// multiple of any of these object kinds or if it finds an object kind it does not expect. It returns a nil pointer
-// for if it does not find an expected object.
-func GetControllerServiceRBAC() (*rbacv1.ClusterRole, *rbacv1.ClusterRoleBinding, *corev1.ServiceAccount, error) {
+// GetRBAC returns a slice of pointers to the following RBAC objects as interfaces: Cluster Role, Cluster Role Binding,
+// Role, Role Binding, Service Account. GetRBAC returns an error if it finds a different kind of object or if an object
+// cannot be correctly unmarshalled. The caller MUST assert the type of each object in the slice before using it. This
+// approach allows us to add additional Roles, Role Bindings, etc. to the deployment manifests without reworking
+// GetRBAC or the dependent operator code.
+func GetRBAC() ([]interface{}, error) {
+	var objects []interface{}
 	var cr *rbacv1.ClusterRole
 	var crb *rbacv1.ClusterRoleBinding
+	var r *rbacv1.Role
+	var rb *rbacv1.RoleBinding
 	var sa *corev1.ServiceAccount
 
 	// cs-beegfs-rbac.yaml includes multiple YAML documents, each with a different structure.
 	splitRBACBytes := bytes.Split(rbacBytes, []byte("---"))
 
 	for _, singleRBACBytes := range splitRBACBytes {
-		// Consider ClusterRoleBinding first because a typical ClusterRoleBinding includes a reference to a
-		// ClusterRole, but not vice versa.
+		// Consider Cluster Role Binding first because a typical Cluster Role Binding includes a reference to a
+		// Cluster Role, but not vice versa.
 		if bytes.Contains(singleRBACBytes, []byte("kind: ClusterRoleBinding")) {
-			if crb != nil {
-				return cr, crb, sa, errors.New("multiple Cluster Role Bindings in RBAC manifest")
-			}
 			crb = new(rbacv1.ClusterRoleBinding)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, crb); err != nil {
-				return cr, crb, sa, err
+				return objects, err
 			}
+			objects = append(objects, crb)
 		} else if bytes.Contains(singleRBACBytes, []byte("kind: ClusterRole")) {
-			if cr != nil {
-				return cr, crb, sa, errors.New("multiple Cluster Roles in RBAC manifest")
-			}
 			cr = new(rbacv1.ClusterRole)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, cr); err != nil {
-				return cr, crb, sa, err
+				return objects, err
 			}
+			objects = append(objects, cr)
+			// Consider Role Binding first because a typical Role Binding includes a reference to a Role, but not vice
+			// versa.
+		} else if bytes.Contains(singleRBACBytes, []byte("kind: RoleBinding")) {
+			rb = new(rbacv1.RoleBinding)
+			if err := yaml.UnmarshalStrict(singleRBACBytes, rb); err != nil {
+				return objects, err
+			}
+			objects = append(objects, rb)
+		} else if bytes.Contains(singleRBACBytes, []byte("kind: Role")) {
+			r = new(rbacv1.Role)
+			if err := yaml.UnmarshalStrict(singleRBACBytes, r); err != nil {
+				return objects, err
+			}
+			objects = append(objects, r)
 		} else if bytes.Contains(singleRBACBytes, []byte("kind: ServiceAccount")) {
-			if sa != nil {
-				return cr, crb, sa, errors.New("multiple Service Accounts in RBAC manifest")
-			}
 			sa = new(corev1.ServiceAccount)
 			if err := yaml.UnmarshalStrict(singleRBACBytes, sa); err != nil {
-				return cr, crb, sa, err
+				return objects, err
 			}
+			objects = append(objects, sa)
 		} else {
-			return cr, crb, sa, errors.New("unexpected document found in RBAC manifest")
+			return objects, errors.New("unexpected document found in RBAC manifest")
 		}
 	}
-	return cr, crb, sa, nil
+	return objects, nil
 }
 
 func GetControllerServiceStatefulSet() (*appsv1.StatefulSet, error) {

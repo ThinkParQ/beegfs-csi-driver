@@ -9,6 +9,14 @@ metadata:
   name: csi-beegfs-controller-sa
 
 ---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-beegfs-node-sa
+
+---
+
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -34,6 +42,7 @@ rules:
     verbs: ["get", "list", "watch"]
 
 ---
+
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -42,6 +51,39 @@ subjects:
   - kind: ServiceAccount
     name: csi-beegfs-controller-sa
 roleRef:
+  apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: csi-beegfs-provisioner-role
+
+---
+
+# This Role is required for OpenShift deployments and unnecessary but completely harmless in non-OpenShift deployments.
+# By default, OpenShift users/groups/service accounts only have access to the "restricted" Security Context Constraint
+# (SCC). This SCC disallows privileged containers and containers that use the host network, but a deployment of the
+# BeeGFS CSI driver requires both.
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-beegfs-privileged-scc-role
+rules:
+  - apiGroups: [ "security.openshift.io" ]
+    resources: [ "securitycontextconstraints" ]
+    resourceNames: [ "privileged" ]
+    verbs: [ "use" ]
+
+---
+
+# See the comments for the "csi-beegfs-privileged-scc-role" Role above.
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-beegfs-privileged-scc-binding
+subjects:
+  - kind: ServiceAccount
+    name: csi-beegfs-controller-sa
+  - kind: ServiceAccount
+    name: csi-beegfs-node-sa
+roleRef:
   apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: csi-beegfs-privileged-scc-role
