@@ -4,19 +4,21 @@ config:
   connInterfaces:
     - ib0
   connNetFilter:
-    - "127.0.0.0/24"
+    - 127.0.0.0/24
   connTcpOnlyFilter:
-    - "127.0.0.0"
+    - 127.0.0.0
   beegfsClientConf:
-    connMgmtdPort: 8000
+    connMgmtdPort: "8000"
+    connUseRDMA: "true"
 fileSystemSpecificConfigs:
-  - sysMgmtdHost: "127.0.0.0"
+  - sysMgmtdHost: 127.0.0.0
     config:
       connInterfaces:
         - ib0
       connNetFilter:
-        - "127.0.0.0/24"
+        - 127.0.0.0/24
       connTcpOnlyFilter:
-        - "127.0.0.0"
+        - 127.0.0.0
       beegfsClientConf:
-        connMgmtdPort: 8000
+        connMgmtdPort: "8000"
+        connUseRDMA: "true"

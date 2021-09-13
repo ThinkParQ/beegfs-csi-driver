@@ -18,7 +18,7 @@ config:
   connTcpOnlyFilter:
     - 10.0.0.1/24
   beegfsClientConf:
-    connMgmtdPortTCP: 9008
+    connMgmtdPortTCP: "9008"
 
 fileSystemSpecificConfigs:
   - sysMgmtdHost: some.specific.file.system
@@ -32,7 +32,7 @@ fileSystemSpecificConfigs:
       connTcpOnlyFilter:
         - 10.0.0.3/24
       beegfsClientConf:
-        connMgmtdPortTCP: 10008
+        connMgmtdPortTCP: "10008"
 
 nodeSpecificConfigs:
   - nodeList:
@@ -48,7 +48,7 @@ nodeSpecificConfigs:
       connTcpOnlyFilter:
         - 10.0.0.5/24
       beegfsClientConf:
-        connMgmtdPortTCP: 11008
+        connMgmtdPortTCP: "11008"
 
     fileSystemSpecificConfigs:
       - sysMgmtdHost: some.specific.file.system
@@ -62,4 +62,4 @@ nodeSpecificConfigs:
           connTcpOnlyFilter:
             - 10.0.0.5/24
           beegfsClientConf:
-            connMgmtdPortTCP: 12008
+            connMgmtdPortTCP: "12008"

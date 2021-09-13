@@ -377,6 +377,9 @@ which it uses to generate the expected file. See [BeeGFS Client
 Parameters](#beegfs-client-parameters) for more detail about
 supported `beegfsClientConf` parameters.
 
+NOTE: beegfs-client.conf values MUST be specified as strings, even if they 
+appear to be integers or booleans (e.g. "8000", not 8000 and "true", not true).
+
 The order of precedence for configuration option overrides is described by
 "PRECEDENCE" comments in the example below. In general, precedence is as
 follows: 
@@ -406,7 +409,7 @@ config:  # OPTIONAL
     - <ip_subnet>
   beegfsClientConf:
     <beegfs-client.conf_key>: <beegfs-client.conf_value>  
-    # e.g. connMgmtdPortTCP: 9008
+    # e.g. connMgmtdPortTCP: "9008"
     # SEE BELOW FOR RESTRICTIONS
 
 fileSystemSpecificConfigs:  # OPTIONAL

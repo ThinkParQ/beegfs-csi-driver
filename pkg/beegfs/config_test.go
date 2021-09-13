@@ -33,7 +33,7 @@ func TestParseConfigFromFile(t *testing.T) {
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
-					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
+					BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000", "connUseRDMA": "true"},
 				},
 				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
@@ -42,7 +42,7 @@ func TestParseConfigFromFile(t *testing.T) {
 							ConnInterfaces:    []string{"ib0"},
 							ConnNetFilter:     []string{"127.0.0.0/24"},
 							ConnTcpOnlyFilter: []string{"127.0.0.0"},
-							BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000"},
+							BeegfsClientConf:  map[string]string{"connMgmtdPort": "8000", "connUseRDMA": "true"},
 						},
 					},
 				},

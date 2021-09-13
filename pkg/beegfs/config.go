@@ -16,7 +16,7 @@ import (
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // These parameters have no effect when specified in the beeGFSClientConf configuration section.
