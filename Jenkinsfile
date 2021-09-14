@@ -328,6 +328,10 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         oc login \${OC_ADDRESS} --username=\${OC_USERNAME} --password=\${OC_PASSWORD} --insecure-skip-tls-verify=true
                         oc delete --cascade=foreground -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
+                        while [ "\$(oc get pod | grep beegfs-csi-driver-operator)" ]; do 
+                            echo "waiting for bundle cleanup"
+                            sleep 5
+                        done
                         operator-sdk run bundle ${uniqueBundleImageTag}
                         sed 's/tag: replaced-by-jenkins/tag: ${uniqueImageTag.split(':')[1]}/g' test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml | kubectl apply -f -
                         # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
