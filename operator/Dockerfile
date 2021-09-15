@@ -4,8 +4,8 @@
 # Because we already do not build the larger project within an intermediate container, it is more straightforward to
 # build the manager directly and then copy it into the container.
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
+# Use distroless as minimal base image to package the manager binary. Refer to
+# https://github.com/GoogleContainerTools/distroless for more details.
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY bin/manager .

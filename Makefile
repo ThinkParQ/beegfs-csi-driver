@@ -37,10 +37,16 @@ build-%: check-go-version-go
 		fi; \
 	done
 
+# Put symbolic links between various commands (e.g. beegfs-ctl, mount, and umount) and cmd/chwrap into a .tar file to
+# be unpacked in the container. chwrap.tar is obviously not a binary file, but bin/ is where release-tools/build.make
+# outputs files and it is cleaned out on "make clean".
+bin/chwrap.tar: build-chwrap cmd/chwrap/chwrap.sh
+	cmd/chwrap/chwrap.sh bin/chwrap bin/chwrap.tar
+
 # The beegfs-csi-driver container requires chwrap to be built and included, so we build it anytime container or push
 # are made. Additional prerequisites and the recipes for container and push are defined in release-tools/build.make. A
 # different workaround will likely be required for multiarch builds.
-container: build-chwrap
+container: build-chwrap bin/chwrap.tar
 push: container  # not explicitly executed in release-tools/build.make
 
 include release-tools/build.make

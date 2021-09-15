@@ -67,9 +67,13 @@ spec:
             - mountPath: /csi/connauth
               name: connauth-dir
             - mountPath: /host
+              # Because we chwrap mount/umount, we must propagate the container's /host mounts to the node.
+              mountPropagation: Bidirectional
               name: host-dir
               readOnly: true  # We should NOT write arbitrarily to the host filesystem.
             - mountPath: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
+              # We must know whether a directory is a mount point in order to decide how to handle it.
+              mountPropagation: HostToContainer
               name: plugin-dir
       volumes:
         # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
