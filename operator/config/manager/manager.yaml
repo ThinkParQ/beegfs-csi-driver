@@ -45,13 +45,20 @@ spec:
             port: 8081
           initialDelaySeconds: 5
           periodSeconds: 10
+        # Pass the manager's namespace to it so it can limit its watches (and the size of its cache).
+        env:
+          - name: BEEGFS_CSI_DRIVER_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        # The operator only watches (and caches) Stateful Sets, Daemon Sets, Secrets, and Config Maps in its namespace.
+        # Under normal conditions it stabilizes at ~47Mi of memory and virtually no CPU.
         resources:
-# TODO(webere, A270): Restore limits after investigation.
-#          limits:
-#            cpu: 100m
-#            memory: 30Mi
+          limits:
+            cpu: 100m      # The operator-sdk default (more than we've ever observed).
+            memory: 150Mi  # Triple the expected memory utilization in case we run in a shared namespace.
           requests:
-            cpu: 100m
-            memory: 20Mi
+            cpu: 100m      # The operator-sdk default (more than we've ever observed).
+            memory: 50Mi   # About the expected memory utilization.
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
