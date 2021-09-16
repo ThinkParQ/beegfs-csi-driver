@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: beegfs-csi-driver-operator-system
+namespace: beegfs-csi
 
 # Value of this field is prepended to the
 # names of all resources, e.g. a deployment named
