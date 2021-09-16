@@ -250,6 +250,8 @@ pipeline {
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static3", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
+                            new TestEnvironment("1.21", "beegfs-7.1.5", "1.21", "static4", false),
+                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
                             new TestEnvironment("openshift", "beegfs-7.1.5", "1.21", "", true),
                             new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
                         ]
@@ -259,6 +261,7 @@ pipeline {
                             new TestEnvironment("1.18", "beegfs-7.2", "1.18", "static1", false),
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
+                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
                             new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
                         ]
                     }
@@ -359,7 +362,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 sh """
                     cp -r deploy/k8s/overlays/default ${overlay}
                     (cd ${overlay} && \\
-                    ${HOME}/kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME} && \\
+                    kustomize edit set image netapp/beegfs-csi-driver=${remoteImageName}:${env.BRANCH_NAME} && \\
                     sed -i 's?/versions/latest?/versions/v${testEnv.k8sVersion}?g' kustomization.yaml)
                 """
                 try {
