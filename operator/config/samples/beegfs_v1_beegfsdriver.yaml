@@ -1,8 +1,13 @@
+# This is a minimal BeeGFSDriver Custom Resource (CR) showing the typical configuration that may need to be updated.
+# For a full list of available configuration and detailed descriptions reference the Custom Resource Definition (CRD)
+# at ../crd/bases/beegfs.csi.netapp.com_beegfsdriver.yaml."
+
 apiVersion: beegfs.csi.netapp.com/v1
 kind: BeegfsDriver
 metadata:
   name: csi-beegfs-cr
 spec:
+  # This configuration is the minimum necessary in OpenShift deployments.
   nodeAffinityControllerService:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 50
@@ -25,3 +30,27 @@ spec:
               operator: NotIn
               values:
                 - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
+  # Uncomment and fill in any portion of this additional configuration that is necessary for your deployment.
+  # containerImageOverrides:
+  #   beegfsCsiDriver:
+  #     image:
+  #     tag:
+  #   csiNodeDriverRegistrar:
+  #     image:
+  #     tag:
+  #   csiProvisioner:
+  #     image:
+  #     tag:
+  #   livenessProbe:
+  #     image:
+  #     tag:
+  # logLevel:
+  # See the deployment documentation at docs/deployment (in addition to the CRD) for details.
+  # pluginConfig:
+  #   config:
+  #     connInterfaces:
+  #     connNetFilter:
+  #     connTcpOnlyFilter:
+  #     beegfsClientConf:
+  #   fileSystemSpecificConfigs:
+  #   nodeSpecificConfigs:

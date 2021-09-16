@@ -123,7 +123,9 @@ type ContainerImageOverride struct {
 
 // The primary configuration structure containing all of the custom configuration (beegfs-client.conf keys/values and
 // additional CSI driver specific fields) associated with a single BeeGFS file system except for sysMgmtdHost, which is
-// specified elsewhere.
+// specified elsewhere. WARNING: This structure includes a beegfsClientConf field. This field may not be rendered in
+// form view by OpenShift or other graphical interfaces, but it can be critical in some environments. Add or modify it
+// in YAML view.
 type BeegfsConfig struct {
 	// A list of interfaces the BeeGFS client service can communicate over (e.g. "ib0" or "eth0"). Often not required.
 	// See beegfs-client.conf for more details.
