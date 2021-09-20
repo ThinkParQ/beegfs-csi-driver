@@ -43,10 +43,12 @@ file systems](https://blog.netapp.com/beegfs-for-beginners/).
 
 ### Interoperability and CSI Feature Matrix
 <a name="interoperability-and-csi-feature-matrix"></a>
-| beegfs.csi.netapp.com  | K8s Versions     | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
-| -----------------------| ---------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
-| v1.0.0                 | 1.19             | 7.2, 7.1.5      | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
-| v1.1.0                 | 1.18, 1.19, 1.20 | 7.2.1, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
+
+| beegfs.csi.netapp.com  | K8s Versions           | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
+| -----------------------| ---------------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
+| v1.0.0                 | 1.19                   | 7.2, 7.1.5      | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
+| v1.1.0                 | 1.18, 1.19, 1.20       | 7.2.1, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21 | 7.2.3, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |
 
 Additional Notes:
 * This matrix indicates tested BeeGFS and Kubernetes versions. The driver
