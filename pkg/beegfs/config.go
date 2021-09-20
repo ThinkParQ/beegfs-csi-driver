@@ -48,6 +48,16 @@ func parseConfigFromFile(path, nodeID string) (beegfsv1.PluginConfig, error) {
 		return beegfsv1.PluginConfig{}, errors.Wrap(err, "failed to read configuration file")
 	}
 	if err := yaml.UnmarshalStrict(rawConfigBytes, &rawConfig); err != nil {
+		// This is a "best effort" attempt to add additional context to an unmarshalling error that is likely caused by
+		// missing quotes in the beegfsClientConf field. It is generally bad practice to base program logic on
+		// "reading" and error string, but here we only add to the error message we write and fall back to simply
+		// logging the error as is if anything goes wrong.
+		re := ".*cannot unmarshal .* into Go struct field " +
+			"BeegfsConfig.fileSystemSpecificConfigs.config.beegfsClientConf of type string.*"
+		if matched, regexErr := regexp.MatchString(re, err.Error()); regexErr == nil && matched {
+			return beegfsv1.PluginConfig{}, errors.Wrap(err, "likely missing quotes around an integer or "+
+				"boolean beegfsClientConf value")
+		}
 		return beegfsv1.PluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
 	LogDebug(nil, "Raw configuration parsed", "parsePath", path, "rawConfig", rawConfig)
