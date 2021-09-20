@@ -7,6 +7,7 @@ package beegfs
 
 import (
 	"reflect"
+	"regexp"
 	"testing"
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
@@ -24,6 +25,7 @@ func TestParseConfigFromFile(t *testing.T) {
 		configFile string
 		nodeID     string
 		want       beegfsv1.PluginConfig
+		errRegex   string // A regular expression expected to be in err.Error(). Empty if parsing should succeed.
 	}{
 		"basic all fields correct": {
 			configFile: "testdata/basic.yaml",
@@ -47,6 +49,18 @@ func TestParseConfigFromFile(t *testing.T) {
 					},
 				},
 			},
+		},
+		"beegfsClientConf integer with forgotten quotes": {
+			configFile: "testdata/no-quotes-integer.yaml",
+			nodeID:     "testnode",
+			want:       beegfsv1.PluginConfig{}, // Empty because we expect to fail.
+			errRegex:   "likely missing quotes around an integer or boolean beegfsClientConf value",
+		},
+		"beegfsClientConf boolean with forgotten quotes": {
+			configFile: "testdata/no-quotes-boolean.yaml",
+			nodeID:     "testnode",
+			want:       beegfsv1.PluginConfig{}, // Empty because we expect to fail.
+			errRegex:   "likely missing quotes around an integer or boolean beegfsClientConf value",
 		},
 		"node default override (matching nodeid) all fields correct": {
 			// because "testnode" is in nodeList, default values should be overridden
@@ -117,9 +131,17 @@ func TestParseConfigFromFile(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, err := parseConfigFromFile(tc.configFile, tc.nodeID)
 			if err != nil {
-				t.Error(err)
-			}
-			if !reflect.DeepEqual(tc.want, got) {
+				if tc.errRegex != "" {
+					if foundMatch, _ := regexp.MatchString(tc.errRegex, err.Error()); !foundMatch {
+						// Got an error, but not the one we expected.
+						t.Fatalf("expected error containing: %s, got error: %s", tc.errRegex, err)
+					}
+				} else {
+					// Got an error we didn't expect.
+					t.Error(err)
+				}
+			} else if !reflect.DeepEqual(tc.want, got) {
+				// Succeeded in unmarshalling, but didn't get the expected struct.
 				t.Fatalf("expected: %v, got: %v", tc.want, got)
 			}
 		})

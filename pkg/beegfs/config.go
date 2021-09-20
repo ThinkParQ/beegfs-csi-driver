@@ -52,8 +52,7 @@ func parseConfigFromFile(path, nodeID string) (beegfsv1.PluginConfig, error) {
 		// missing quotes in the beegfsClientConf field. It is generally bad practice to base program logic on
 		// "reading" and error string, but here we only add to the error message we write and fall back to simply
 		// logging the error as is if anything goes wrong.
-		re := ".*cannot unmarshal .* into Go struct field " +
-			"BeegfsConfig.fileSystemSpecificConfigs.config.beegfsClientConf of type string.*"
+		re := ".*cannot unmarshal .* into Go struct field .*\\.beegfsClientConf of type string.*"
 		if matched, regexErr := regexp.MatchString(re, err.Error()); regexErr == nil && matched {
 			return beegfsv1.PluginConfig{}, errors.Wrap(err, "likely missing quotes around an integer or "+
 				"boolean beegfsClientConf value")
