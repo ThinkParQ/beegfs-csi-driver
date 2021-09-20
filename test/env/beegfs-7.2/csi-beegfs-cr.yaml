@@ -55,5 +55,5 @@ spec:
       - sysMgmtdHost: scspa2060446001.rtp.openenglab.netapp.com
         config:
           beegfsClientConf:
-            connMgmtdPortTCP: '9009'
-            connMgmtdPortUDP: '9009'
+            connMgmtdPortTCP: "9009"
+            connMgmtdPortUDP: "9009"

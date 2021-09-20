@@ -408,7 +408,9 @@ config:  # OPTIONAL
     - <ip_subnet>  # e.g. 10.0.0.1/24
     - <ip_subnet>
   beegfsClientConf:
-    <beegfs-client.conf_key>: <beegfs-client.conf_value>  
+    <beegfs-client.conf_key>: <beegfs-client.conf_value>
+    # All beegfs-client.conf values must be strings. Quotes are required on 
+    # integers and booleans.
     # e.g. connMgmtdPortTCP: "9008"
     # SEE BELOW FOR RESTRICTIONS
 

@@ -10,10 +10,10 @@ fileSystemSpecificConfigs:
   - sysMgmtdHost: 192.168.1.106
     config:
       beegfsClientConf:
-        connUseRDMA: true
+        connUseRDMA: "true"
   - sysMgmtdHost: 192.168.2.106
     config:
       beegfsClientConf:
-        connMgmtdPortTCP: 9009
-        connMgmtdPortUDP: 9009
-        connUseRDMA: true
+        connMgmtdPortTCP: "9009"
+        connMgmtdPortUDP: "9009"
+        connUseRDMA: "true"
