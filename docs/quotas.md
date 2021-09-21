@@ -58,13 +58,13 @@ management IP of `192.168.1.100`:
 ```yaml
 config:
 beegfsClientConf:
-    connUseRDMA: true
+    connUseRDMA: "true"  # All beegfs-client.conf values must be strings.
 
 fileSystemSpecificConfigs:
-- sysMgmtdHost: "192.168.1.100"
+- sysMgmtdHost: 192.168.1.100
     config:
     beegfsClientConf:
-        quotaEnabled: true
+        quotaEnabled: "true"  # All beegfs-client.conf values must be strings.
 ```
 
 When deploying to Kubernetes run `kubectl apply -k 

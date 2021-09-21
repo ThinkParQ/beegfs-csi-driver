@@ -177,6 +177,7 @@ metadata:
   name: my-storage-class
 provisioner: beegfs.csi.netapp.com
 parameters:
+  # All Storage Class values must be strings. Quotes are required on integers.
   sysMgmtdHost: 10.113.72.217
   volDirBasePath: /path/to/parent/dir 
   stripePattern/storagePoolID: "1"

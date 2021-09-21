@@ -9,7 +9,7 @@ spec:
     - name: csi-beegfs-dyn-app
       image: alpine:latest
       volumeMounts:
-      - mountPath: "/mnt/dyn"
+      - mountPath: /mnt/dyn
         name: csi-beegfs-dyn-volume
       # The "command":
       #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.

@@ -9,7 +9,7 @@ spec:
     - name: csi-beegfs-ge-app
       image: alpine:latest
       volumeMounts:
-      - mountPath: "/mnt/ge"
+      - mountPath: /mnt/ge
         name: csi-beegfs-ge-volume
       # The "command":
       #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.

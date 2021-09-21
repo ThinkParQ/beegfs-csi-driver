@@ -61,3 +61,10 @@ from v1.1.0, follow these steps:
 1. Paste the copied files into *deploy/k8s/overlays/my-overlay*. This will
    overwrite the default (empty) files.
 1. Deploy the driver: `kubectl apply -k deploy/k8s/overlays/my-overlay`.
+
+Prior to v1.2.0, the beegfsClientConf field of the configuration file allowed 
+string, integer, or boolean values. In v1.2.0, all beegfsClientConf values must 
+be strings, so integers and booleans must be quoted. If you used v1.1.0 and 
+specified parameters like: `connMgmtdPortTCP: 8000` or `connUseRDMA: true`, 
+modify your configuration file, specifying parameters like `connMgmtdPortTCP: 
+"8000"` or `connUseRDMA: "true"`.

@@ -10,7 +10,8 @@ parameters:
   sysMgmtdHost: localhost
   # Replace "name" with a unique k8s cluster name to prevent multiple k8s clusters from dynamically provisioning volumes at the same BeeGFS path.
   volDirBasePath: k8s/name/dyn
-  # Optionally configure the default stripePattern parameters.
+  # Optionally configure the default stripePattern parameters. All Storage Class values must be strings. Quotes are
+  # required on integers.
   # stripePattern/storagePoolID: "1"
   # stripePattern/chunkSize: 512k
   # stripePattern/numTargets: "4"

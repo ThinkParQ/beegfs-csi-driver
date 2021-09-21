@@ -39,13 +39,13 @@ import (
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
-	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
+	"sigs.k8s.io/yaml"
 )
 
 // A pointer to a BeegfsDriver is kept here as a global variable so its perFSConfigs can be set with

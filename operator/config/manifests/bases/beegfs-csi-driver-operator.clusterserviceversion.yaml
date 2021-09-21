@@ -50,6 +50,8 @@ spec:
         path: pluginConfig.config
       - description: A map of additional key value pairs matching key value pairs
           in the beegfs-client.conf file. See beegfs-client.conf for more details.
+          Values MUST be specified as strings, even if they appear to be integers
+          or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.config.beegfsClientConf
       - description: A list of subnets in which RDMA communication can/should not
@@ -61,6 +63,8 @@ spec:
         path: pluginConfig.fileSystemSpecificConfigs[0].config
       - description: A map of additional key value pairs matching key value pairs
           in the beegfs-client.conf file. See beegfs-client.conf for more details.
+          Values MUST be specified as strings, even if they appear to be integers
+          or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.fileSystemSpecificConfigs[0].config.beegfsClientConf
       - description: A list of subnets in which RDMA communication can/should not
@@ -76,6 +80,8 @@ spec:
         path: pluginConfig.nodeSpecificConfigs[0].config
       - description: A map of additional key value pairs matching key value pairs
           in the beegfs-client.conf file. See beegfs-client.conf for more details.
+          Values MUST be specified as strings, even if they appear to be integers
+          or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.nodeSpecificConfigs[0].config.beegfsClientConf
       - description: A list of subnets in which RDMA communication can/should not
@@ -91,6 +97,8 @@ spec:
         path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config
       - description: A map of additional key value pairs matching key value pairs
           in the beegfs-client.conf file. See beegfs-client.conf for more details.
+          Values MUST be specified as strings, even if they appear to be integers
+          or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.beegfsClientConf
       - description: A list of subnets in which RDMA communication can/should not

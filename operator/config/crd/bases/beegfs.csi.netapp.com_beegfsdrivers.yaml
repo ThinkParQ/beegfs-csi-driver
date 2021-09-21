@@ -514,7 +514,9 @@ spec:
                           type: string
                         description: A map of additional key value pairs matching
                           key value pairs in the beegfs-client.conf file. See beegfs-client.conf
-                          for more details.
+                          for more details. Values MUST be specified as strings, even
+                          if they appear to be integers or booleans (e.g. "8000",
+                          not 8000 and "true", not true).
                         type: object
                       connInterfaces:
                         description: A list of interfaces the BeeGFS client service
@@ -557,7 +559,10 @@ spec:
                                 type: string
                               description: A map of additional key value pairs matching
                                 key value pairs in the beegfs-client.conf file. See
-                                beegfs-client.conf for more details.
+                                beegfs-client.conf for more details. Values MUST be
+                                specified as strings, even if they appear to be integers
+                                or booleans (e.g. "8000", not 8000 and "true", not
+                                true).
                               type: object
                             connInterfaces:
                               description: A list of interfaces the BeeGFS client
@@ -614,7 +619,10 @@ spec:
                                 type: string
                               description: A map of additional key value pairs matching
                                 key value pairs in the beegfs-client.conf file. See
-                                beegfs-client.conf for more details.
+                                beegfs-client.conf for more details. Values MUST be
+                                specified as strings, even if they appear to be integers
+                                or booleans (e.g. "8000", not 8000 and "true", not
+                                true).
                               type: object
                             connInterfaces:
                               description: A list of interfaces the BeeGFS client
@@ -663,6 +671,9 @@ spec:
                                     description: A map of additional key value pairs
                                       matching key value pairs in the beegfs-client.conf
                                       file. See beegfs-client.conf for more details.
+                                      Values MUST be specified as strings, even if
+                                      they appear to be integers or booleans (e.g.
+                                      "8000", not 8000 and "true", not true).
                                     type: object
                                   connInterfaces:
                                     description: A list of interfaces the BeeGFS client

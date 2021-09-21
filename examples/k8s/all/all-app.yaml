@@ -9,11 +9,11 @@ spec:
     - name: csi-beegfs-all-app
       image: alpine:latest
       volumeMounts:
-      - mountPath: "/mnt/dyn"
+      - mountPath: /mnt/dyn
         name: csi-beegfs-dyn-volume
-      - mountPath: "/mnt/static"
+      - mountPath: /mnt/static
         name: csi-beegfs-static-volume 
-      - mountPath: "/mnt/static-ro"
+      - mountPath: /mnt/static-ro
         name: csi-beegfs-static-ro-volume 
       # Replace "name" with a unique k8s cluster name to disambiguate files touched by pods with UUIDs that collide among separate k8s clusters.
       # The "command":
