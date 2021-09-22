@@ -38,14 +38,67 @@ spec:
           version>.
         displayName: BeeGFS CSI Driver
         path: containerImageOverrides.beegfsCsiDriver
+      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+          or docker.io/netapp/beegfs-csi-driver).
+        displayName: Image
+        path: containerImageOverrides.beegfsCsiDriver.image
+      - description: A tag (e.g. v2.2.2 or latest).
+        displayName: Tag
+        path: containerImageOverrides.beegfsCsiDriver.tag
       - description: Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the
           most current version at operator release>.
         displayName: CSI Node Driver Registrar
         path: containerImageOverrides.csiNodeDriverRegistrar
+      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+          or docker.io/netapp/beegfs-csi-driver).
+        displayName: Image
+        path: containerImageOverrides.csiNodeDriverRegistrar.image
+      - description: A tag (e.g. v2.2.2 or latest).
+        displayName: Tag
+        path: containerImageOverrides.csiNodeDriverRegistrar.tag
       - description: Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the most
           current version at operator release>.
         displayName: CSI Provisioner
         path: containerImageOverrides.csiProvisioner
+      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+          or docker.io/netapp/beegfs-csi-driver).
+        displayName: Image
+        path: containerImageOverrides.csiProvisioner.image
+      - description: A tag (e.g. v2.2.2 or latest).
+        displayName: Tag
+        path: containerImageOverrides.csiProvisioner.tag
+      - description: Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the most current
+          version at operator release>.
+        displayName: Liveness Probe
+        path: containerImageOverrides.livenessProbe
+      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
+          or docker.io/netapp/beegfs-csi-driver).
+        displayName: Image
+        path: containerImageOverrides.livenessProbe.image
+      - description: A tag (e.g. v2.2.2 or latest).
+        displayName: Tag
+        path: containerImageOverrides.livenessProbe.tag
+      - description: The logging level of deployed containers expressed as an integer
+          from 0 (low detail) to 5 (high detail). 0 only logs errors. 3 logs most
+          RPC requests/responses and some detail about driver actions. 5 logs all
+          RPC requests/responses, including redundant/frequently occurring ones. Empty
+          defaults to level 3.
+        displayName: Log Level
+        path: logLevel
+      - description: 'The controller service consists of a single Pod. It preferably
+          runs on an infrastructure/master node, but the running node must have the
+          beegfs-utils and beegfs-client packages installed. E.g. "preferred: node-role.kubernetes.io/master
+          Exists" and/or "required: node.openshift.io/os_id NotIn rhcos".'
+        displayName: Node Affinity Controller Service
+        path: nodeAffinityControllerService
+      - description: 'The node service consists of one Pod running on each eligible
+          node. It runs on every node expected to host a workload that requires BeeGFS.
+          Running nodes must have the beegfs-utils and beegfs-client packages installed.
+          E.g. "required: node.openshift.io/os_id NotIn rhcos".'
+        displayName: Node Affinity Node Service
+        path: nodeAffinityNodeService
+      - displayName: Plugin Config From File
+        path: pluginConfig
       - displayName: Default Config
         path: pluginConfig.config
       - description: A map of additional key value pairs matching key value pairs
@@ -54,6 +107,16 @@ spec:
           or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.config.beegfsClientConf
+      - description: A list of interfaces the BeeGFS client service can communicate
+          over (e.g. "ib0" or "eth0"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Interfaces
+        path: pluginConfig.config.connInterfaces
+      - description: A list of subnets the BeeGFS client service can use for outgoing
+          communication (e.g. "10.10.10.10/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Net Filter
+        path: pluginConfig.config.connNetFilter
       - description: A list of subnets in which RDMA communication can/should not
           be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
           for more details.
@@ -67,6 +130,16 @@ spec:
           or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.fileSystemSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of interfaces the BeeGFS client service can communicate
+          over (e.g. "ib0" or "eth0"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Interfaces
+        path: pluginConfig.fileSystemSpecificConfigs[0].config.connInterfaces
+      - description: A list of subnets the BeeGFS client service can use for outgoing
+          communication (e.g. "10.10.10.10/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Net Filter
+        path: pluginConfig.fileSystemSpecificConfigs[0].config.connNetFilter
       - description: A list of subnets in which RDMA communication can/should not
           be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
           for more details.
@@ -84,6 +157,16 @@ spec:
           or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.nodeSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of interfaces the BeeGFS client service can communicate
+          over (e.g. "ib0" or "eth0"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Interfaces
+        path: pluginConfig.nodeSpecificConfigs[0].config.connInterfaces
+      - description: A list of subnets the BeeGFS client service can use for outgoing
+          communication (e.g. "10.10.10.10/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Net Filter
+        path: pluginConfig.nodeSpecificConfigs[0].config.connNetFilter
       - description: A list of subnets in which RDMA communication can/should not
           be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
           for more details.
@@ -101,6 +184,16 @@ spec:
           or booleans (e.g. "8000", not 8000 and "true", not true).
         displayName: Additional beegfs-client.conf Parameters
         path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.beegfsClientConf
+      - description: A list of interfaces the BeeGFS client service can communicate
+          over (e.g. "ib0" or "eth0"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Interfaces
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.connInterfaces
+      - description: A list of subnets the BeeGFS client service can use for outgoing
+          communication (e.g. "10.10.10.10/24"). Often not required. See beegfs-client.conf
+          for more details.
+        displayName: Conn Net Filter
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.connNetFilter
       - description: A list of subnets in which RDMA communication can/should not
           be established (e.g. "10.10.10.11/24"). Often not required. See beegfs-client.conf
           for more details.

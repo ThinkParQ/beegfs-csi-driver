@@ -323,9 +323,16 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 string(credentialsId: "address-${testEnv.k8sCluster}", variable: "OC_ADDRESS")]) {
                 try {
                     // We escape the $ on OC_ADDRESS, etc. to avoid Groovy interpolation for secrets.
+                    //
                     // We are not using a secret KUBECONFIG here as we do in the non-OpenShift deployment. However,
                     // we still need to set KUBECONFIG to point to an empty file in the workspace so "oc login" won't
                     // modify the Jenkins user's ~/.kube/config.
+                    //
+                    // It's a bit awkward to include Scorecard testing here, because Scorecard currently only evaluates
+                    // our bundle (doesn't really do integration tests) and currently isn't expected to get different
+                    // results on different clusters. However:
+                    //   1) We need kubeconfig access to a cluster to run Scorecard.
+                    //   2) We may eventually write custom tests with cluster-dependent results.
                     sh """                   
                         export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
                         oc login \${OC_ADDRESS} --username=\${OC_USERNAME} --password=\${OC_PASSWORD} --insecure-skip-tls-verify=true
@@ -335,6 +342,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                             echo "waiting for bundle cleanup"
                             sleep 5
                         done
+                        operator-sdk scorecard ./operator/bundle -w 180s > ${resultsDir}/scorecard.txt 2>&1 || echo "SCORECARD FAILURE!" || exit 1
                         operator-sdk run bundle ${uniqueBundleImageTag}
                         sed 's/tag: replaced-by-jenkins/tag: ${uniqueImageTag.split(':')[1]}/g' test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml | kubectl apply -f -
                         # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
@@ -372,9 +380,16 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     // The two kubectl get ... lines are used to clean up any beegfs CSI driver currently
                     // running on the cluster. We can't simply delete using -k deploy/k8s/overlay-xxx/ because a previous
                     // user might have deployed the driver using a different deployment scheme.
+                    //
+                    // It's a bit awkward to include Scorecard testing here, because Scorecard currently only evaluates
+                    // our bundle (doesn't really do integration tests) and currently isn't expected to get different
+                    // results on different clusters. However:
+                    //   1) We need kubeconfig access to a cluster to run Scorecard.
+                    //   2) We may eventually write custom tests with cluster-dependent results.
                     sh """                   
                         kubectl get sts -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground sts || true
                         kubectl get ds -A | grep csi-beegfs | awk '{print \$2 " -n " \$1}' | xargs kubectl delete --cascade=foreground ds || true
+                        operator-sdk scorecard ./operator/bundle -w 180s > ${resultsDir}/scorecard.txt 2>&1 || echo "SCORECARD FAILURE!" || exit 1
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
                         kubectl apply -k ${overlay}

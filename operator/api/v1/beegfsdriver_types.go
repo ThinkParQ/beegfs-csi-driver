@@ -27,24 +27,26 @@ import (
 
 // BeegfsDriverSpec defines the desired state of BeegfsDriver
 type BeegfsDriverSpec struct {
-	// TODO(webere, A259): Add additional fields.
-
 	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
-	//+kubebuilder:validation:Minimum:=0
-	//+kubebuilder:validation:Maximum:=5
 	// The logging level of deployed containers expressed as an integer from 0 (low detail) to 5 (high detail). 0
 	// only logs errors. 3 logs most RPC requests/responses and some detail about driver actions. 5 logs all RPC
 	// requests/responses, including redundant/frequently occurring ones. Empty defaults to level 3.
+	//+kubebuilder:validation:Minimum:=0
+	//+kubebuilder:validation:Maximum:=5
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	LogLevel *int `json:"logLevel,omitempty"` // Pointer per https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#optional-vs-required.
 	// The controller service consists of a single Pod. It preferably runs on an infrastructure/master node, but the
 	// running node must have the beegfs-utils and beegfs-client packages installed. E.g.
 	// "preferred: node-role.kubernetes.io/master Exists" and/or "required: node.openshift.io/os_id NotIn rhcos".
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeAffinityControllerService corev1.NodeAffinity `json:"nodeAffinityControllerService"`
 	// The node service consists of one Pod running on each eligible node. It runs on every node expected to host a
 	// workload that requires BeeGFS. Running nodes must have the beegfs-utils and beegfs-client packages installed.
 	// E.g. "required: node.openshift.io/os_id NotIn rhcos".
-	NodeAffinityNodeService corev1.NodeAffinity  `json:"nodeAffinityNodeService"`
-	PluginConfigFromFile    PluginConfigFromFile `json:"pluginConfig,omitempty"`
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
+	NodeAffinityNodeService corev1.NodeAffinity `json:"nodeAffinityNodeService"`
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
+	PluginConfigFromFile PluginConfigFromFile `json:"pluginConfig,omitempty"`
 }
 
 // BeegfsDriverStatus defines the observed state of BeegfsDriver
@@ -106,13 +108,16 @@ type ContainerImageOverrides struct {
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Provisioner"
 	CsiProvisioner ContainerImageOverride `json:"csiProvisioner"`
 	// Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the most current version at operator release>.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	LivenessProbe ContainerImageOverride `json:"livenessProbe"`
 }
 
 type ContainerImageOverride struct {
 	// A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner or docker.io/netapp/beegfs-csi-driver).
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	Image string `json:"image"`
 	// A tag (e.g. v2.2.2 or latest).
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	Tag string `json:"tag"`
 }
 
@@ -122,9 +127,11 @@ type ContainerImageOverride struct {
 type BeegfsConfig struct {
 	// A list of interfaces the BeeGFS client service can communicate over (e.g. "ib0" or "eth0"). Often not required.
 	// See beegfs-client.conf for more details.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	ConnInterfaces []string `json:"connInterfaces,omitempty"`
 	// A list of subnets the BeeGFS client service can use for outgoing communication (e.g. "10.10.10.10/24"). Often
 	// not required. See beegfs-client.conf for more details.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	ConnNetFilter []string `json:"connNetFilter,omitempty"`
 	// A list of subnets in which RDMA communication can/should not be established (e.g. "10.10.10.11/24"). Often not
 	// required. See beegfs-client.conf for more details.
@@ -135,7 +142,8 @@ type BeegfsConfig struct {
 	// booleans (e.g. "8000", not 8000 and "true", not true).
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Additional beegfs-client.conf Parameters"
 	BeegfsClientConf map[string]string `json:"beegfsClientConf,omitempty"`
-	ConnAuth         string            `json:"-"` // Do not support unmarshalling from a configuration file.
+	// This field is explicitly NOT tagged for inclusion in the CSV, as it cannot be set externally.
+	ConnAuth string `json:"-"` // Do not support unmarshalling from a configuration file.
 }
 
 func NewBeegfsConfig() *BeegfsConfig {
