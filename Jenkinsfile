@@ -277,7 +277,7 @@ pipeline {
             }
             post {
                 always {
-                    archiveArtifacts(artifacts: 'test/e2e/junit/**/*.xml')
+                    archiveArtifacts(artifacts: 'results/**/*')
                 }
             }
         }
@@ -308,12 +308,17 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
-    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit/${jobID} -report-prefix parallel"
-    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit/${jobID} -report-prefix serial"
+    def resultsDir = "results/${jobID}"
+    sh "mkdir -p ${resultsDir}"
+    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel"
+    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial"
     if (testEnv.staticVolDirName) {
         testCommand += " -static-vol-dir-name ${testEnv.staticVolDirName}"
         testCommandDisruptive += " -static-vol-dir-name ${testEnv.staticVolDirName}"
     }
+    // Redirect output for easier reading.
+    testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
+    testCommandDisruptive += " > ${resultsDir}/ginkgo-serial.log 2>&1"
 
     echo "Running test using kubernetes version ${testEnv.k8sCluster} with beegfs version ${testEnv.beegfsHost}"
     lock(resource: "${testEnv.k8sCluster}") {
@@ -348,8 +353,8 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
                         # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
                         oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule --overwrite
-                        ${testCommand}
-                        ${testCommandDisruptive}
+                        ${testCommand} || (echo "INTEGRATION TEST FAILURE!" && exit 1)
+                        ${testCommandDisruptive} || (echo "DISRUPTIVE INTEGRATION TEST FAILURE!" && exit 1)
                     """
                 } finally {
                     sh """
@@ -362,7 +367,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    junit "test/e2e/junit/${jobID}/*.xml"
+                    junit "${resultsDir}/*.xml"
                 }
             }
         } else {
@@ -393,14 +398,14 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
                         kubectl apply -k ${overlay}
-                        ${testCommand}
-                        ${testCommandDisruptive}
+                        ${testCommand} || (echo "INTEGRATION TEST FAILURE!" && exit 1)
+                        ${testCommandDisruptive} || (echo "DISRUPTIVE INTEGRATION TEST FAILURE!" && exit 1)
                     """
                 } finally {
                     sh "kubectl delete --cascade=foreground -k ${overlay} || true"
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    junit "test/e2e/junit/${jobID}/*.xml"
+                    junit "${resultsDir}/*.xml"
                 }
             }
         }
