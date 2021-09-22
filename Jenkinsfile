@@ -311,8 +311,8 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID}"
     def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID}"
     if (testEnv.staticVolDirName) {
-        testCommand += "-static-vol-dir-name ${testEnv.staticVolDirName}"
-        testCommandDisruptive += "-static-vol-dir-name ${testEnv.staticVolDirName}"
+        testCommand += " -static-vol-dir-name ${testEnv.staticVolDirName}"
+        testCommandDisruptive += " -static-vol-dir-name ${testEnv.staticVolDirName}"
     }
 
     echo "Running test using kubernetes version ${testEnv.k8sCluster} with beegfs version ${testEnv.beegfsHost}"
