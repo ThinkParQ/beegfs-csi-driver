@@ -277,7 +277,7 @@ pipeline {
             }
             post {
                 always {
-                    junit "test/e2e/junit/*.xml"
+                    archiveArtifacts(artifacts: 'test/e2e/junit/**/*.xml')
                 }
             }
         }
@@ -308,8 +308,8 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
-    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix parallel-${jobID}"
-    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit -report-prefix serial-${jobID}"
+    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit/${jobID} -report-prefix parallel"
+    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ./junit/${jobID} -report-prefix serial"
     if (testEnv.staticVolDirName) {
         testCommand += " -static-vol-dir-name ${testEnv.staticVolDirName}"
         testCommandDisruptive += " -static-vol-dir-name ${testEnv.staticVolDirName}"
@@ -352,6 +352,9 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         oc delete -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
                     """
+                    // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
+                    // it clear which environment failed.
+                    junit "test/e2e/junit/${jobID}/*.xml"
                 }
             }
         } else {
@@ -380,6 +383,9 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                 } finally {
                     sh "kubectl delete --cascade=foreground -k ${overlay} || true"
+                    // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
+                    // it clear which environment failed.
+                    junit "test/e2e/junit/${jobID}/*.xml"
                 }
             }
         }
