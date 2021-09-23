@@ -40,8 +40,8 @@ spec:
                 - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
   pluginConfig:
     fileSystemSpecificConfigs:
-      - sysMgmtdHost: scspa2059245001.rtp.openenglab.netapp.com
-      - sysMgmtdHost: scspa2061750001.rtp.openenglab.netapp.com
+      - sysMgmtdHost: 10.113.4.44
+      - sysMgmtdHost: 10.113.4.45
         config:
           beegfsClientConf:
             connMgmtdPortTCP: '9009'
