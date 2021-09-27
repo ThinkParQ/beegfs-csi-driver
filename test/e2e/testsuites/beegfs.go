@@ -225,7 +225,9 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 
 		for _, pod := range []corev1.Pod{controllerPod, nodePod} {
 			execOptions := e2eframework.ExecOptions{
-				Command:       []string{"touch", "/host/test-file"},
+				// touch is chwrapped, so attempting to write /tmp/test-file actually attempts to write
+				// /host/tmp/test-file.
+				Command:       []string{"touch", "/tmp/test-file"},
 				PodName:       pod.Name,
 				Namespace:     pod.Namespace,
 				ContainerName: "beegfs",

@@ -43,7 +43,7 @@ spec:
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
-            - --endpoint=unix://var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
+            - --endpoint=unix://csi/csi.sock
             - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
@@ -76,13 +76,17 @@ spec:
             timeoutSeconds: 3
           volumeMounts:
             - mountPath: /host
+              mountPropagation: Bidirectional
               name: host-dir
               readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+              # Because we chwrap mount/umount, we must propagate the container's /host mounts to the node.
             - mountPath: /var/lib/kubelet/pods
-              mountPropagation: Bidirectional
+              # We must know whether a directory is a mount point in order to decide how to handle it.
+              mountPropagation: HostToContainer
               name: pods-mount-dir
-            - mountPath: /var/lib/kubelet/plugins
-              mountPropagation: Bidirectional
+            - mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
+              # We must know whether a directory is a mount point in order to decide how to handle it.
+              mountPropagation: HostToContainer
               name: plugins-mount-dir
             - mountPath: /csi
               name: socket-dir
@@ -114,7 +118,7 @@ spec:
         # Kubernetes mounts global volumes at locations like
         # /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-########/globalmount.
         - hostPath:
-            path: /var/lib/kubelet/plugins
+            path: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
             type: DirectoryOrCreate
           name: plugins-mount-dir
         - hostPath:

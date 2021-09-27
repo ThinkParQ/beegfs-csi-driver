@@ -15,6 +15,9 @@ parameters:
   # stripePattern/storagePoolID: "1"
   # stripePattern/chunkSize: 512k
   # stripePattern/numTargets: "4"
+  # permissions/uid: "1000"
+  # permissions/gid: "1000"
+  # permissions/mode: "0644"
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: false
