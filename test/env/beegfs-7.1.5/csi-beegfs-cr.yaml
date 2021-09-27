@@ -4,6 +4,17 @@
 # In a typical deployment with the operator, an administrator would pre-create this secret or edit it after it was
 # created. For testing purposes it is easiest to simply deploy it here.
 
+kind: Secret
+apiVersion: v1
+metadata:
+  name: csi-beegfs-connauth
+stringData:
+  csi-beegfs-connauth.yaml: |
+    - sysMgmtdHost: 10.113.4.45
+      connAuth: secret1
+
+---
+
 kind: BeegfsDriver
 apiVersion: beegfs.csi.netapp.com/v1
 metadata:
