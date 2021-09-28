@@ -359,6 +359,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 } finally {
                     sh """
                         export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
+                        kubectl get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- | xargs kubectl delete ns --cascade=foreground || true
                         # This is a hack to undo the previous hack.
                         # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
                         oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule- || true
@@ -402,7 +403,10 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         ${testCommandDisruptive} || (echo "DISRUPTIVE INTEGRATION TEST FAILURE!" && exit 1)
                     """
                 } finally {
-                    sh "kubectl delete --cascade=foreground -k ${overlay} || true"
+                    sh """
+                        kubectl get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- | xargs kubectl delete ns --cascade=foreground || true                        
+                        kubectl delete --cascade=foreground -k ${overlay} || true
+                    """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
                     junit "${resultsDir}/*.xml"
