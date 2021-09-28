@@ -1,6 +1,7 @@
 # BeeGFS CSI Driver Developer Documentation
 
 ## Contents
+
 * [Overview](#overview)
 * [Building the Project](#building-the-project)
 * [Developer Kubernetes Deployment](#developer-kubernetes-deployment)
@@ -9,12 +10,16 @@
 * [Frequently Asked Questions](#frequently-asked-questions)
 
 ## Overview 
-This repository hosts the BeeGFS CSI Driver and all of its build and dependent configuration files to deploy the driver.
+
+This repository hosts the BeeGFS CSI Driver and all of its build and dependent
+configuration files to deploy the driver.
 
 ## Building the Project 
 
 ### Building the binaries
-If you want to build the driver yourself, you can do so with the following command from the root directory:
+
+If you want to build the driver yourself, you can do so with the following
+command from the root directory:
 
 ```shell
 make
@@ -45,6 +50,7 @@ make REGISTRY_NAME="docker.repo.eng.netapp.com/${USER}" IMAGE_TAGS=devBranchName
 ```
 
 ## Developer Kubernetes Deployment
+
 Create a new overlay by copying */deploy/k8s/overlays/default-dev/* to 
 */deploy/k8s/overlays/dev/* and edit it as necessary. This specific path is 
 .gitignored for convenience, so your local changes won't be (and shouldn't be) 
@@ -107,7 +113,7 @@ rules/restrictions:
     where a boolean is expected.
 * If it is necessary to quote a string, double quotes `"` are preferred.
 
-## Frequently Asked Questionsc
+## Frequently Asked Questions
 <a name="style-guidelines"></a>
 
 ### Why do we use sigs.k8s.io/yaml instead of gopkg.in/yaml?

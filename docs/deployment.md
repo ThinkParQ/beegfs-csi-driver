@@ -42,7 +42,9 @@ of this file is not currently supported without changing kustomization files.
 <a name="kubernetes-deployment"></a>
 Deployment manifests are provided in this repository under *deploy/k8s/* along with
 a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply
--k` (kustomize). 
+-k` (kustomize). For more detailed information on how the manifests are organized or 
+version specific upgrade information, see the Kubernetes [deployment 
+README](../deploy/k8s/README.md).
 
 Steps:
 * On a machine with kubectl and access to the Kubernetes cluster where you want
@@ -185,7 +187,8 @@ administrators with clusters running OLM to install the driver directly from
 possible, though not recommended, to install the operator and to use the 
 operator to install the driver directly from this repository.
 
-See the [BeeGFS CSI Driver Operator](operator.md) documentation for details.
+See the [BeeGFS CSI Driver Operator](../operator/README.md) documentation for 
+details.
 
 ## Example Application Deployment
 <a name="example-application-deployment"></a>
