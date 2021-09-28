@@ -503,11 +503,14 @@ spec:
                   from the default configuration. Often not required.
                 properties:
                   config:
-                    description: The primary configuration structure containing all
+                    description: 'The primary configuration structure containing all
                       of the custom configuration (beegfs-client.conf keys/values
                       and additional CSI driver specific fields) associated with a
                       single BeeGFS file system except for sysMgmtdHost, which is
-                      specified elsewhere.
+                      specified elsewhere. WARNING: This structure includes a beegfsClientConf
+                      field. This field may not be rendered in form view by OpenShift
+                      or other graphical interfaces, but it can be critical in some
+                      environments. Add or modify it in YAML view.'
                     properties:
                       beegfsClientConf:
                         additionalProperties:
@@ -548,11 +551,15 @@ spec:
                         the default configuration for a specific file system.
                       properties:
                         config:
-                          description: The primary configuration structure containing
+                          description: 'The primary configuration structure containing
                             all of the custom configuration (beegfs-client.conf keys/values
                             and additional CSI driver specific fields) associated
                             with a single BeeGFS file system except for sysMgmtdHost,
-                            which is specified elsewhere.
+                            which is specified elsewhere. WARNING: This structure
+                            includes a beegfsClientConf field. This field may not
+                            be rendered in form view by OpenShift or other graphical
+                            interfaces, but it can be critical in some environments.
+                            Add or modify it in YAML view.'
                           properties:
                             beegfsClientConf:
                               additionalProperties:
@@ -608,11 +615,15 @@ spec:
                         on specific nodes.
                       properties:
                         config:
-                          description: The primary configuration structure containing
+                          description: 'The primary configuration structure containing
                             all of the custom configuration (beegfs-client.conf keys/values
                             and additional CSI driver specific fields) associated
                             with a single BeeGFS file system except for sysMgmtdHost,
-                            which is specified elsewhere.
+                            which is specified elsewhere. WARNING: This structure
+                            includes a beegfsClientConf field. This field may not
+                            be rendered in form view by OpenShift or other graphical
+                            interfaces, but it can be critical in some environments.
+                            Add or modify it in YAML view.'
                           properties:
                             beegfsClientConf:
                               additionalProperties:
@@ -659,11 +670,16 @@ spec:
                               system.
                             properties:
                               config:
-                                description: The primary configuration structure containing
-                                  all of the custom configuration (beegfs-client.conf
+                                description: 'The primary configuration structure
+                                  containing all of the custom configuration (beegfs-client.conf
                                   keys/values and additional CSI driver specific fields)
                                   associated with a single BeeGFS file system except
                                   for sysMgmtdHost, which is specified elsewhere.
+                                  WARNING: This structure includes a beegfsClientConf
+                                  field. This field may not be rendered in form view
+                                  by OpenShift or other graphical interfaces, but
+                                  it can be critical in some environments. Add or
+                                  modify it in YAML view.'
                                 properties:
                                   beegfsClientConf:
                                     additionalProperties:

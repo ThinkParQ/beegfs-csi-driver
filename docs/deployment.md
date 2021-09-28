@@ -8,6 +8,7 @@
   * [Kubernetes Deployment](#kubernetes-deployment)
   * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
   * [Deployment to Kubernetes Clusters with Mixed Nodes](#mixed-kubernetes-deployment)
+  * [Deployment to Kubernetes Using the Operator](#operator-deployment)
 * [Example Application Deployment](#example-application-deployment)
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
@@ -170,6 +171,21 @@ NOTE: When the driver is installed in this way, all workloads (e.g. Pods,
 StatefulSets, Deployments) that depend on BeeGFS MUST be deployed with the same 
 nodeAffinity assigned to the driver node service. Provide your users with the 
 labels or nodes they must run their workloads on.
+
+### Deployment to Kubernetes Using the Operator
+<a name="operator-deployment"></a>
+
+An [operator](https://operatorframework.io/what/) can be used to deploy the 
+BeeGFS CSI driver to a cluster and manage its configuration/state within that 
+cluster. The operator is designed for integration with 
+[Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io/) and is 
+primarily intended as an easy way for OpenShift administrators or 
+administrators with clusters running OLM to install the driver directly from 
+[Operator Hub](https://operatorhub.io/) and keep it updated. It is also 
+possible, though not recommended, to install the operator and to use the 
+operator to install the driver directly from this repository.
+
+See the [BeeGFS CSI Driver Operator](operator.md) documentation for details.
 
 ## Example Application Deployment
 <a name="example-application-deployment"></a>
