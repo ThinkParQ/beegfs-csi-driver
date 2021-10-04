@@ -84,10 +84,9 @@ func initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirPathBeegf
 			// MaxFileSize:
 			// SupportedSizeRange:
 			SupportedFsType: sets.NewString(""),
-			// Map of string for supported mount option
-			// TODO(jbostian, A141): Determine how to implement mount options.
-			// SupportedMountOption:
-			// RequiredMountOption:
+			// This list of supported mount options is non-exhaustive - there may be other valid mount options such as
+			// "ro", but this is only the list of mount options we choose to test
+			SupportedMountOption: sets.NewString("rw", "relatime", "noexec"),
 			Capabilities: map[storageframework.Capability]bool{
 				storageframework.CapPersistence:         true,
 				storageframework.CapBlock:               false,

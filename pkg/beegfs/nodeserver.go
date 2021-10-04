@@ -118,8 +118,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
+	opts := volCap.GetMount().MountFlags
 	// Bind mount volDirPath onto TargetPath.
-	opts := []string{"bind"}
+	opts = append(opts, "bind")
 	if readOnly {
 		// TODO(webere, A143): Get read-only mounts propagating outside of the plugin container.
 		// When the driver runs in a container (as is standard in a K8s deployment), the bind mount appears read-only
@@ -128,6 +129,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		// work as expected for other COs.
 		opts = append(opts, "ro")
 	}
+	opts = removeInvalidMountOptions(opts)
 	LogDebug(ctx, "Mounting volume", "volDirPath", vol.volDirPath, "targetPath", targetPath, "options", opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {
@@ -192,6 +194,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
+	mountOptions := volCap.GetMount().MountFlags
 	// Only mount BeeGFS if beegfs-ctl reports our target directory exists.
 	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
@@ -199,7 +202,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		}
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(ctx, vol, ns.mounter); err != nil {
+	if err := mountIfNecessary(ctx, vol, mountOptions, ns.mounter); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
