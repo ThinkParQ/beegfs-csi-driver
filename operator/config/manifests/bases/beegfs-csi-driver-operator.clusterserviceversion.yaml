@@ -264,7 +264,7 @@ spec:
     name: Joe McCormick
   - email: eric.weber2@netapp.com
     name: Eric Weber
-  maturity: alpha
+  maturity: stable
   minKubeVersion: 1.18.0
   provider:
     name: NetApp
