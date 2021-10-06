@@ -104,7 +104,7 @@ pipeline {
             }
         }
         // The operator built in this step can be retagged and released to Docker Hub as needed.
-        stage('Build and Push Operator') {
+        stage('Build, Test, and Push Operator') {
             options {
                 timeout(time: 5, unit: 'MINUTES')
             }
@@ -212,7 +212,7 @@ pipeline {
                 }
             }
         }
-        stage("Integration Testing") {
+        stage("End-to-End Test") {
             when {
                 expression {
                     return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') ||
