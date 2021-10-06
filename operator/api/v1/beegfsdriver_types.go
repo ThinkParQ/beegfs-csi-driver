@@ -135,8 +135,8 @@ type BeegfsConfig struct {
 	// not required. See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	ConnNetFilter []string `json:"connNetFilter,omitempty"`
-	// A list of subnets in which RDMA communication can/should not be established (e.g. "10.10.10.11/24"). Often not
-	// required. See beegfs-client.conf for more details.
+	// A list of subnets in which RDMA communication cannot or should not be established (e.g. "10.10.10.11/24").
+	// Often not required. See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Conn TCP Only Filter"
 	ConnTcpOnlyFilter []string `json:"connTcpOnlyFilter,omitempty"`
 	// A map of additional key value pairs matching key value pairs in the beegfs-client.conf file. See
