@@ -316,6 +316,17 @@ created Kubernetes Persistent Volume Claim.
   location of this file is not currently supported without changing
   kustomization files. 
 
+### BeeGFS Mount Options
+<a name="beegfs-mount-options"></a>
+
+Except for `cfgFile` (which has to be set by the driver) mount options supported
+by BeeGFS can be specified on a [persistent
+volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
+or [storage class
+class](https://kubernetes.io/docs/concepts/storage/storage-classes/#mount-options).
+Please note the driver DOES NOT validate provided mount options and use of
+options not supported by BeeGFS may cause unpredictable behavior. 
+
 ### Memory Consumption with RDMA
 For performance (and other) reasons each Persistent Volume used on a given
 Kubernetes node has a separate mount point. When using remote direct memory
