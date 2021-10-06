@@ -1,6 +1,47 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.2.0] - 2021-10-11
+--------------------
+### Added
+- A new [BeeGFS CSI Driver Operator](operator/README.md) as an option to deploy
+  and manage the lifecycle of the driver. This allows for a more seamless
+  [discovery](https://operatorhub.io/) and installation experience from clusters
+  running Operator Lifecycle Manager (OLM).
+- [Documentation and job specifications](deploy/nomad/README.md) showing how to
+  deploy the driver to HashiCorp Nomad.
+  - Note: At this time the BeeGFS CSI driver does not officially support Nomad.
+    These are being provided as an example for others who might want to
+    experiment with using BeeGFS and Nomad, in particular anyone interested in
+    [contributing](CONTRIBUTING.md) to any future efforts around Nomad.
+- [Documentation](docs/deployment.md##mixed-kubernetes-deployment) on how to
+  deploy the driver to Kubernetes clusters where some nodes can access BeeGFS
+  volumes, and some cannot.
+- Support for BeeGFS v7.2.4, Kubernetes v1.21, and RedHat OpenShift v4.8. 
+- Support for specifying [BeeGFS mount
+  options](docs/usage.md#beegfs-mount-options) on a persistent volume or storage
+  class.
+- Information on how to [contribute](CONTRIBUTING.md) to the project. 
+
+### Changed
+- Greatly improved performance of end-to-end testing by parallelizing many tests
+  and being more selective about when certain tests run.
+- Updated the project to adhere to v1.5.0 of the CSI specification.
+
+### Fixed
+- Automated tests failing in a confusing manner when `csi-beegfs-config.yaml` is
+  empty. 
+
+### Known Issues
+- In some instances Kubernetes has been observed to call `DeleteVolume` prior to
+  `NodeUnpublishVolume` and `NodeUnstageVolume`. This has the effect of leaving
+  behind BeeGFS mount points on Kubernetes nodes for volumes that no longer
+  exist in the Kubernetes API or BeeGFS. Over time if enough "orphaned" mounts
+  accrue, the Kubernetes node may become unstable. To date this has only been
+  observed as part of end-to-end testing, and is suspected to be either a side
+  effect of how the E2E test framework interacts with Kubernetes, or a bug
+  within Kubernetes itself.
+
 [1.1.0] - 2021-05-10
 --------------------
 ### Added 
