@@ -41,6 +41,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// Some resources needed by the BeeGFS CSI driver are cluster-scoped. These resources cannot be owned by our
+// namespace-scoped CRD and thus cannot be garbage collected. This finalizer enables us to manually delete these
+// cluster-scoped resources before garbage collection occurs.
+const finalizerClusterResourceDeletion = "beegfs.csi.netapp.com/clusterResourceDeletion"
+
 // BeegfsDriverReconciler reconciles a BeegfsDriver object
 type BeegfsDriverReconciler struct {
 	client.Client
@@ -203,23 +208,18 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// -----------------------------------------------------------------------------------------------------------------
 	// Handle finalizers, either by adding them if they are missing or executing on them if the CR is being deleted.
 
-	// Some resources needed by the BeeGFS CSI driver are cluster-scoped. These resources cannot be owned by our
-	// namespace-scoped CRD and thus cannot be garbage collected. This finalizer enables us to manually delete these
-	// cluster-scoped resources before garbage collection occurs.
-	const clusterResourceDeletionFinalizer = "beegfs.csi.netapp.com/clusterResourceDeletion"
-
 	if driver.ObjectMeta.DeletionTimestamp.IsZero() {
 		// The CR is not being deleted. Let's add our finalizer and update it if necessary.
-		if !containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
-			controllerutil.AddFinalizer(driver, clusterResourceDeletionFinalizer)
-			log.Info("Adding finalizer", "finalizer", clusterResourceDeletionFinalizer)
+		if !containsString(driver.GetFinalizers(), finalizerClusterResourceDeletion) {
+			controllerutil.AddFinalizer(driver, finalizerClusterResourceDeletion)
+			log.Info("Adding finalizer", "finalizer", finalizerClusterResourceDeletion)
 			if err = r.Update(ctx, driver); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 	} else {
 		// The CR is being deleted. Execute on our finalizer by deleting cluster-scoped resources.
-		if containsString(driver.GetFinalizers(), clusterResourceDeletionFinalizer) {
+		if containsString(driver.GetFinalizers(), finalizerClusterResourceDeletion) {
 			log.Info("Deleting cluster-scoped objects")
 			// There are some number of RBAC objects from the deployment manifests on the cluster. We do not hard code
 			// the exact nature of these objects here.
@@ -238,7 +238,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err = r.Delete(ctx, d); err != nil && !errors.IsNotFound(err) {
 				return ctrl.Result{}, err
 			}
-			controllerutil.RemoveFinalizer(driver, clusterResourceDeletionFinalizer)
+			controllerutil.RemoveFinalizer(driver, finalizerClusterResourceDeletion)
 			if err = r.Update(ctx, driver); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -568,6 +568,12 @@ func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, drive
 	return ctrl.SetControllerReference(driver, object, r.Scheme)
 }
 
+// See setResourceVersionAnnotations for details.
+const (
+	annotationConfigMapVersion      = "beegfs.csi.netapp.com/configMapVersion"
+	annotationConnauthSecretVersion = "beegfs.csi.netapp.com/connauthSecretVersion"
+)
+
 // setResourceVersionAnnotations is an important part of our overall configuration scheme. It records the current name
 // and resource version of the Config Map and Secret required by our driver in annotations on a Pod Template Spec (for
 // either a Daemon Set or a Stateful Set).
@@ -578,12 +584,12 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 	}
 
 	correctCMNameAndVersion := fmt.Sprintf("%s/%s", cm.Name, cm.ResourceVersion)
-	podTemplate.Annotations["beegfs.csi.netapp.com/configMapVersion"] = correctCMNameAndVersion
+	podTemplate.Annotations[annotationConfigMapVersion] = correctCMNameAndVersion
 	log.V(5).Info("Setting Config Map version annotation", "versionAnnotation", correctCMNameAndVersion)
 
 	if s != nil { // We may not be using a Secret in this deployment of the driver.
 		correctSecretNameAndVersion := fmt.Sprintf("%s/%s", s.Name, s.ResourceVersion)
-		podTemplate.Annotations["beegfs.csi.netapp.com/connauthSecretVersion"] = correctSecretNameAndVersion
+		podTemplate.Annotations[annotationConnauthSecretVersion] = correctSecretNameAndVersion
 		log.V(5).Info("Setting Secret version annotation", "versionAnnotation", correctSecretNameAndVersion)
 	}
 }
