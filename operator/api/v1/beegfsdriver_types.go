@@ -72,13 +72,15 @@ const (
 //+operator-sdk:csv:customresourcedefinitions:displayName="BeeGFS Driver"
 //+operator-sdk:csv:customresourcedefinitions:resources={{ConfigMap,v1,},{DaemonSet,v1,},{Secret,v1,},{StatefulSet,v1,}}
 
-// BeegfsDriver is the Schema for the beegfsdrivers API
+// Deploys the BeeGFS CSI driver
 type BeegfsDriver struct {
+	// Do not change the comment directly above the type definition unless you want your changes to appear in the
+	// Cluster Service Version and OpenShift GUI.
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   BeegfsDriverSpec   `json:"spec,omitempty"`
-	Status BeegfsDriverStatus `json:"status,omitempty"`
+	Spec              BeegfsDriverSpec   `json:"spec,omitempty"`
+	Status            BeegfsDriverStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

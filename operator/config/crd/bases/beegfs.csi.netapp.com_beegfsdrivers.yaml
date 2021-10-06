@@ -19,7 +19,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: BeegfsDriver is the Schema for the beegfsdrivers API
+        description: Deploys the BeeGFS CSI driver
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

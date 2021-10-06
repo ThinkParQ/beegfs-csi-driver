@@ -17,7 +17,7 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: BeegfsDriver is the Schema for the beegfsdrivers API
+    - description: Deploys the BeeGFS CSI driver
       displayName: BeeGFS Driver
       kind: BeegfsDriver
       name: beegfsdrivers.beegfs.csi.netapp.com
