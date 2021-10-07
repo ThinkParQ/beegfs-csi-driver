@@ -238,17 +238,17 @@ In one terminal window:
 In a separate terminal window (the first is consumed by the running operator):
 
 1. Navigate to the *operator/* directory.
-1. Execute `kubectl apply -f hack/example_driver.yaml` to deploy an example
-   BeegfsDriver object with the maximum amount of configuration.
-1. Modify the example BeegfsDriver object and redeploy with `kubectl apply -f
-   hack/example_driver.yaml`.
+1. Create your own *csi-beegfs-cr.yaml* file from scratch or copy one from 
+   *../test/env* if you have access to NetApp internal test resources.
+1. Execute `kubectl apply -f csi-beegfs-cr.yaml` to deploy the driver.
+1. Optionally modify *csi-beegfs-cr.yaml* and redeploy the driver with `kubectl 
+   apply -f hack/example_driver.yaml` to test reconfiguration scenarios.
 1. Use commands like `kubectl describe beegfsdriver`, `kubectl describe sts`,
    and `kubectl describe ds` to verify expected behavior.
-1. Delete the example BeegfsDriver object with `kubectl delete -f
-   hack/example_driver.yaml`.
+1. Delete the driver with `kubectl delete -f csi-beegfs-cr.yaml`.
 
 As commands are executed, logs in the first terminal window show the
-actions the driver is taking.
+actions the operator is taking.
 
 #### Run Operator With OLM Integration Using OpenShift Console
 <a name="functional-testing-install-bundle"></a>

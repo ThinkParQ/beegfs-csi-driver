@@ -49,7 +49,7 @@ const finalizerClusterResourceDeletion = "beegfs.csi.netapp.com/clusterResourceD
 // BeegfsDriverReconciler reconciles a BeegfsDriver object
 type BeegfsDriverReconciler struct {
 	client.Client
-	Log    logr.Logger // TODO(webere, A277): Reexamine the logger used.
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
