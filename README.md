@@ -19,6 +19,12 @@ Kubernetes. This driver allows containers to access existing datasets or request
 on-demand ephemeral or persistent high speed storage backed by [BeeGFS parallel
 file systems](https://blog.netapp.com/beegfs-for-beginners/). 
 
+The driver can be easily deployed using the provided Kubernetes manifests. Optionally the 
+[BeeGFS CSI Driver Operator](operator/README.md) can be used to automate day-1 (install/
+configure) and day-2 (reconfigure/update) tasks for the driver. This especially simplifies 
+discovery and installation from Operator Lifecycle Manger (OLM) enabled clusters like Red Hat 
+OpenShift. 
+
 ### Notable Features
 <a name="notable-features"></a>
 * Integration of [Storage Classes in Kubernetes](docs/usage.md#create-a-storage-class) with [storage
@@ -44,11 +50,16 @@ file systems](https://blog.netapp.com/beegfs-for-beginners/).
 ### Interoperability and CSI Feature Matrix
 <a name="interoperability-and-csi-feature-matrix"></a>
 
-| beegfs.csi.netapp.com  | K8s Versions           | BeeGFS Versions | CSI Version  | Persistence | Supported Access Modes   | Dynamic Provisioning |
-| -----------------------| ---------------------- | --------------- | ------------ | ----------- | ------------------------ | -------------------- |
-| v1.0.0                 | 1.19                   | 7.2, 7.1.5      | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
-| v1.1.0                 | 1.18, 1.19, 1.20       | 7.2.1, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |  
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21 | 7.2.3, 7.1.5    | v1.3.0       | Persistent  | Read/Write Multiple Pods | Yes                  |
+| beegfs.csi.netapp.com  | K8s Versions           | Red Hat OpenShift Versions | BeeGFS Versions | CSI Version  | 
+| -----------------------| ---------------------- | -------------------------- | --------------- | ------------ |
+| v1.0.0                 | 1.19                   |                            | 7.2, 7.1.5      | v1.3.0       |  
+| v1.1.0                 | 1.18, 1.19, 1.20       |                            | 7.2.1, 7.1.5    | v1.3.0       |  
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21 | 4.8                        | 7.2.4, 7.1.5    | v1.5.0       | 
+
+The following CSI features are supported by all versions of the driver:
+* Access Modes: Read/Write Multiple Pods
+* Dynamic Provisioning: Yes 
+* Persistence: Yes
 
 Additional Notes:
 * This matrix indicates tested BeeGFS and Kubernetes versions. The driver
@@ -85,7 +96,8 @@ Additional Notes:
 <a name="quick-start"></a>
 The steps in this section allow you to get the driver up and running quickly.
 For production use cases or air-gapped environments it is recommended to read
-through the full [deployment guide](docs/deployment.md). 
+through the full [kubectl deployment guide](docs/deployment.md) or [operator 
+deployment guide](operator/README.md).
 
 1. On a machine with kubectl and access to the Kubernetes cluster where you want
    to deploy the BeeGFS CSI driver clone this repository: `git clone
@@ -142,13 +154,17 @@ Volume Claims in your environment.
 If you have any questions, feature requests, or would like to report an issue
 please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
 
+## Contributing to the Project
+The BeeGFS CSI Driver maintainers welcome improvements from the BeeGFS and 
+open source community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for how 
+to get started.
+
 ## License 
 <a name="license"></a>
 Apache License 2.0
 
 ## Maintainers 
 <a name="maintainers"></a>
-* Austin Major (@austinmajor).
 * Eric Weber (@ejweber).
 * Jason Eastburn
 * Joe McCormick (@iamjoemccormick).
