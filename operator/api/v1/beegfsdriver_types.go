@@ -72,13 +72,15 @@ const (
 //+operator-sdk:csv:customresourcedefinitions:displayName="BeeGFS Driver"
 //+operator-sdk:csv:customresourcedefinitions:resources={{ConfigMap,v1,},{DaemonSet,v1,},{Secret,v1,},{StatefulSet,v1,}}
 
-// BeegfsDriver is the Schema for the beegfsdrivers API
+// Deploys the BeeGFS CSI driver
 type BeegfsDriver struct {
+	// Do not change the comment directly above the type definition unless you want your changes to appear in the
+	// Cluster Service Version and OpenShift GUI.
+
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   BeegfsDriverSpec   `json:"spec,omitempty"`
-	Status BeegfsDriverStatus `json:"status,omitempty"`
+	Spec              BeegfsDriverSpec   `json:"spec,omitempty"`
+	Status            BeegfsDriverStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -135,8 +137,8 @@ type BeegfsConfig struct {
 	// not required. See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	ConnNetFilter []string `json:"connNetFilter,omitempty"`
-	// A list of subnets in which RDMA communication can/should not be established (e.g. "10.10.10.11/24"). Often not
-	// required. See beegfs-client.conf for more details.
+	// A list of subnets in which RDMA communication cannot or should not be established (e.g. "10.10.10.11/24").
+	// Often not required. See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Conn TCP Only Filter"
 	ConnTcpOnlyFilter []string `json:"connTcpOnlyFilter,omitempty"`
 	// A map of additional key value pairs matching key value pairs in the beegfs-client.conf file. See
