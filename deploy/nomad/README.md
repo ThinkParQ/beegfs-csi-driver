@@ -40,7 +40,7 @@ Nodes Healthy = 1
 $ nomad plugin status 
 beegfs ID = beegfs-plugin0 
 Provider = beegfs.csi.netapp.com 
-Version = v1.1.0-0-gc65b537 
+Version = v1.2.0-0-gc65b537 
 Controllers Healthy = 1 
 Controllers Expected = 1 
 Nodes Healthy = 1 
