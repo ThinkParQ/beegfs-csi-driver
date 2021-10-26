@@ -10,7 +10,7 @@ metadata:
   name: csi-beegfs-connauth
 stringData:
   csi-beegfs-connauth.yaml: |
-    - sysMgmtdHost: 192.168.2.106
+    - sysMgmtdHost: 10.113.4.60
       connAuth: secret1
 
 ---
@@ -51,11 +51,11 @@ spec:
                 - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
   pluginConfig:
     fileSystemSpecificConfigs:
-      - sysMgmtdHost: 192.168.1.106
+      - sysMgmtdHost: 10.113.4.59
         config:
           beegfsClientConf:
             connUseRDMA: "true"
-      - sysMgmtdHost: 192.168.2.106
+      - sysMgmtdHost: 10.113.4.60
         config:
           beegfsClientConf:
             connMgmtdPortTCP: "9009"
