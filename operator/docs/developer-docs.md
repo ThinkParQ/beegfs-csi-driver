@@ -239,7 +239,11 @@ In a separate terminal window (the first is consumed by the running operator):
 
 1. Navigate to the *operator/* directory.
 1. Create your own *csi-beegfs-cr.yaml* file from scratch or copy one from 
-   *../test/env* if you have access to NetApp internal test resources.
+   *../test/env* if you have access to NetApp internal test resources.  
+   NOTE: For many test cases, you will want to set the 
+   `containerImageOverrides.beegfsCsiDriver.image` and/or 
+   `containerImageOverrides.beegfsCsiDriver.tag` fields to ensure the default 
+   driver image (usually the last released version) is not used.
 1. Execute `kubectl apply -f csi-beegfs-cr.yaml` to deploy the driver.
 1. Optionally modify *csi-beegfs-cr.yaml* and redeploy the driver with `kubectl 
    apply -f hack/example_driver.yaml` to test reconfiguration scenarios.
@@ -305,7 +309,12 @@ Steps:
    (as well as other OLM objects).
 1. In a browser, navigate to the OpenShift console -> Operators -> Installed
    Operators and look for "BeeGFS CSI Driver".
-1. Experiment with creating/modifying/deleting BeegfsDriver objects.
+1. Experiment with creating/modifying/deleting BeegfsDriver objects.  
+   NOTE: For many test cases, you will want to set the
+   `containerImageOverrides.beegfsCsiDriver.image` and/or
+   `containerImageOverrides.beegfsCsiDriver.tag` fields before deploying a CR 
+   to ensure the default driver image (usually the last released version) is not 
+   used.
 1. In the terminal, execute `operator-sdk cleanup beegfs-csi-driver-operator`
    to undo the above steps.
 
@@ -335,7 +344,12 @@ Steps:
 1. Create a new namespace to install the operator or choose and existing one.
 1. Install the operator.
 1. Experiment with creating/modifying/deleting BeegfsDriver objects as with
-   the previous method.
+   the previous method.  
+   NOTE: For most test cases, you will want to set the
+   `containerImageOverrides.beegfsCsiDriver.image` and/or
+   `containerImageOverrides.beegfsCsiDriver.tag` fields before deploying a CR
+   to ensure the default driver image (usually the last released version) is not
+   used.
 1. In Operators -> Installed Operators, use the three dots to the right of
    the BeeGFS CSI Driver operator to uninstall it.
 1. In the terminal, execute `oc delete -f hack/test_catalog_source.yaml` to
