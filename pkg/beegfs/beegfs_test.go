@@ -6,6 +6,9 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
+	"path"
+	"reflect"
 	"testing"
 )
 
@@ -101,5 +104,30 @@ func TestGoFileMode(t *testing.T) {
 				t.Fatalf("expected: %s, got: %s", tc.goModeString, got.String())
 			}
 		})
+	}
+}
+
+func TestNewBeegfsVolume(t *testing.T) {
+	// Inputs are based on comments in the example preceding the beegfsVolume struct in beegfs.go.
+	want := beegfsVolume{
+		config:                   *beegfsv1.NewBeegfsConfig(),
+		clientConfPath:           path.Join("/", "...", "mountDirPath", "beegfs-client.conf"),
+		csiDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", ".csi", "volumes", "volume"),
+		csiDirPathBeegfsRoot:     path.Join("/", "...", "parent", ".csi", "volumes", "volume"),
+		mountDirPath:             path.Join("/", "...", "mountDirPath"),
+		mountPath:                path.Join("/", "...", "mountDirPath", "mount"),
+		sysMgmtdHost:             "sysMgmtdHost",
+		volDirBasePathBeegfsRoot: path.Join("/", "...", "parent"),
+		volDirBasePath:           path.Join("/", "...", "/", "mountDirPath", "mount", "...", "parent"),
+		volDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", "volume"),
+		volDirPathBeegfsRoot:     path.Join("/", "...", "parent", "volume"),
+		volumeID:                 NewBeegfsUrl("sysMgmtdHost", path.Join("/", "...", "parent", "volume")),
+	}
+	got := newBeegfsVolume(path.Join("/", "...", "mountDirPath"),
+		"sysMgmtdHost",
+		path.Join("/", "...", "parent", "volume"),
+		beegfsv1.PluginConfig{})
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("\nexpected: \n%+v, \ngot: \n%+v", want, got)
 	}
 }

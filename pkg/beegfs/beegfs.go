@@ -75,24 +75,32 @@ type beegfs struct {
 //            |-- "connTcpOnlyFilterFile"
 //            |-- "mount" (mountPath)
 //                |-- ...
-//                    |-- volDirBasePath
-//                        |-- volDirPath (same as volDirPathBeegfsRoot)
+//                   |-- ".csi"
+//                       |-- volumes
+//                           |-- csiDirPath
+//                   |-- volDirBasePath
+//                       |-- volDirPath (same as volDirPathBeegfsRoot)
 //
 // From the perspective of the BeeGFS file system (all variable names represent absolute paths):
 //    /
 //    |-- ...
-//        |-- volDirBasePathBeegfsRoot
+//        |-- volDirBasePathBeegfsRoot (same as volDirBasePath)
+//            |-- ".csi"
+//                |-- volumes
+//                    |-- csiDirPathBeegfsRoot (same as csiDirPath)
 //            |-- volDirPathBeegfsRoot (same as volDirPath)
 type beegfsVolume struct {
 	config                   beegfsv1.BeegfsConfig
-	clientConfPath           string // absolute path to beegfs-client.conf from host root (e.g. .../mountDirPath/beegfs-client.conf)
-	mountDirPath             string // absolute path to directory containing configuration files and mount point from node root
-	mountPath                string // absolute path to mount point from host root (e.g. .../mountDirPath/mount)
+	clientConfPath           string // absolute path to beegfs-client.conf from host root (e.g. /.../mountDirPath/beegfs-client.conf)
+	csiDirPath               string // absolute path to CSI metadata directory from host root (e.g. /.../mountDirPath/mount/.../parent/.csi/volumes/volume)
+	csiDirPathBeegfsRoot     string // absolute path to CSI metadata directory from BeeGFS root (e.g. /.../parent/.csi/volumes/volume)
+	mountDirPath             string // absolute path to directory containing configuration files and mount point from node root (e.g. /.../mountDirPath)
+	mountPath                string // absolute path to mount point from host root (e.g. /.../mountDirPath/mount)
 	sysMgmtdHost             string // IP address or hostname of BeeGFS mgmtd service
-	volDirBasePathBeegfsRoot string // absolute path to BeeGFS parent directory from BeeGFS root (e.g. /parent)
-	volDirBasePath           string // absolute path to BeeGFS parent directory from host root (e.g. ../mountDirPath/mount/parent)
-	volDirPathBeegfsRoot     string // absolute path to BeeGFS directory from BeeGFS root (e.g. /parent/volume)
-	volDirPath               string // absolute path to BeeGFS directory from host root (e.g. .../mountDirPath/mount/parent/volume)
+	volDirBasePathBeegfsRoot string // absolute path to BeeGFS parent directory from BeeGFS root (e.g. /.../parent)
+	volDirBasePath           string // absolute path to BeeGFS parent directory from host root (e.g. /.../mountDirPath/mount/.../parent)
+	volDirPathBeegfsRoot     string // absolute path to BeeGFS directory from BeeGFS root (e.g. /.../parent/volume)
+	volDirPath               string // absolute path to BeeGFS directory from host root (e.g. /.../mountDirPath/mount/.../parent/volume)
 	volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
 }
 
@@ -220,15 +228,20 @@ func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pl
 	// These parameters must be constructed outside of the struct literal.
 	mountPath := path.Join(mountDirPath, "mount")
 	volDirPath := path.Join(mountPath, volDirPathBeegfsRoot)
+	volDirBasePath := path.Dir(volDirPath)
+	volDirBasePathBeegfsRoot := path.Dir(volDirPathBeegfsRoot)
+	volName := path.Base(volDirPathBeegfsRoot) // volName is always the last element of volDirPathBeegfsRoot.
 
 	return beegfsVolume{
 		config:                   squashConfigForSysMgmtdHost(sysMgmtdHost, pluginConfig),
 		clientConfPath:           path.Join(mountDirPath, "beegfs-client.conf"),
+		csiDirPath:               path.Join(volDirBasePath, ".csi", "volumes", volName),
+		csiDirPathBeegfsRoot:     path.Join(volDirBasePathBeegfsRoot, ".csi", "volumes", volName),
 		mountDirPath:             mountDirPath,
 		mountPath:                mountPath,
 		sysMgmtdHost:             sysMgmtdHost,
-		volDirBasePathBeegfsRoot: path.Dir(volDirPathBeegfsRoot),
-		volDirBasePath:           path.Dir(volDirPath),
+		volDirBasePathBeegfsRoot: volDirBasePathBeegfsRoot,
+		volDirBasePath:           volDirBasePath,
 		volDirPathBeegfsRoot:     volDirPathBeegfsRoot,
 		volDirPath:               volDirPath,
 		volumeID:                 NewBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot),
