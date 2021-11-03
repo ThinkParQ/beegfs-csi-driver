@@ -6,10 +6,11 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
-	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"path"
 	"reflect"
 	"testing"
+
+	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 )
 
 func TestHasNonDefaultOwnerOrGroup(t *testing.T) {

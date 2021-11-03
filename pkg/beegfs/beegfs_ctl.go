@@ -19,38 +19,38 @@ import (
 // beegfsCtlExecutorInterface abstracts beegfs-ctl so tests can run without access to a beegfs-ctl binary or a BeeGFS
 // file system.
 type beegfsCtlExecutorInterface interface {
-	createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error
-	statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error)
+	createDirectoryForVolume(ctx context.Context, vol beegfsVolume, dirPath string, cfg permissionsConfig) error
+	statDirectoryForVolume(ctx context.Context, vol beegfsVolume, dirPath string) (string, error)
 	setPatternForVolume(ctx context.Context, vol beegfsVolume, cfg stripePatternConfig) error
 }
 
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
 type beegfsCtlExecutor struct{}
 
-// createDirForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by
-// vol.volDirPathBeegfsRoot on the BeeGFS file system specified by vol.sysMgmtdHost. createDirectory returns an error
-// if it cannot create the directory, but does not return an error if the directory already exists.
-func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error {
-	LogDebug(ctx, "Creating BeeGFS directory", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
-	// Check if volume already exists.
-	_, err := ctlExec.statDirectoryForVolume(ctx, vol)
+// createDirectoryForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by dirPath on the
+// BeeGFS file system specified by vol.sysMgmtdHost. createDirectoryForPath returns an error if it cannot create the
+// directory, but does not return an error if the directory already exists.
+func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, dirPath string, cfg permissionsConfig) error {
+	LogDebug(ctx, "Creating BeeGFS directory", "path", dirPath, "volumeID", vol.volumeID)
+	// Check if directory already exists.
+	_, err := ctlExec.statDirectoryForVolume(ctx, vol, dirPath)
 	if errors.As(err, &ctlNotExistError{}) {
-		// We can't find the volume so we need to create one.
-		LogDebug(ctx, "BeeGFS directory does not exist", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
+		// We can't find the directory so we need to create it.
+		LogDebug(ctx, "BeeGFS directory does not exist", "path", dirPath, "volumeID", vol.volumeID)
 
 		// Construct the set of arguments that will be used to create any necessary directories.
 		createDirArgs := constructCreateDirForVolumeArgs(cfg)
 
 		// Multiple parent directories may need to be created.
 		// Create a slice of paths where the first path is the most general and each subsequent path is less general.
-		dirsToMake := []string{vol.volDirPathBeegfsRoot}
-		for dir := path.Dir(vol.volDirPathBeegfsRoot); dir != "/"; { // path.Dir() returns "." if there is no parent.
+		dirsToMake := []string{dirPath}
+		for dir := path.Dir(dirPath); dir != "/"; { // path.Dir() returns "." if there is no parent.
 			dirsToMake = append([]string{dir}, dirsToMake...) // Prepend so the more general path comes first.
 			dir = path.Dir(dir)
 		}
-		// Starting with the most general path, create all directories required to eventually create vol.volDirPathBeegfsRoot.
+		// Starting with the most general path, create all directories required to eventually create dirPath.
 		for _, dir := range dirsToMake {
-			_, err := ctlExec.execute(ctx, vol.clientConfPath, append(createDirArgs, dir))
+			_, err = ctlExec.execute(ctx, vol.clientConfPath, append(createDirArgs, dir))
 			if err != nil && !errors.As(err, &ctlExistError{}) {
 				// We can't create the volume.
 				return errors.WithMessagef(err, "cannot create BeeGFS directory %s for %s", dir, vol.volumeID)
@@ -59,15 +59,15 @@ func (ctlExec *beegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, 
 	} else if err != nil {
 		return err
 	} else {
-		LogDebug(ctx, "BeeGFS directory already exists", "volDirPathBeegfsRoot", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
+		LogDebug(ctx, "BeeGFS directory already exists", "path", dirPath, "volumeID", vol.volumeID)
 	}
 	return nil
 }
 
-// statDirForVolume returns the information output by "beegfs-ctl --getentryinfo" as a string, or an empty string
-// and an error if the stat fails.
-func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error) {
-	return ctlExec.execute(ctx, vol.clientConfPath, []string{"--unmounted", "--getentryinfo", vol.volDirPathBeegfsRoot})
+// statDirectoryForVolume returns the information output by "beegfs-ctl --getentryinfo dirPath" as a string, or an empty
+// string and an error if the stat fails.
+func (ctlExec *beegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume, dirPath string) (string, error) {
+	return ctlExec.execute(ctx, vol.clientConfPath, []string{"--unmounted", "--getentryinfo", dirPath})
 }
 
 // constructSetPatternForVolumeArgs constructs the slice of arguments that will be passed to ctlExec.execute() in a
@@ -193,11 +193,11 @@ func (err ctlExistError) Error() string {
 // fakeBeeGFSCtlExecutor is a mock implementation of beegfsCtlExecutorInterface useful for testing.
 type fakeBeegfsCtlExecutor struct{}
 
-func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, cfg permissionsConfig) error {
+func (*fakeBeegfsCtlExecutor) createDirectoryForVolume(ctx context.Context, vol beegfsVolume, path string, cfg permissionsConfig) error {
 	return nil
 }
 
-func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume) (string, error) {
+func (*fakeBeegfsCtlExecutor) statDirectoryForVolume(ctx context.Context, vol beegfsVolume, path string) (string, error) {
 	return "", nil
 }
 

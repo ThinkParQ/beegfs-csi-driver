@@ -88,7 +88,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	// Only continue if our target directory exists. Check using beegfs-ctl instead of something more straightforward
 	// (e.g. fs.Stat(vol.volDirPath)) because beegfs-ctl is easier to mock for sanity tests. Client files are already
 	// written. If they weren't, the volume couldn't have been staged.
-	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
@@ -196,7 +196,7 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 
 	mountOptions := volCap.GetMount().MountFlags
 	// Only mount BeeGFS if beegfs-ctl reports our target directory exists.
-	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+	if _, err := ns.ctlExec.statDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}

@@ -100,7 +100,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
 	}
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
-	permissionsConfig, err := getPermissionsConfigFromParams(reqParams)
+	volPermissionsConfig, err := getPermissionsConfigFromParams(reqParams)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
@@ -132,7 +132,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// Use beegfs-ctl to create the directory and stripe it appropriately.
-	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, permissionsConfig); err != nil {
+	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot, volPermissionsConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := cs.ctlExec.setPatternForVolume(ctx, vol, stripePatternConfig); err != nil {
@@ -142,15 +142,24 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Mount BeeGFS and use OS tools to change the access mode only if beegfs-ctl could not handle the access mode
 	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
 	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
-	if permissionsConfig.hasSpecialPermissions() {
+	if volPermissionsConfig.hasSpecialPermissions() {
 		if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
-		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", permissionsConfig.mode),
+		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", volPermissionsConfig.mode),
 			"volDirPath", vol.volDirPath, "volumeID", vol.volumeID)
-		if err := os.Chmod(vol.volDirPath, permissionsConfig.goFileMode()); err != nil {
+		if err := os.Chmod(vol.volDirPath, volPermissionsConfig.goFileMode()); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
+	}
+
+	// Use beegfs-ctl to create the directory we will use to track the nodes that mount this volume. Don't mount and
+	// use mkdir in case there is no other need to mount.
+	nodesDirPath := path.Join(vol.csiDirPathBeegfsRoot, "nodes")
+	nodesDirPermissions := permissionsConfig{mode: 0750}
+	if err = cs.ctlExec.createDirectoryForVolume(ctx, vol, nodesDirPath, nodesDirPermissions); err != nil {
+		LogError(ctx, err,
+			"Failed to create subdirectory for node tracking", "path", nodesDirPath, "volumeID", vol.volumeID)
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -258,7 +267,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	if _, err := cs.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+	if _, err := cs.ctlExec.statDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
