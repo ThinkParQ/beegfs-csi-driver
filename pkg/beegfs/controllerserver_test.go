@@ -6,8 +6,14 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"context"
+	"path"
 	"reflect"
 	"testing"
+	"time"
+
+	v1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
+	"github.com/spf13/afero"
 )
 
 func TestGetStripePatternConfigFromParams(t *testing.T) {
@@ -203,5 +209,106 @@ func TestGetPermissionsConfigFromParams(t *testing.T) {
 				t.Fatalf("expected: %v, got: %v", tc.want, got)
 			}
 		})
+	}
+}
+
+func TestDeleteVolumeUntilWaitEmptyNodesDir(t *testing.T) {
+	fs = afero.NewMemMapFs() // Set up a new memory-mapped file system.
+	fsutil = afero.Afero{Fs: fs}
+	vol := newBeegfsVolume("mountDirPath", "sysMgmtdHost", "volDirPathBeegfsRoot", v1.PluginConfig{})
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	if err := fs.MkdirAll(nodesPath, 0750); err != nil {
+		t.Fatal("error in setup")
+	}
+	if err := fs.MkdirAll(vol.mountDirPath, 0777); err != nil {
+		t.Fatal("error in setup")
+	}
+
+	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+		t.Fatal("expected no error deleting volume")
+	}
+	if _, err := fs.Stat(vol.csiDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.csiDirPath)
+	}
+	if _, err := fs.Stat(vol.volDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.volDirPath)
+	}
+}
+
+func TestDeleteVolumeUntilWaitNoCSIDir(t *testing.T) {
+	fs = afero.NewMemMapFs() // Set up a new memory-mapped file system.
+	fsutil = afero.Afero{Fs: fs}
+	vol := newBeegfsVolume("mountDirPath", "sysMgmtdHost", "volDirPathBeegfsRoot", v1.PluginConfig{})
+	if err := fs.MkdirAll(vol.mountDirPath, 0777); err != nil {
+		t.Fatal("error in setup")
+	}
+
+	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+		t.Fatal("expected no error deleting volume")
+	}
+	if _, err := fs.Stat(vol.volDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.volDirPath)
+	}
+}
+
+func TestDeleteVolumeUntilWaitNodesDirNeverEmpties(t *testing.T) {
+	fs = afero.NewMemMapFs() // Set up a new memory-mapped file system.
+	fsutil = afero.Afero{Fs: fs}
+	vol := newBeegfsVolume("mountDirPath", "sysMgmtdHost", "volDirPathBeegfsRoot", v1.PluginConfig{})
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	if err := fs.MkdirAll(nodesPath, 0750); err != nil {
+		t.Fatal("error in setup")
+	}
+	if err := fs.MkdirAll(vol.mountDirPath, 0777); err != nil {
+		t.Fatal("error in setup")
+	}
+
+	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+		t.Fatal("expected no error deleting volume")
+	}
+	if _, err := fs.Stat(vol.csiDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.csiDirPath)
+	}
+	if _, err := fs.Stat(vol.volDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.volDirPath)
+	}
+}
+
+func TestDeleteVolumeUntilWaitNodesDirEmptiesEventually(t *testing.T) {
+	fs = afero.NewMemMapFs() // Set up a new memory-mapped file system.
+	fsutil = afero.Afero{Fs: fs}
+	vol := newBeegfsVolume("mountDirPath", "sysMgmtdHost", "volDirPathBeegfsRoot", v1.PluginConfig{})
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	nodeFile := path.Join(nodesPath, "node")
+	if err := fs.MkdirAll(nodesPath, 0750); err != nil {
+		t.Fatal("error in setup")
+	}
+	if _, err := fs.Create(nodeFile); err != nil {
+		t.Fatal("error in setup")
+	}
+	if err := fs.MkdirAll(vol.mountDirPath, 0777); err != nil {
+		t.Fatal("error in setup")
+	}
+
+	// Empty the nodes directory after a couple of seconds.
+	emptyTime := time.Duration(2) * time.Second
+	go func() {
+		time.Sleep(emptyTime)
+		_ = fsutil.Remove(nodeFile)
+	}()
+
+	start := time.Now()
+	const waitTime = 10
+	if err := DeleteVolumeUntilWait(context.TODO(), vol, uint64(waitTime)); err != nil {
+		t.Fatal("expected no error deleting volume")
+	}
+	if _, err := fs.Stat(vol.csiDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.csiDirPath)
+	}
+	if _, err := fs.Stat(vol.volDirPath); err == nil {
+		t.Fatalf("expected %s to be deleted", vol.volDirPath)
+	}
+	if time.Since(start) > 2*emptyTime || time.Since(start) > waitTime*time.Second {
+		t.Fatalf("expected delete to take ~%f seconds but it took %f", emptyTime.Seconds(), time.Since(start).Seconds())
 	}
 }

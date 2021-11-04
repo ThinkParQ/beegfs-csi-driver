@@ -13,10 +13,14 @@ import (
 
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 	"github.com/onsi/ginkgo/config"
+	"github.com/spf13/afero"
 	"k8s.io/utils/mount"
 )
 
 func TestSanity(t *testing.T) {
+	fs = afero.NewOsFs() // Make sure we are using an OS-backed file system.
+	fsutil = afero.Afero{Fs: fs}
+
 	config.DefaultReporterConfig.NoColor = true
 	sanityDir, err := ioutil.TempDir("", "driver-sanity")
 	if err != nil {
