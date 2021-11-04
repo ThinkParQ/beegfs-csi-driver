@@ -108,26 +108,37 @@ func TestGoFileMode(t *testing.T) {
 	}
 }
 
+// Use the same wantBeegfsVolume for multiple NewBeegfsVolume tests.
+var wantBeegfsVolume = beegfsVolume{
+	config:                   *beegfsv1.NewBeegfsConfig(),
+	clientConfPath:           path.Join("/", "...", "mountDirPath", "beegfs-client.conf"),
+	csiDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", ".csi", "volumes", "volume"),
+	csiDirPathBeegfsRoot:     path.Join("/", "...", "parent", ".csi", "volumes", "volume"),
+	mountDirPath:             path.Join("/", "...", "mountDirPath"),
+	mountPath:                path.Join("/", "...", "mountDirPath", "mount"),
+	sysMgmtdHost:             "sysMgmtdHost",
+	volDirBasePathBeegfsRoot: path.Join("/", "...", "parent"),
+	volDirBasePath:           path.Join("/", "...", "/", "mountDirPath", "mount", "...", "parent"),
+	volDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", "volume"),
+	volDirPathBeegfsRoot:     path.Join("/", "...", "parent", "volume"),
+	volumeID:                 NewBeegfsUrl("sysMgmtdHost", path.Join("/", "...", "parent", "volume")),
+}
+
 func TestNewBeegfsVolume(t *testing.T) {
 	// Inputs are based on comments in the example preceding the beegfsVolume struct in beegfs.go.
-	want := beegfsVolume{
-		config:                   *beegfsv1.NewBeegfsConfig(),
-		clientConfPath:           path.Join("/", "...", "mountDirPath", "beegfs-client.conf"),
-		csiDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", ".csi", "volumes", "volume"),
-		csiDirPathBeegfsRoot:     path.Join("/", "...", "parent", ".csi", "volumes", "volume"),
-		mountDirPath:             path.Join("/", "...", "mountDirPath"),
-		mountPath:                path.Join("/", "...", "mountDirPath", "mount"),
-		sysMgmtdHost:             "sysMgmtdHost",
-		volDirBasePathBeegfsRoot: path.Join("/", "...", "parent"),
-		volDirBasePath:           path.Join("/", "...", "/", "mountDirPath", "mount", "...", "parent"),
-		volDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", "volume"),
-		volDirPathBeegfsRoot:     path.Join("/", "...", "parent", "volume"),
-		volumeID:                 NewBeegfsUrl("sysMgmtdHost", path.Join("/", "...", "parent", "volume")),
+	want := wantBeegfsVolume
+	got := newBeegfsVolume(want.mountDirPath, want.sysMgmtdHost, want.volDirPathBeegfsRoot, beegfsv1.PluginConfig{})
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("\nexpected: \n%+v, \ngot: \n%+v", want, got)
 	}
-	got := newBeegfsVolume(path.Join("/", "...", "mountDirPath"),
-		"sysMgmtdHost",
-		path.Join("/", "...", "parent", "volume"),
-		beegfsv1.PluginConfig{})
+}
+
+func TestNewBeegfsVolumeFromID(t *testing.T) {
+	want := wantBeegfsVolume
+	got, err := newBeegfsVolumeFromID(want.mountDirPath, want.volumeID, beegfsv1.PluginConfig{})
+	if err != nil {
+		t.Fatalf("expected no error; got %v", err)
+	}
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("\nexpected: \n%+v, \ngot: \n%+v", want, got)
 	}

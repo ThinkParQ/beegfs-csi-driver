@@ -23,6 +23,7 @@ package beegfs
 
 import (
 	"os"
+	"path"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
@@ -206,6 +207,23 @@ func (ns *nodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
+	// At this point, the volume should be mounted. Add our nodeID to the appropriate tracking directory. This is best
+	// effort. Log if something goes wrong, but don't fail the operation.
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	nodePath := path.Join(nodesPath, ns.nodeID)
+	dirExists, err := fsutil.DirExists(nodesPath)
+	if err != nil {
+		LogError(ctx, err, "Failed attempting to stat node tracking directory", "path", nodesPath, "volumeID", vol.volumeID)
+	} else if !dirExists {
+		LogVerbose(ctx, "Node tracking directory doesn't exist for volume", "path", nodesPath, "volumeID", vol.volumeID)
+	} else {
+		LogDebug(ctx, "Creating file in node tracking directory", "path", nodePath, "volumeID", vol.volumeID)
+		// Use WriteFile instead of Create to avoid the need for Close.
+		if err = fsutil.WriteFile(nodePath, []byte{}, 0640); err != nil {
+			LogError(ctx, err, "Failed to create file in node tracking directory", "path", nodePath, "volumeID", vol.volumeID)
+		}
+	}
+
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
@@ -223,6 +241,22 @@ func (ns *nodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstag
 	vol, err := newBeegfsVolumeFromID(stagingTargetPath, volumeID, ns.pluginConfig)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
+	}
+
+	// While the volume is still mounted, delete our nodeID from the appropriate tracking directory. This is best
+	// effort. Log if something goes wrong, but don't fail the operation.
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	nodePath := path.Join(nodesPath, ns.nodeID)
+	fileExists, err := fsutil.Exists(nodePath)
+	if err != nil {
+		LogError(ctx, err, "Failed attempting to stat node tracking file", "path", nodePath, "volumeID", vol.volumeID)
+	} else if !fileExists {
+		LogVerbose(ctx, "Node tracking file doesn't exist for node", "path", nodePath, "volumeID", vol.volumeID)
+	} else {
+		LogDebug(ctx, "Deleting node tracking file", "path", nodePath, "volumeID", vol.volumeID)
+		if err = fs.Remove(nodePath); err != nil {
+			LogError(ctx, err, "Failed to delete node tracking file", "path", nodePath, "volumeID", vol.volumeID)
+		}
 	}
 
 	err = unmountAndCleanUpIfNecessary(ctx, vol, false, ns.mounter) // The CO will clean up mountDirPath.
