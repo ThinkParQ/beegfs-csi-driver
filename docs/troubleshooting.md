@@ -7,6 +7,7 @@
 * [Kubernetes](#kubernetes)
   * [Determining the BeeGFS Client Configuration 
   for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
+  * [Orphaned BeeGFS Mounts Remain on Nodes](#orphan-mounts)
 
 ## Overview
 <a name="overview"></a>
@@ -73,3 +74,70 @@ beegfs_nodev on /var/lib/kubelet/pods/aa002809-c443-42f1-970c-e2e9c7ca14ad/volum
 user@ictm1625h12:~$ sudo cat /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-3ad5dffc/globalmount/beegfs-client.conf | grep quotaEnabled
 quotaEnabled                 = true
 ```
+
+### Orphaned Mounts Remain on Nodes
+<a href="orphaned mounts"></a>
+
+There are a number of circumstances that can cause orphaned mounts to remain on 
+nodes. Many of them are outside of the control of the BeeGFS CSI driver.
+
+#### General Symptoms
+
+The driver controller service logs indicate that the controller service waited 
+for the maximum allowed time before deleting a BeeGFS directory. This 
+indicates that Kubernetes called DeleteVolume before NodeUnpublish and 
+NodeUnstageVolume completed on at least one node and these operations never 
+completed before the timeout.
+
+```bash
+-> kubectl logs csi-beegfs-controller-0 | grep 380e4ac6
+...
+I1105 17:54:00.421874       1 server.go:189]  "msg"="GRPC call" "reqID"="001d" "method"="/csi.v1.Controller/DeleteVolume" "request"="{\"volume_id\":\"beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6\"}"
+I1105 17:54:00.422079       1 beegfs_util.go:62]  "msg"="Writing client files" "reqID"="001d" "path"="/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:54:00.423025       1 beegfs_util.go:208]  "msg"="Mounting volume to path" "reqID"="001d" "mountOptions"=["rw","relatime","cfgFile=/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6/beegfs-client.conf"] "path"="/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6/mount" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:54:00.445937       1 controllerserver.go:441]  "msg"="Waiting for volume to unstage from all nodes" "reqID"="001d" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:54:02.450102       1 controllerserver.go:441]  "msg"="Waiting for volume to unstage from all nodes" "reqID"="001d" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+...
+I1105 17:54:58.559323       1 controllerserver.go:441]  "msg"="Waiting for volume to unstage from all nodes" "reqID"="001d" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:55:00.562626       1 controllerserver.go:446]  "msg"="Deleting BeeGFS directory" "reqID"="001d" "path"="/e2e-test/dynamic/.csi/volumes/pvc-380e4ac6" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:55:00.565337       1 controllerserver.go:461]  "msg"="Deleting BeeGFS directory" "reqID"="001d" "path"="/e2e-test/dynamic/pvc-380e4ac6" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:55:00.570070       1 beegfs_util.go:270]  "msg"="Unmounting volume from path" "reqID"="001d" "path"="/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6/mount" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+I1105 17:55:00.570734       1 mount_helper_common.go:71] "/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6/mount" is a mountpoint, unmounting
+I1105 17:55:01.871999       1 mount_helper_common.go:85] "/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6/mount" is unmounted, deleting the directory
+I1105 17:55:01.872095       1 beegfs_util.go:283]  "msg"="Cleaning up path" "reqID"="001d" "path"="/var/lib/kubelet/plugins/beegfs.csi.netapp.com/10.113.4.46_e2e-test_dynamic_pvc-380e4ac6" "volumeID"="beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6"
+...
+```
+
+BeeGFS mounts still exist on a node indefinitely.
+
+```bash
+-> ssh root@some.node mount | grep beegfs | grep pvc-380e4ac6
+beegfs_nodev on /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-380e4ac6/globalmount/mount type beegfs (rw,relatime,cfgFile=/var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-380e4ac6/globalmount/beegfs-client.conf)
+beegfs_nodev on /var/lib/kubelet/pods/06f28bf6-b4a2-4d4e-8104-e2d60a0682b8/volumes/kubernetes.io~csi/pvc-380e4ac6/mount type beegfs (rw,relatime,cfgFile=/var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-380e4ac6/globalmount/beegfs-client.conf)
+```
+
+#### Missing vol_data.json
+
+Along with the general symptoms, the journal on an affected node indicates that 
+UnmountVolume is continuously failing due to a missing vol_data.json file.
+
+```bash
+-> ssh root@some.node
+-> journalctl -e -t kubelet --since "5 minutes ago"
+...
+Nov 05 16:15:11 kubernetes-119-cluster-8 kubelet[2478]: E1105 16:15:11.740637    2478 reconciler.go:193] operationExecutor.UnmountVolume failed (controllerAttachDetachEnabled true) for volume "volume1" (UniqueName: "kubernetes.io/csi/beegfs.csi.netapp.com^beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6") pod "06f28bf6-b4a2-4d4e-8104-e2d60a0682b8" (UID: "06f28bf6-b4a2-4d4e-8104-e2d60a0682b8") : UnmountVolume.NewUnmounter failed for volume "volume1" (UniqueName: "kubernetes.io/csi/beegfs.csi.netapp.com^beegfs://10.113.4.46/e2e-test/dynamic/pvc-380e4ac6") pod "06f28bf6-b4a2-4d4e-8104-e2d60a0682b8" (UID: "06f28bf6-b4a2-4d4e-8104-e2d60a0682b8") : kubernetes.io/csi: unmounter failed to load volume data file [/var/lib/kubelet/pods/06f28bf6-b4a2-4d4e-8104-e2d60a0682b8/volumes/kubernetes.io~csi/pvc-380e4ac6/mount]: kubernetes.io/csi: failed to open volume data file [/var/lib/kubelet/pods/06f28bf6-b4a2-4d4e-8104-e2d60a0682b8/volumes/kubernetes.io~csi/pvc-380e4ac6/vol_data.json]: open /var/lib/kubelet/pods/06f28bf6-b4a2-4d4e-8104-e2d60a0682b8/volumes/kubernetes.io~csi/pvc-380e4ac6/vol_data.json: no such file or directory
+```
+
+This is a bug in Kubelet itself. See [Kubernetes Issue 
+\#101911](#https://github.com/kubernetes/kubernetes/issues/101911) and its 
+associated fix in [Kubernetes PR 
+\#102576](#https://github.com/kubernetes/kubernetes/pull/102576) for details. 
+When affected by this bug, Kubelet fails to call NodeUnstageVolume while 
+tearing down a Pod and Kubernetes calls DeleteVolume anyway. Kubelet cannot 
+recover without manual intervention on the node.
+
+This bug is fixed in the following Kubernetes versions:
+* 1.22.0
+* 1.21.4
+* 1.20.10
+* 1.19.14
