@@ -371,6 +371,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 
 		// Use a uniquely named volDirBasePathBeegfsRoot for isolation.
 		volDirBasePathBeegfsRoot := path.Join("e2e-test", "delete", f.UniqueName)
+		csiDirPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, ".csi")
 		tarPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, "before.tar")
 		// The volDirBasePath storage class parameter is the volDirBasePathBeegfsRoot pkg/beegfs parameter.
 		d.SetStorageClassParams(map[string]string{"volDirBasePath": volDirBasePathBeegfsRoot})
@@ -389,7 +390,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		}
 
 		// Create an archive of the volDirBasePath as it currently exists.
-		_, err := fsExec.IssueCommandWithBeegfsPaths("tar -cf %s %s", tarPathBeegfsRoot, volDirBasePathBeegfsRoot)
+		_, err := fsExec.IssueCommandWithBeegfsPaths("tar --exclude %s -cf %s %s", csiDirPathBeegfsRoot, tarPathBeegfsRoot, volDirBasePathBeegfsRoot)
 		e2eframework.ExpectNoError(err)
 
 		// Create and then delete a new PVC with this same unique volDirBasePathBeegfsRoot.
@@ -397,7 +398,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		e2eframework.ExpectNoError(resource.CleanupResource())
 
 		// Verify that the current state of volDirBasePath matches our original archive.
-		_, err = fsExec.IssueCommandWithBeegfsPaths("tar --diff -f %s", tarPathBeegfsRoot)
-		e2eframework.ExpectNoError(err)
+		s, err := fsExec.IssueCommandWithBeegfsPaths("tar --exclude %s --diff -f %s", csiDirPathBeegfsRoot, tarPathBeegfsRoot)
+		e2eframework.ExpectNoError(err, "%s", s)
 	})
 }
