@@ -35,7 +35,8 @@ func TestSanity(t *testing.T) {
 	}
 
 	// Create and run the driver
-	driver, err := NewBeegfsDriver("", "", csDataDirPath, "testDriver", endpoint, "testID", clientConfTemplatePath, "v0.1")
+	driver, err := NewBeegfsDriver("", "", csDataDirPath, "testDriver", endpoint, "testID",
+		clientConfTemplatePath, "v0.1", 10)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -154,7 +154,8 @@ var (
 	vendorVersion = "dev"
 )
 
-func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath, version string) (*beegfs, error) {
+func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
 	}
@@ -205,7 +206,8 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 	// Create GRPC servers
 	driver.ids = NewIdentityServer(driver.driverName, driver.version)
 	driver.ns = NewNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
-	driver.cs = NewControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir)
+	driver.cs = NewControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir,
+		nodeUnstageTimeout)
 
 	return &driver, nil
 }

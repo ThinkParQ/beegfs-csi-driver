@@ -46,6 +46,7 @@ spec:
             - --cs-data-dir=/var/lib/kubelet/plugins/beegfs.csi.netapp.com
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
+            - --node-unstage-timeout=60
             - -v=$(LOG_LEVEL)
           securityContext:
             # Privileged is required for bidirectional mount propagation and to run the mount command.

@@ -54,9 +54,11 @@ type controllerServer struct {
 	mounter                mount.Interface
 	csDataDir              string
 	volumeIDsInFlight      *threadSafeStringLock
+	nodeUnstageTimeout     uint64
 }
 
-func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
+func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
+	nodeUnstageTimeout uint64) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
@@ -69,6 +71,7 @@ func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 		csDataDir:              csDataDir,
 		mounter:                nil,
 		volumeIDsInFlight:      newThreadSafeStringLock(),
+		nodeUnstageTimeout:     nodeUnstageTimeout,
 	}
 }
 
@@ -156,11 +159,15 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// Use beegfs-ctl to create the directory we will use to track the nodes that mount this volume. Don't mount and
 	// use mkdir in case there is no other need to mount.
-	nodesDirPath := path.Join(vol.csiDirPathBeegfsRoot, "nodes")
-	nodesDirPermissions := permissionsConfig{mode: 0750}
-	if err = cs.ctlExec.createDirectoryForVolume(ctx, vol, nodesDirPath, nodesDirPermissions); err != nil {
-		LogError(ctx, err,
-			"Failed to create subdirectory for node tracking", "path", nodesDirPath, "volumeID", vol.volumeID)
+	if cs.nodeUnstageTimeout > 0 {
+		nodesDirPath := path.Join(vol.csiDirPathBeegfsRoot, "nodes")
+		nodesDirPermissions := permissionsConfig{mode: 0750}
+		if err = cs.ctlExec.createDirectoryForVolume(ctx, vol, nodesDirPath, nodesDirPermissions); err != nil {
+			LogError(ctx, err,
+				"Failed to create subdirectory for node tracking", "path", nodesDirPath, "volumeID", vol.volumeID)
+		}
+	} else {
+		LogVerbose(ctx, "Node tracking not enabled", "volumeID", vol.volumeID)
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -208,8 +215,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Delete volume from mounted BeeGFS.
-	// TODO(webere): Make waitTime a command line argument.
-	if err = DeleteVolumeUntilWait(ctx, vol, 10); err != nil {
+	if err = DeleteVolumeUntilWait(ctx, vol, cs.nodeUnstageTimeout); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
@@ -446,7 +452,7 @@ func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint6
 		} else {
 			// It's fine if the .csi/volumes/volume/nodes directory does not exist. It was likely never created in the
 			// first place. We'll just fall back to naive deletion behavior.
-			LogVerbose(ctx, "No staging information found", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
+			LogVerbose(ctx, "No node tracking information found", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
 			break // Go on to delete the volume.
 		}
 	}
