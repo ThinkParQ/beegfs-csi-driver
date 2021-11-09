@@ -48,5 +48,8 @@ for ITERATION in {1..20}; do
 done
 
 ELAPSED=$((${SECONDS} - ${START_TIME}))
-kubectl logs -n ${DRIVER_NAMESPACE} -c beegfs --since=${ELAPSED}s csi-beegfs-controller-0 | grep Waiting
+# Print any controller logs that indicate either:
+# -> The orphan mount prevention infrastructure worked, (waited for unstage) or
+# -> The orphan mount infrastructure had difficulties, (failed to clean up due to a busy mount).
+kubectl logs -n ${DRIVER_NAMESPACE} -c beegfs --since=${ELAPSED}s csi-beegfs-controller-0 | grep -e Waiting -e busy
 rm -rf ${OUTPUT_DIR}

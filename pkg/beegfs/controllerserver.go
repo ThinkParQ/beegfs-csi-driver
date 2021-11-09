@@ -179,7 +179,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 // DeleteVolume deletes the directory referenced in the volumeID from the BeeGFS file system referenced in the
 // volumeID.
-func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (resp *csi.DeleteVolumeResponse, err error) {
 	// Check arguments.
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -198,19 +198,29 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 
 	// Write configuration files and mount BeeGFS.
 	defer func() {
-		// Failure to clean up is an internal problem. The CO only cares whether or not we deleted the volume.
-		if err := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
-			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
+		// Clean up no matter what and return an error if cleanup fails. Ignoring cleanup failure might lead to silent
+		// orphaned mounts. One occasional cause of cleanup failure is a mount reporting "busy" on attempted unmount
+		// immediately after a directory or file deletion. Another DeleteVolume call resolves the issue.
+		if cleanupErr := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
+			// err and resp are named values that were being returned by DeleteVolume. We can modify them here to
+			// return something different.
+			resp = nil
+			if err != nil {
+				// Instead of overwriting the returned GrpcError, let's just log a separate error here.
+				LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
+			} else {
+				err = newGrpcErrorFromCause(codes.Internal, cleanupErr)
+			}
 		}
 	}()
-	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
+	if err = fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
+	if err = writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
+	if err = mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
