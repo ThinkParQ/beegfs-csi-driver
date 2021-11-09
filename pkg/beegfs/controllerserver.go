@@ -201,7 +201,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		// Clean up no matter what and return an error if cleanup fails. Ignoring cleanup failure might lead to silent
 		// orphaned mounts. One occasional cause of cleanup failure is a mount reporting "busy" on attempted unmount
 		// immediately after a directory or file deletion. Another DeleteVolume call resolves the issue.
-		if cleanupErr := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
+		if cleanupErr := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); cleanupErr != nil {
 			// err and resp are named values that were being returned by DeleteVolume. We can modify them here to
 			// return something different.
 			resp = nil

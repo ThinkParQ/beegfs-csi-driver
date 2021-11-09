@@ -75,11 +75,11 @@ type beegfs struct {
 //            |-- "connTcpOnlyFilterFile"
 //            |-- "mount" (mountPath)
 //                |-- ...
-//                   |-- ".csi"
-//                       |-- volumes
-//                           |-- csiDirPath
-//                   |-- volDirBasePath
-//                       |-- volDirPath (same as volDirPathBeegfsRoot)
+//                    |-- ".csi"
+//                        |-- volumes
+//                            |-- csiDirPath
+//                    |-- volDirBasePath
+//                        |-- volDirPath (same as volDirPathBeegfsRoot)
 //
 // From the perspective of the BeeGFS file system (all variable names represent absolute paths):
 //    /

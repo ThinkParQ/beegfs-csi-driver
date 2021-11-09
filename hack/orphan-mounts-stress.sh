@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Prior to the v1.2.1 release, on certain versions of Kubernetes, the driver's node service would infrequently leave
+# behind some number of orphan mounts (mounted BeeGFS file systems that could not be cleaned up without manual
+# intervention, even though the associated Persistent Volume had been deleted from the Kubernetes API server already).
+# The fixes in v1.2.1 should prevent the issue moving forward, but due to its intermittent nature, testing for the issue
+# is difficult.
+
+# This script runs the end-to-end test suite against a cluster many times in a row. If the suite fails (and it WILL
+# fail if orphaned mounts are detected), the script logs all relevant information to a temporary directory. If the suite
+# succeeds on all attempts, the script logs everything the controller service reported about the orphan mount
+# infrastructure while it was running.
+
 # Set KUBECONFIG.
 # Deploy the driver.
 # Modify DRIVER_NAMESPACE if necessary.
@@ -29,7 +40,7 @@ for ITERATION in {1..20}; do
   date
 
   echo "running nondisruptive ginkgo tests"
-  if ginkgo -p -nodes 8 -skip 'should be able to unmount after the subpath directory is deleted|\[Slow\]|\[Disruptive\]|\[Serial\]|should delete only the anticipated directory' -timeout 60m ./test/e2e/ >${OUTPUT_DIR}/nondisruptive.log; then
+  if ginkgo -p -nodes 8 -skip 'should be able to unmount after the subpath directory is deleted|\[Slow\]|\[Disruptive\]|\[Serial\]' -timeout 60m ./test/e2e/ >${OUTPUT_DIR}/nondisruptive.log; then
     echo "nondisruptive ginkgo tests passed"
   else
     echo "nondisruptive ginkgo tests failed"
@@ -37,7 +48,7 @@ for ITERATION in {1..20}; do
   fi
 
   echo "running disruptive ginkgo tests"
-  if ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ >${OUTPUT_DIR}/disruptive.log; then
+  if ginkgo -v -noColor -skip 'should be able to unmount after the subpath directory is deleted|\[Slow\]' -focus '\[Disruptive\]|\[Serial\]' -timeout 60m ./test/e2e/ >${OUTPUT_DIR}/disruptive.log; then
     echo "disruptive ginkgo tests passed"
   else
     echo "disruptive ginkgo tests failed"
@@ -47,7 +58,7 @@ for ITERATION in {1..20}; do
   echo
 done
 
-ELAPSED=$((${SECONDS} - ${START_TIME}))
+ELAPSED=$((SECONDS - START_TIME))
 # Print any controller logs that indicate either:
 # -> The orphan mount prevention infrastructure worked, (waited for unstage) or
 # -> The orphan mount infrastructure had difficulties, (failed to clean up due to a busy mount).

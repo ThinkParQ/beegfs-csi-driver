@@ -22,12 +22,10 @@ Licensed under the Apache License, Version 2.0.
 package utils
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
@@ -55,8 +53,12 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 // within the case. It is currently preferred to use VerifyNoOrphanedMounts before and after an entire suite of tests
 // runs to ensure none of the tests within the suite causes a mount to be orphaned.
 func VerifyNoOrphanedMounts(cs *kubernetes.Clientset) {
-	nodes, err := cs.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	// The external infrastructure taints nodes that cannot participate in the tests.
+	nodes, err := e2enode.GetReadySchedulableNodes(cs)
 	e2eframework.ExpectNoError(err)
+	if len(nodes.Items) < 2 {
+		e2eframework.Failf("expected more than %d ready nodes", len(nodes.Items))
+	}
 	var nodeAddresses []string
 	for _, node := range nodes.Items {
 		address, err := e2enode.GetInternalIP(&node)

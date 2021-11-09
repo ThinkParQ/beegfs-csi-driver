@@ -103,7 +103,9 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	e2eframework.ExpectNoError(err, "expected to load a client set")
 
 	// Check for orphaned mounts on all nodes. This MUST be done in SynchronizedBeforeSuite (instead of BeforeSuite)
-	// in case one process is fast and starts creating BeeGFS volumes before another is done checking.
+	// in case one process is fast and starts creating BeeGFS volumes before another is done checking. If the check
+	// fails here, it is likely that a different test run (or a developer acting outside of the test infrastructure)
+	// caused mounts to be orphaned.
 	utils.VerifyNoOrphanedMounts(cs)
 
 	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace). Wait for it to be
@@ -143,7 +145,8 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	cs, err := e2eframework.LoadClientset()
 	e2eframework.ExpectNoError(err, "expected to load a client set")
 	// Check for orphaned mounts on all nodes. This MUST be done in SynchronizedAfterSuite (instead of AfterSuite)
-	// because some processes will be done running tests and check while others are still creating BeeGFS volumes.
+	// because some processes will be done running tests and check while others are still creating BeeGFS volumes. If
+	// the check fails here, it is likely that code changes introduced for this test run caused mounts to be orphaned.
 	utils.VerifyNoOrphanedMounts(cs)
 })
 

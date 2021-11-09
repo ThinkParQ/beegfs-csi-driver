@@ -76,10 +76,15 @@ quotaEnabled                 = true
 ```
 
 ### Orphaned Mounts Remain on Nodes
-<a href="orphaned mounts"></a>
+<a href="orphan-mounts"></a>
 
-There are a number of circumstances that can cause orphaned mounts to remain on 
-nodes. Many of them are outside of the control of the BeeGFS CSI driver.
+There are a number of circumstances that can cause orphaned mounts to remain on
+the nodes of a container orchestrator after a BeeGFS volume is deleted. These
+are largely outside the control of the BeeGFS CSI driver and occur due to how a
+particular container orchestrator interacts with CSI drivers in general.
+Starting in v1.2.1 the BeeGFS CSI driver introduced functionality that can
+mitigate this behavior in most circumstances, but administrators should be aware
+of the potential, and the measures taken by the driver to mitigate it.
 
 #### General Symptoms
 
@@ -116,6 +121,23 @@ beegfs_nodev on /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-380e4ac6/globa
 beegfs_nodev on /var/lib/kubelet/pods/06f28bf6-b4a2-4d4e-8104-e2d60a0682b8/volumes/kubernetes.io~csi/pvc-380e4ac6/mount type beegfs (rw,relatime,cfgFile=/var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-380e4ac6/globalmount/beegfs-client.conf)
 ```
 
+#### Outdated Driver or --node-unstage-timeout=0
+
+Code to mitigate the primary cause of orphan mounts was added in BeeGFS CSI
+driver v1.2.1. This code is enabled by setting --node-unstage-timeout to
+something other than 0 (the deployment manifests do this automatically). On an
+older version of the driver or when the driver is deployed into Kubernetes with
+--node-unstage-timeout=0, it is possible for Kubernetes to call DeleteVolume
+before all nodes have called NodeUnpublishVolume. If the DeleteVolume succeeds,
+NodeUnpublishVolume becomes impossible, leaving orphan mounts. Under these
+circumstances, the controller service will NOT log anything about waiting for
+the node service.
+
+Follow the [cleanup](#orphan-mounts-cleanup) instructions to clean up.
+Then upgrade the driver or set --node-unstage-timeout to ensure the issue
+doesn't occur again.
+
+
 #### Missing vol_data.json
 
 Along with the general symptoms, the journal on an affected node indicates that 
@@ -129,9 +151,9 @@ Nov 05 16:15:11 kubernetes-119-cluster-8 kubelet[2478]: E1105 16:15:11.740637   
 ```
 
 This is a bug in Kubelet itself. See [Kubernetes Issue 
-\#101911](#https://github.com/kubernetes/kubernetes/issues/101911) and its 
+\#101911](https://github.com/kubernetes/kubernetes/issues/101911) and its 
 associated fix in [Kubernetes PR 
-\#102576](#https://github.com/kubernetes/kubernetes/pull/102576) for details. 
+\#102576](https://github.com/kubernetes/kubernetes/pull/102576) for details. 
 When affected by this bug, Kubelet fails to call NodeUnstageVolume while 
 tearing down a Pod and Kubernetes calls DeleteVolume anyway. Kubelet cannot 
 recover without manual intervention on the node.
@@ -141,3 +163,28 @@ This bug is fixed in the following Kubernetes versions:
 * 1.21.4
 * 1.20.10
 * 1.19.14
+
+Follow the [cleanup](#orphan-mounts-cleanup) instructions to clean up.
+Then upgrade Kubernetes to ensure the issue doesn't occur again.
+
+#### Cleanup
+<a href="orphan-mounts-cleanup"></a>
+
+On each node with orphan mounts, identify and unmount them.
+
+```bash
+mount | grep beegfs
+umount <mount point>
+```
+
+Kubelet may no longer be able to clean up the orphaned Pod directories 
+associated with the mounts. Delete orphaned pod directories manually.
+
+```bash
+journalctl -xe -t kubelet
+# Look for messages about orphaned Pods that can't be cleaned up.
+rm -rf /var/lib/kubelet/pods/<orphaned pod>
+```
+
+To prevent a reoccurrence, identify the root cause (if it is listed above) and 
+take the required steps.
