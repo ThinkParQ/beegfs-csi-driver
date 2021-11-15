@@ -54,11 +54,12 @@ OpenShift.
 ### Interoperability and CSI Feature Matrix
 <a name="interoperability-and-csi-feature-matrix"></a>
 
-| beegfs.csi.netapp.com  | K8s Versions           | Red Hat OpenShift Versions | BeeGFS Versions | CSI Version  | 
-| -----------------------| ---------------------- | -------------------------- | --------------- | ------------ |
-| v1.0.0                 | 1.19                   |                            | 7.2, 7.1.5      | v1.3.0       |  
-| v1.1.0                 | 1.18, 1.19, 1.20       |                            | 7.2.1, 7.1.5    | v1.3.0       |  
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21 | 4.8                        | 7.2.4, 7.1.5    | v1.5.0       | 
+| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions | BeeGFS Versions | CSI Version  |
+| ---------------------- | -------------------------------- | -------------------------- | --------------- | ------------ |
+| v1.0.0                 | 1.19                             |                            | 7.2, 7.1.5      | v1.3.0       |
+| v1.1.0                 | 1.18, 1.19, 1.20                 |                            | 7.2.1, 7.1.5    | v1.3.0       |
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8                        | 7.2.4, 7.1.5    | v1.5.0       |
+| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9                        | 7.2.5, 7.1.5    | v1.5.0       |
 
 The following CSI features are supported by all versions of the driver:
 * Access Modes: Read/Write Multiple Pods
@@ -66,13 +67,85 @@ The following CSI features are supported by all versions of the driver:
 * Persistence: Yes
 
 Additional Notes:
+* The BeeGFS CSI driver is released according to the semantic versioning scheme 
+  outlined at [semver.org](https://semver.org/). According to this scheme, 
+  given a version number MAJOR.MINOR.PATCH, we increment the:
+  * MAJOR version when we make incompatible API changes,
+  * MINOR version when we add functionality in a backwards compatible manner, 
+    and
+  * PATCH version when we make backwards compatible bug fixes.
 * This matrix indicates tested BeeGFS and Kubernetes versions. The driver
   may work with other versions of Kubernetes, but they have not been tested. 
   Changes to the deployment manifests are likely required, especially for 
   earlier versions of Kubernetes.
+* It is generally recommended to run the driver on the latest version of 
+  Kubernetes supported by a given version of the driver. While an older version 
+  of Kubernetes may appear to work, it may not include critical fixes that 
+  ensure driver stability.
 * The driver has not been tested with SELinux.
 * For environments where the driver is used with both BeeGFS 7.1.x and 
   7.2.x, Kubernetes nodes should have the 7.2 BeeGFS DKMS client installed.
+
+### Support Policy
+
+Support for the BeeGFS CSI driver is "best effort". The maintainers will make
+every attempt to fix all known bugs, release new features, and maintain 
+compatibility with new container orchestrators, but the following policy is in 
+no way binding and may change over time.
+
+Only the latest version of the BeeGFS CSI driver is supported. Bugs or 
+vulnerabilities found in this version may be fixed in a patch release or may be 
+fixed in a new minor version. If they are fixed in a new minor version, 
+upgrading to this version may be required to obtain the fix. 
+
+Note: The BeeGFS CSI driver maintainers may choose to release a patch for a 
+previous minor version with a backported fix, but this is not the norm.
+
+The latest version of the driver is only supported on certain versions of 
+Kubernetes and OpenShift. It may be necessary to upgrade Kubernetes or 
+OpenShift to maintain driver support.
+
+The goal is to release a new driver version three to four times per year 
+(roughly quarterly). Releases may be major, minor, or patch at the discretion 
+of the maintainers in accordance with needs of the community (i.e. large 
+features, small features, or miscellaneous bug fixes).
+
+#### Kubernetes
+
+A new minor version of the driver will be tested on, and will include deployment 
+manifests for, any Kubernetes version that meets the following criteria:
+* It is able to be set up via a released version of
+  [Kubespray](https://github.com/kubernetes-sigs/kubespray) (used to maintain
+  BeeGFS CSI driver test environments).
+* It is still supported by the Kubernetes community (see the [currently 
+  supported Kubernetes releases](https://kubernetes.io/releases/) and 
+  [Kubernetes support 
+  policy](https://kubernetes.io/releases/version-skew-policy/)) OR it is one 
+  version out of support but provides no major obstacles to driver deployment 
+  and operation.
+
+Note: We make a "best effort" to maintain compatibility with one out-of-support 
+version as an acknowledgement that Kubernetes has a fast moving release cycle 
+and upgrading environments can take time. However, if any issues arise when 
+using the driver on a Kubernetes version that is out of support, the first 
+recommendation is to upgrade Kubernetes.
+
+Occasionally, a particular Kubernetes patch version may be required to 
+guarantee smooth driver operation. See the [Troubleshooting 
+Guide](docs/troubleshooting.md) for known issues.
+
+#### OpenShift
+
+A new minor version of the driver and the operator that can be used to deploy 
+and/or upgrade the driver will be tested on the latest supported version of 
+OpenShift.
+
+#### Nomad
+
+While we have made [initial investments](deploy/nomad/README.md) into enabling 
+the use of the BeeGFS CSI driver with HashiCorp Nomad, we may not test with 
+Nomad for every driver release and do not currently consider Nomad to be a 
+supported container orchestrator.
 
 ## Getting Started 
 <a name="getting-started"></a>
