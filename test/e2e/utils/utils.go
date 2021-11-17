@@ -23,12 +23,15 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
+	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2essh "k8s.io/kubernetes/test/e2e/framework/ssh"
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
 )
@@ -69,5 +72,50 @@ func VerifyNoOrphanedMounts(cs *kubernetes.Clientset) {
 		result, err := e2essh.SSH("mount | grep -e beegfs_nodev | grep pvc", nodeAddress, e2eframework.TestContext.Provider)
 		e2eframework.ExpectNoError(err)
 		e2eframework.ExpectEmpty(result.Stdout, "node with address %s has orphaned mounts", nodeAddress)
+	}
+}
+
+// ArchiveServiceLogs collects the logs on the node and controller service pods and writes them in the specified report
+// path. Logs will be collected from beegfs and csi-provisioner containers. This should typically be called after the
+// test suite completes.
+func ArchiveServiceLogs(cs *kubernetes.Clientset, reportPath string) {
+	// Get controller and node pod information
+	nodePods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-node"})
+	if err != nil {
+		e2eframework.ExpectNoError(err, "failed to get node pods")
+	}
+	controllerPods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-controller"})
+	if err != nil {
+		e2eframework.ExpectNoError(err, "failed to get controller pod")
+	}
+
+	// Verify that we have the expected number of node and controller pods
+	e2eframework.ExpectNotEqual(len(nodePods), 0, "expected to find at least one node pod")
+	e2eframework.ExpectEqual(len(controllerPods), 1, "expected to find exactly one controller pod")
+
+	// Dump logs of each node pod's beegfs container
+	for _, nodePod := range nodePods {
+		logs, err := e2epod.GetPodLogs(cs, nodePod.Namespace, nodePod.Name, "beegfs")
+		if err != nil {
+			e2eframework.ExpectNoError(err, "failed to get beegfs logs for node container beegfs")
+		}
+
+		err = os.WriteFile(path.Join(reportPath, fmt.Sprintf("container-logs-%s-beegfs.log", nodePod.Name)), []byte(logs), 0666)
+		if err != nil {
+			e2eframework.ExpectNoError(err, "failed to write to file")
+		}
+	}
+
+	// Dump logs of controller pod's beegfs and csi-provisioner containers
+	for _, containerName := range []string{"beegfs", "csi-provisioner"} {
+		logs, err := e2epod.GetPodLogs(cs, controllerPods[0].Namespace, controllerPods[0].Name, containerName)
+		if err != nil {
+			e2eframework.ExpectNoError(err, fmt.Sprintf("failed to get logs for controller container %s", containerName))
+		}
+
+		err = os.WriteFile(path.Join(reportPath, fmt.Sprintf("container-logs-%s-%s.log", controllerPods[0].Name, containerName)), []byte(logs), 0666)
+		if err != nil {
+			e2eframework.ExpectNoError(err, "failed to write to file")
+		}
 	}
 }
