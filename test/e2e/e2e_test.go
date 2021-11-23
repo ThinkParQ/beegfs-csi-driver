@@ -35,6 +35,7 @@ import (
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	beegfssuites "github.com/netapp/beegfs-csi-driver/test/e2e/testsuites"
+	"github.com/netapp/beegfs-csi-driver/test/e2e/utils"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
@@ -97,9 +98,15 @@ var k8sSuitesToRun = []func() storageframework.TestSuite{
 	storagesuites.InitVolumeModeTestSuite,
 }
 
-var _ = ginkgo.BeforeSuite(func() {
+var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	cs, err := e2eframework.LoadClientset()
 	e2eframework.ExpectNoError(err, "expected to load a client set")
+
+	// Check for orphaned mounts on all nodes. This MUST be done in SynchronizedBeforeSuite (instead of BeforeSuite)
+	// in case one process is fast and starts creating BeeGFS volumes before another is done checking. If the check
+	// fails here, it is likely that a different test run (or a developer acting outside of the test infrastructure)
+	// caused mounts to be orphaned.
+	utils.VerifyNoOrphanedMounts(cs)
 
 	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace). Wait for it to be
 	// running so we don't read the stale ConfigMap from a terminated deployment.
@@ -116,20 +123,31 @@ var _ = ginkgo.BeforeSuite(func() {
 		}
 	}
 
-	// Read the ConfigMap.
+	// Read the ConfigMap and pass it to all nodes.
 	driverCM, err := cs.CoreV1().ConfigMaps(controllerNS).Get(context.TODO(), driverCMName, metav1.GetOptions{})
 	e2eframework.ExpectNoError(err, "expected to read ConfigMap")
 	driverConfigString, ok := driverCM.Data["csi-beegfs-config.yaml"]
 	e2eframework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
+	return []byte(driverConfigString)
 
+}, func(driverConfigBytes []byte) {
 	// Unmarshal the ConfigMap and use it to populate the global BeegfsDriver's perFSConfigs.
 	var pluginConfig beegfsv1.PluginConfig
-	err = yaml.UnmarshalStrict([]byte(driverConfigString), &pluginConfig)
+	err := yaml.UnmarshalStrict(driverConfigBytes, &pluginConfig)
 	e2eframework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
 	e2eframework.ExpectNotEqual(len(pluginConfig.FileSystemSpecificConfigs), 0,
 		"expected csi-beegfs-config.yaml to include at least one config")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
+})
+
+var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
+	cs, err := e2eframework.LoadClientset()
+	e2eframework.ExpectNoError(err, "expected to load a client set")
+	// Check for orphaned mounts on all nodes. This MUST be done in SynchronizedAfterSuite (instead of AfterSuite)
+	// because some processes will be done running tests and check while others are still creating BeeGFS volumes. If
+	// the check fails here, it is likely that code changes introduced for this test run caused mounts to be orphaned.
+	utils.VerifyNoOrphanedMounts(cs)
 })
 
 var _ = ginkgo.Describe("E2E Tests", func() {

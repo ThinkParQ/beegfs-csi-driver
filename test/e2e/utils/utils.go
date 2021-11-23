@@ -26,7 +26,10 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
+	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
+	e2essh "k8s.io/kubernetes/test/e2e/framework/ssh"
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
 )
 
@@ -42,4 +45,29 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 	e2eframework.ExpectEqual(ll[0], expectedMode)
 	e2eframework.ExpectEqual(ll[2], expectedUid)
 	e2eframework.ExpectEqual(ll[3], expectedGid)
+}
+
+// VerifyNoOrphanedMounts uses SSH to access all cluster nodes and verify that none of them have a BeeGFS file system
+// mounted as a PersistentVolume. VerifyNoOrphanedMounts could be used within a single test case, but mounts are orphaned
+// intermittently and it would be unlikely to catch an orphan mount without including an extremely long stress test
+// within the case. It is currently preferred to use VerifyNoOrphanedMounts before and after an entire suite of tests
+// runs to ensure none of the tests within the suite causes a mount to be orphaned.
+func VerifyNoOrphanedMounts(cs *kubernetes.Clientset) {
+	// The external infrastructure taints nodes that cannot participate in the tests.
+	nodes, err := e2enode.GetReadySchedulableNodes(cs)
+	e2eframework.ExpectNoError(err)
+	if len(nodes.Items) < 2 {
+		e2eframework.Failf("expected more than %d ready nodes", len(nodes.Items))
+	}
+	var nodeAddresses []string
+	for _, node := range nodes.Items {
+		address, err := e2enode.GetInternalIP(&node)
+		e2eframework.ExpectNoError(err)
+		nodeAddresses = append(nodeAddresses, address)
+	}
+	for _, nodeAddress := range nodeAddresses {
+		result, err := e2essh.SSH("mount | grep -e beegfs_nodev | grep pvc", nodeAddress, e2eframework.TestContext.Provider)
+		e2eframework.ExpectNoError(err)
+		e2eframework.ExpectEmpty(result.Stdout, "node with address %s has orphaned mounts", nodeAddress)
+	}
 }

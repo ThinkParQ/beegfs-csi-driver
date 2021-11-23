@@ -40,6 +40,7 @@ var (
 	nodeID                 = flag.String("node-id", "", "node id")
 	showVersion            = flag.Bool("version", false, "Show version.")
 	clientConfTemplatePath = flag.String("client-conf-template-path", "/etc/beegfs/beegfs-client.conf", "path to template beegfs-client.conf")
+	nodeUnstageTimeout     = flag.Uint64("node-unstage-timeout", 0, "seconds DeleteVolume waits for NodeUnstageVolume to complete on all nodes")
 
 	// Set by the build process
 	version = ""
@@ -63,7 +64,8 @@ func main() {
 }
 
 func handle() {
-	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID, *clientConfTemplatePath, version)
+	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID,
+		*clientConfTemplatePath, version, *nodeUnstageTimeout)
 	if err != nil {
 		beegfs.LogFatal(nil, err, "Failed to initialize driver")
 	}

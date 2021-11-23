@@ -27,6 +27,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
@@ -53,9 +54,11 @@ type controllerServer struct {
 	mounter                mount.Interface
 	csDataDir              string
 	volumeIDsInFlight      *threadSafeStringLock
+	nodeUnstageTimeout     uint64
 }
 
-func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string) *controllerServer {
+func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
+	nodeUnstageTimeout uint64) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
@@ -68,6 +71,7 @@ func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 		csDataDir:              csDataDir,
 		mounter:                nil,
 		volumeIDsInFlight:      newThreadSafeStringLock(),
+		nodeUnstageTimeout:     nodeUnstageTimeout,
 	}
 }
 
@@ -100,7 +104,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
 	}
 	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
-	permissionsConfig, err := getPermissionsConfigFromParams(reqParams)
+	volPermissionsConfig, err := getPermissionsConfigFromParams(reqParams)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
@@ -132,7 +136,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// Use beegfs-ctl to create the directory and stripe it appropriately.
-	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, permissionsConfig); err != nil {
+	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot, volPermissionsConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if err := cs.ctlExec.setPatternForVolume(ctx, vol, stripePatternConfig); err != nil {
@@ -142,15 +146,28 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Mount BeeGFS and use OS tools to change the access mode only if beegfs-ctl could not handle the access mode
 	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
 	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
-	if permissionsConfig.hasSpecialPermissions() {
+	if volPermissionsConfig.hasSpecialPermissions() {
 		if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
-		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", permissionsConfig.mode),
+		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", volPermissionsConfig.mode),
 			"volDirPath", vol.volDirPath, "volumeID", vol.volumeID)
-		if err := os.Chmod(vol.volDirPath, permissionsConfig.goFileMode()); err != nil {
+		if err := os.Chmod(vol.volDirPath, volPermissionsConfig.goFileMode()); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
+	}
+
+	// Use beegfs-ctl to create the directory we will use to track the nodes that mount this volume. Don't mount and
+	// use mkdir in case there is no other need to mount.
+	if cs.nodeUnstageTimeout > 0 {
+		nodesDirPath := path.Join(vol.csiDirPathBeegfsRoot, "nodes")
+		nodesDirPermissions := permissionsConfig{mode: 0750}
+		if err = cs.ctlExec.createDirectoryForVolume(ctx, vol, nodesDirPath, nodesDirPermissions); err != nil {
+			LogError(ctx, err,
+				"Failed to create subdirectory for node tracking", "path", nodesDirPath, "volumeID", vol.volumeID)
+		}
+	} else {
+		LogVerbose(ctx, "Node tracking not enabled", "volumeID", vol.volumeID)
 	}
 
 	return &csi.CreateVolumeResponse{
@@ -162,7 +179,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 // DeleteVolume deletes the directory referenced in the volumeID from the BeeGFS file system referenced in the
 // volumeID.
-func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
+func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (resp *csi.DeleteVolumeResponse, err error) {
 	// Check arguments.
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
@@ -181,26 +198,34 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 
 	// Write configuration files and mount BeeGFS.
 	defer func() {
-		// Failure to clean up is an internal problem. The CO only cares whether or not we deleted the volume.
-		if err := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
-			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
+		// Clean up no matter what and return an error if cleanup fails. Ignoring cleanup failure might lead to silent
+		// orphaned mounts. One occasional cause of cleanup failure is a mount reporting "busy" on attempted unmount
+		// immediately after a directory or file deletion. Another DeleteVolume call resolves the issue.
+		if cleanupErr := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); cleanupErr != nil {
+			// err and resp are named values that were being returned by DeleteVolume. We can modify them here to
+			// return something different.
+			resp = nil
+			if err != nil {
+				// Instead of overwriting the returned GrpcError, let's just log a separate error here.
+				LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
+			} else {
+				err = newGrpcErrorFromCause(codes.Internal, cleanupErr)
+			}
 		}
 	}()
-	if err := fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
+	if err = fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
+	if err = writeClientFiles(ctx, vol, cs.clientConfTemplatePath); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
+	if err = mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Delete volume from mounted BeeGFS.
-	LogDebug(ctx, "Deleting BeeGFS directory", "volDirBasePathBeegfsRoot", vol.volDirBasePathBeegfsRoot, "volumeID", vol.volumeID)
-	if err = fs.RemoveAll(vol.volDirPath); err != nil {
-		err = errors.WithStack(err)
+	if err = DeleteVolumeUntilWait(ctx, vol, cs.nodeUnstageTimeout); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
@@ -258,7 +283,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	if _, err := cs.ctlExec.statDirectoryForVolume(ctx, vol); err != nil {
+	if _, err := cs.ctlExec.statDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot); err != nil {
 		if errors.As(err, &ctlNotExistError{}) {
 			return nil, newGrpcErrorFromCause(codes.NotFound, err)
 		}
@@ -406,4 +431,58 @@ func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRo
 func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume, error) {
 	mountDirPath := path.Join(cs.csDataDir, sanitizeVolumeID(volumeID)) // e.g. /csDataDir/127.0.0.1_scratch_pvc-12345678
 	return newBeegfsVolumeFromID(mountDirPath, volumeID, cs.pluginConfig)
+}
+
+func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint64) error {
+	start := time.Now()
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
+	for {
+		dirExists, err := fsutil.DirExists(nodesPath)
+		if err != nil {
+			// For some unknown reason, we couldn't check for the existence of the .csi/volumes/volume/nodes directory.
+			return errors.WithStack(err)
+		} else if dirExists {
+			isEmpty, err := fsutil.IsEmpty(nodesPath)
+			if err != nil {
+				// For some unknown reason, we couldn't attempt to read from the .csi/volumes/volume/nodes directory.
+				return errors.WithStack(err)
+			} else if !isEmpty {
+				if time.Since(start) < time.Duration(waitTime)*time.Second {
+					// We found the .csi/volumes/volume/nodes/ directory, but it isn't yet empty and we're willing to wait.
+					secondsLeft := int64((time.Duration(waitTime)*time.Second - time.Since(start)).Seconds())
+					LogVerbose(ctx, "Waiting for volume to unstage from all nodes",
+						"secondsLeft", secondsLeft, "volumeID", vol.volumeID)
+					time.Sleep(time.Duration(2) * time.Second)
+					continue // Wait for the next loop to do anything else.
+				} else {
+					// The .csi/volumes/volume/nodes directory is not empty, but we're no longer willing to wait.
+					// If an error occurs reading the directory entries, just log an empty list of remaining nodes.
+					remainingNodeInfos, _ := fsutil.ReadDir(nodesPath)
+					var remainingNodeNames []string
+					for _, fileInfo := range remainingNodeInfos {
+						remainingNodeNames = append(remainingNodeNames, fileInfo.Name())
+					}
+					LogDebug(ctx, "Volume did not unstage on all nodes; orphan mounts may remain",
+						"remainingNodes", remainingNodeNames, "volumeID", vol.volumeID)
+				}
+			}
+			// Whether the .csi/volumes/volume/nodes/ directory is empty or we're done waiting, we should delete it.
+			LogDebug(ctx, "Deleting BeeGFS directory", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
+			if err = fsutil.RemoveAll(vol.csiDirPath); err != nil {
+				return errors.WithStack(err)
+			}
+			break // Go on to delete the volume.
+		} else {
+			// It's fine if the .csi/volumes/volume/nodes directory does not exist. It was likely never created in the
+			// first place. We'll just fall back to naive deletion behavior.
+			LogVerbose(ctx, "No node tracking information found", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
+			break // Go on to delete the volume.
+		}
+	}
+	// Now it's time to delete the volume itself.
+	LogDebug(ctx, "Deleting BeeGFS directory", "path", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
+	if err := fs.RemoveAll(vol.volDirPath); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
 }
