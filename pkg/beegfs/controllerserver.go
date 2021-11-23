@@ -435,8 +435,8 @@ func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume
 
 func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint64) error {
 	start := time.Now()
+	nodesPath := path.Join(vol.csiDirPath, "nodes")
 	for {
-		nodesPath := path.Join(vol.csiDirPath, "nodes")
 		dirExists, err := fsutil.DirExists(nodesPath)
 		if err != nil {
 			// For some unknown reason, we couldn't check for the existence of the .csi/volumes/volume/nodes directory.
@@ -446,19 +446,32 @@ func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint6
 			if err != nil {
 				// For some unknown reason, we couldn't attempt to read from the .csi/volumes/volume/nodes directory.
 				return errors.WithStack(err)
-			} else if !isEmpty && time.Since(start) < time.Duration(waitTime)*time.Second {
-				// We found the .csi/volumes/volume/nodes/ directory, but it isn't yet empty and we're willing to wait.
-				LogVerbose(ctx, "Waiting for volume to unstage from all nodes", "volumeID", vol.volumeID)
-				time.Sleep(time.Duration(2) * time.Second)
-				continue // Wait for the next loop to do anything else.
-			} else {
-				// We found the .csi/volumes/volume/nodes/ directory, and it's either empty or we're done waiting.
-				LogDebug(ctx, "Deleting BeeGFS directory", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
-				if err = fsutil.RemoveAll(vol.csiDirPath); err != nil {
-					return errors.WithStack(err)
+			} else if !isEmpty {
+				if time.Since(start) < time.Duration(waitTime)*time.Second {
+					// We found the .csi/volumes/volume/nodes/ directory, but it isn't yet empty and we're willing to wait.
+					secondsLeft := int64((time.Duration(waitTime)*time.Second - time.Since(start)).Seconds())
+					LogVerbose(ctx, "Waiting for volume to unstage from all nodes",
+						"secondsLeft", secondsLeft, "volumeID", vol.volumeID)
+					time.Sleep(time.Duration(2) * time.Second)
+					continue // Wait for the next loop to do anything else.
+				} else {
+					// The .csi/volumes/volume/nodes directory is not empty, but we're no longer willing to wait.
+					// If an error occurs reading the directory entries, just log an empty list of remaining nodes.
+					remainingNodeInfos, _ := fsutil.ReadDir(nodesPath)
+					var remainingNodeNames []string
+					for _, fileInfo := range remainingNodeInfos {
+						remainingNodeNames = append(remainingNodeNames, fileInfo.Name())
+					}
+					LogDebug(ctx, "Volume did not unstage on all nodes; orphan mounts may remain",
+						"remainingNodes", remainingNodeNames, "volumeID", vol.volumeID)
 				}
-				break // Go on to delete the volume.
 			}
+			// Whether the .csi/volumes/volume/nodes/ directory is empty or we're done waiting, we should delete it.
+			LogDebug(ctx, "Deleting BeeGFS directory", "path", vol.csiDirPathBeegfsRoot, "volumeID", vol.volumeID)
+			if err = fsutil.RemoveAll(vol.csiDirPath); err != nil {
+				return errors.WithStack(err)
+			}
+			break // Go on to delete the volume.
 		} else {
 			// It's fine if the .csi/volumes/volume/nodes directory does not exist. It was likely never created in the
 			// first place. We'll just fall back to naive deletion behavior.
@@ -466,7 +479,6 @@ func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint6
 			break // Go on to delete the volume.
 		}
 	}
-
 	// Now it's time to delete the volume itself.
 	LogDebug(ctx, "Deleting BeeGFS directory", "path", vol.volDirPathBeegfsRoot, "volumeID", vol.volumeID)
 	if err := fs.RemoveAll(vol.volDirPath); err != nil {
