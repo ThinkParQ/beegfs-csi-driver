@@ -148,6 +148,8 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	// because some processes will be done running tests and check while others are still creating BeeGFS volumes. If
 	// the check fails here, it is likely that code changes introduced for this test run caused mounts to be orphaned.
 	utils.VerifyNoOrphanedMounts(cs)
+	// Archive logs from node and controller service pods
+	utils.ArchiveServiceLogs(cs, e2eframework.TestContext.ReportDir)
 })
 
 var _ = ginkgo.Describe("E2E Tests", func() {
