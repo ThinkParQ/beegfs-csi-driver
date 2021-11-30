@@ -13,7 +13,9 @@
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
   * [Kubernetes Configuration](#kubernetes-configuration)
-  * [BeeGFS Client Parameters](#beegfs-client-parameters) 
+  * [BeeGFS Client Parameters](#beegfs-client-parameters)
+* [Notes for Kubernetes Administrators](#kubernetes-administrator-notes)
+  * [Security and Networking Considerations](#security-considerations)
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 ## Deploying to Kubernetes
@@ -36,7 +38,7 @@ runs a component of the driver:
 
 IMPORTANT: By default the driver uses the beegfs-client.conf file at
 */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the location
-of this file is not currently supported without changing kustomization files. 
+of this file is not currently supported without changing kustomization files.
 
 ### Kubernetes Deployment
 <a name="kubernetes-deployment"></a>
@@ -593,6 +595,44 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `tuneUseGlobalAppendLocks`
 * `tuneUseGlobalFileLocks`
 * `sysACLsEnabled`
+
+## Notes for Kubernetes Administrators
+<a name="kubernetes-administrator-notes"></a>
+
+### Security and Networking Considerations
+<a name="security-considerations"></a>
+
+**The driver must be allowed to mount and unmount file systems.**
+
+* When the driver binary is run directly, it must be run as a user with
+  permission to make the mount and unmount system calls and with permission to
+  create and delete directories on the staging target path and target path.
+* When the driver is run in its container, the container must be granted the
+  CAP_SYS_ADMIN capability or the container must be privileged. The provided
+  Kubernetes deployment manifests run the driver container as privileged to
+  avoid SELinux and other concerns.
+
+**The driver must be allowed to reserve arbitrary UDP ports in the primary
+network namespace.**
+
+For each volume to be mounted on a node, the driver identifies an
+available UDP port. Mounting the volume causes the BeeGFS client to listen for
+UDP traffic on this port. While the driver may be running in a container, the
+BeeGFS client is not. The provided Kubernetes deployment manifests run the
+driver container in the host network instead of an isolated container network
+to allow the driver to correctly identify available ports.
+
+**The network must allow BeeGFS traffic.**
+
+[By default](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat),
+outbound traffic from all BeeGFS clients to ports 8003, 8005, and 8008 on nodes
+serving up BeeGFS file systems must be allowed. A BeeGFS file system can be
+configured to use different ports and the driver [can be
+configured](#general-configuration) to accomodate.
+
+Inbound UDP traffic from nodes serving up BeeGFS file systems to arbitrary
+ports on all BeeGFS clients must be allowed. Each volume requires its own port
+and it is not currently possible to configure an allowed port range.
 
 ## Removing the Driver from Kubernetes
 <a name="removing-the-driver-from-kubernetes"></a>
