@@ -167,8 +167,15 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 	if endpoint == "" {
 		return nil, errors.New("no driver endpoint provided")
 	}
+
 	if version != "" {
 		vendorVersion = version
+	}
+
+	if clientConfTemplatePath == "" {
+		return nil, errors.New("no client configuration template path provided")
+	} else if _, err := fsutil.ReadFile(clientConfTemplatePath); err != nil {
+		return nil, errors.WithMessage(err, "failed to read client configuration template file")
 	}
 
 	var pluginConfig beegfsv1.PluginConfig
@@ -186,7 +193,9 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 		}
 	}
 
-	if err := fs.MkdirAll(csDataDir, 0750); err != nil {
+	if csDataDir == "" {
+		return nil, errors.New("no controller service data directory path provided")
+	} else if err := fs.MkdirAll(csDataDir, 0750); err != nil {
 		return nil, errors.Wrap(err, "failed to create csDataDir")
 	}
 
