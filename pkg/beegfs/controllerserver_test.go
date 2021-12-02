@@ -200,7 +200,7 @@ func TestGetPermissionsConfigFromParams(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, err := getPermissionsConfigFromParams(tc.reqParams)
 			if !tc.wantErr && err != nil {
-				t.Fatalf("unexpected error occured: %s", err)
+				t.Fatalf("unexpected error occurred: %s", err)
 			}
 			if tc.wantErr && err == nil {
 				t.Fatalf("expected error did not occur")

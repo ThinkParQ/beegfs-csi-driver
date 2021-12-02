@@ -584,12 +584,12 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 }
 
 // setImages takes a slice of Container specs (containers) and a slice of ContainerImageOverrides (overrides). If the
-// image field of a spec in containers is overriden in overrides, setImages modifies it. Otherwise, setImages assumes
+// image field of a spec in containers is overridden in overrides, setImages modifies it. Otherwise, setImages assumes
 // the image field is already correct and leaves it alone.
 func setImages(log logr.Logger, containers []corev1.Container, overrides beegfsv1.ContainerImageOverrides) {
 	// Match fields in overrides to expected container names for ease of lookup. Tests in deploy ensure default
 	// containers maintain these expected names. This is not the only way we could determine whether a container's
-	// image should be overriden (e.g. index in PodTemplateSpec.Containers or hard coding a particular image name we
+	// image should be overridden (e.g. index in PodTemplateSpec.Containers or hard coding a particular image name we
 	// expect to be overridden), but container name is one of the most reliable fields (i.e. least likely to change) in
 	// the deployment manifests.
 	containerNameToImageOverrideMap := map[string]beegfsv1.ContainerImageOverride{
