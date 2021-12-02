@@ -360,7 +360,7 @@ func TestIsValidVolumeCapabilities(t *testing.T) {
 		},
 		"unsupported capability": {
 			caps: []*csi.VolumeCapability{
-				&csi.VolumeCapability{
+				{
 					AccessMode: &csi.VolumeCapability_AccessMode{ // all access modes are supported
 						Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
 					},
