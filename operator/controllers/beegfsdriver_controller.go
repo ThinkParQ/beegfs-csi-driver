@@ -116,14 +116,13 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if !errors.IsNotFound(err) {
 			// Something we aren't prepared for went wrong.
 			return ctrl.Result{}, err
-		} else {
-			// We didn't find a Stateful Set.
-			statusCondition = metav1.Condition{
-				Type:    beegfsv1.ConditionControllerServiceReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  beegfsv1.ReasonServiceNotCreated,
-				Message: "controller service stateful set has not been created",
-			}
+		}
+		// We didn't find a Stateful Set.
+		statusCondition = metav1.Condition{
+			Type:    beegfsv1.ConditionControllerServiceReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  beegfsv1.ReasonServiceNotCreated,
+			Message: "controller service stateful set has not been created",
 		}
 	} else {
 		// We found a Stateful Set. Let's update our status based on its status.
@@ -159,13 +158,12 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if !errors.IsNotFound(err) {
 			// Something we aren't prepared for went wrong.
 			return ctrl.Result{}, err
-		} else {
-			statusCondition = metav1.Condition{
-				Type:    beegfsv1.ConditionNodeServiceReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  beegfsv1.ReasonServiceNotCreated,
-				Message: "node service daemon set has not been created",
-			}
+		}
+		statusCondition = metav1.Condition{
+			Type:    beegfsv1.ConditionNodeServiceReady,
+			Status:  metav1.ConditionFalse,
+			Reason:  beegfsv1.ReasonServiceNotCreated,
+			Message: "node service daemon set has not been created",
 		}
 	} else {
 		// We found a Daemon Set. Let's update our status based on its status.
@@ -263,12 +261,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Config Map doesn't exist. Let's create it.
-			log.Info("Creating Config Map")
-			if err = r.Create(ctx, cm); err != nil {
-				return ctrl.Result{}, err
-			}
+		}
+		// The Config Map doesn't exist. Let's create it.
+		log.Info("Creating Config Map")
+		if err = r.Create(ctx, cm); err != nil {
+			return ctrl.Result{}, err
 		}
 	} else if !equality.Semantic.DeepEqual(cm.Data, cmFromCluster.Data) {
 		// The Config Map needs to be updated.
@@ -292,12 +289,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The Secret doesn't exist. Let's create it.
-			log.Info("Creating Secret")
-			if err = r.Create(ctx, s); err != nil {
-				return ctrl.Result{}, err
-			}
+		}
+		// The Secret doesn't exist. Let's create it.
+		log.Info("Creating Secret")
+		if err = r.Create(ctx, s); err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
 		// Many of the other objects created by this controller may need to be updated to keep them in sync with the
@@ -320,12 +316,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-				} else {
-					// The Service Account doesn't exist. Let's create it.
-					log.Info("Creating Service Account", "name", object.Name)
-					if err = r.Create(ctx, object); err != nil {
-						return ctrl.Result{}, err
-					}
+				}
+				// The Service Account doesn't exist. Let's create it.
+				log.Info("Creating Service Account", "name", object.Name)
+				if err = r.Create(ctx, object); err != nil {
+					return ctrl.Result{}, err
 				}
 			} else {
 				// Intentionally empty.
@@ -341,12 +336,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-				} else {
-					// The Cluster Role doesn't exist. Let's create it.
-					log.Info("Creating Cluster Role", "name", object.Name)
-					if err = r.Create(ctx, object); err != nil {
-						return ctrl.Result{}, err
-					}
+				}
+				// The Cluster Role doesn't exist. Let's create it.
+				log.Info("Creating Cluster Role", "name", object.Name)
+				if err = r.Create(ctx, object); err != nil {
+					return ctrl.Result{}, err
 				}
 			} else if !equality.Semantic.DeepEqual(object.Rules, crFromCluster.Rules) {
 				// The Cluster Role on the cluster needs to be updated.
@@ -360,7 +354,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			// Completely recreate the Cluster Role Binding to ensure all fields specified in the deployment manifests
 			// are propagated. Don't call setCommonObjectMetadata because this is a cluster-scoped object (it doesn't
 			// have a namespace and our namespace-scoped CRD can't own it).
-			for j, _ := range object.Subjects {
+			for j := range object.Subjects {
 				object.Subjects[j].Namespace = req.Namespace
 			}
 			crbFromCluster := new(rbacv1.ClusterRoleBinding)
@@ -368,12 +362,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-				} else {
-					// The Cluster Role Binding doesn't exist. Let's create it.
-					log.Info("Creating Cluster Role Binding", "name", object.Name)
-					if err = r.Create(ctx, object); err != nil {
-						return ctrl.Result{}, err
-					}
+				}
+				// The Cluster Role Binding doesn't exist. Let's create it.
+				log.Info("Creating Cluster Role Binding", "name", object.Name)
+				if err = r.Create(ctx, object); err != nil {
+					return ctrl.Result{}, err
 				}
 			} else if !equality.Semantic.DeepEqual(object.Subjects, crbFromCluster.Subjects) ||
 				!equality.Semantic.DeepEqual(object.RoleRef, crbFromCluster.RoleRef) {
@@ -394,12 +387,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-				} else {
-					// The Role doesn't exist. Let's create it.
-					log.Info("Creating Role", "name", object.Name)
-					if err = r.Create(ctx, object); err != nil {
-						return ctrl.Result{}, err
-					}
+				}
+				// The Role doesn't exist. Let's create it.
+				log.Info("Creating Role", "name", object.Name)
+				if err = r.Create(ctx, object); err != nil {
+					return ctrl.Result{}, err
 				}
 			} else if !equality.Semantic.DeepEqual(object.Rules, rFromCluster.Rules) {
 				// The Cluster Role on the cluster needs to be updated.
@@ -415,7 +407,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err = r.setCommonObjectMetadata(req, driver, object); err != nil {
 				return ctrl.Result{}, err
 			}
-			for j, _ := range object.Subjects {
+			for j := range object.Subjects {
 				object.Subjects[j].Namespace = req.Namespace
 			}
 			crbFromCluster := new(rbacv1.RoleBinding)
@@ -423,12 +415,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if err != nil {
 				if !errors.IsNotFound(err) {
 					return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-				} else {
-					// The Role Binding doesn't exist. Let's create it.
-					log.Info("Creating Role Binding", "name", object.Name)
-					if err = r.Create(ctx, object); err != nil {
-						return ctrl.Result{}, err
-					}
+				}
+				// The Role Binding doesn't exist. Let's create it.
+				log.Info("Creating Role Binding", "name", object.Name)
+				if err = r.Create(ctx, object); err != nil {
+					return ctrl.Result{}, err
 				}
 			} else if !equality.Semantic.DeepEqual(object.Subjects, crbFromCluster.Subjects) ||
 				!equality.Semantic.DeepEqual(object.RoleRef, crbFromCluster.RoleRef) {
@@ -449,12 +440,11 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
-		} else {
-			// The CSI Driver object doesn't exist. Let's create it.
-			log.Info("Creating CSI Driver object")
-			if err = r.Create(ctx, d); err != nil {
-				return ctrl.Result{}, err
-			}
+		}
+		// The CSI Driver object doesn't exist. Let's create it.
+		log.Info("Creating CSI Driver object")
+		if err = r.Create(ctx, d); err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
 		// Intentionally empty.

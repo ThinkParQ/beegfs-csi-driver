@@ -53,19 +53,19 @@ type BeegfsDynamicDriver struct {
 	*baseBeegfsDriver
 }
 
-// baseBeegfsDriver implements the storageframework.TestDriver interface.
+// GetDriverInfo is part of the storageframework.TestDriver interface.
 func (d *baseBeegfsDriver) GetDriverInfo() *storageframework.DriverInfo {
 	return &d.driverInfo
 }
 
-// baseBeegfsDriver implements the storageframework.TestDriver interface.
+// SkipUnsupportedTest is part of the storageframework.TestDriver interface.
 func (d *baseBeegfsDriver) SkipUnsupportedTest(pattern storageframework.TestPattern) {
 	if pattern.VolType == storageframework.PreprovisionedPV && d.staticVolDirPathBeegfsRoot == "" {
 		e2eskipper.Skipf("Set staticVolDirPathBeegfsRoot to enable pre-provisioned tests -- skipping")
 	}
 }
 
-// baseBeegfsDriver implements the storageframework.TestDriver interface.
+// PrepareTest is part of the storageframework.TestDriver interface.
 func (d *baseBeegfsDriver) PrepareTest(f *e2eframework.Framework) (*storageframework.PerTestConfig, func()) {
 	config := &storageframework.PerTestConfig{
 		Driver:    d,
@@ -137,7 +137,7 @@ func InitBeegfsDynamicDriver(dynamicVolDirBasePathBeegfsRoot string) *BeegfsDyna
 	return &BeegfsDynamicDriver{baseBeegfsDriver: initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, "")}
 }
 
-// baseBeegfsDriver directly implements the storageframework.DynamicPVTestDriver interface.
+// GetDynamicProvisionStorageClass is part of the storageframework.DynamicPVTestDriver interface.
 func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframework.PerTestConfig,
 	fsType string) *storagev1.StorageClass {
 	params := map[string]string{
@@ -154,7 +154,7 @@ func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframew
 	return storageframework.GetStorageClass("beegfs.csi.netapp.com", params, nil, config.Framework.Namespace.Name)
 }
 
-// BeegfsDriver implements the storageframework.PreprovisionedVolumeTestDriver interface.
+// CreateVolume is part of the storageframework.PreprovisionedVolumeTestDriver interface.
 // CreateVolume returns a storageframework.TestVolume that appropriately references a pre-created directory on a
 // BeeGFS file system known to the driver. Tests can use SetFSIndex and SetStaticDirName to modify its behavior.
 func (d *BeegfsDriver) CreateVolume(config *storageframework.PerTestConfig, volumeType storageframework.TestVolType) storageframework.TestVolume {
@@ -164,7 +164,7 @@ func (d *BeegfsDriver) CreateVolume(config *storageframework.PerTestConfig, volu
 	}
 }
 
-// BeegfsDriver implements the storageframework.PreprovisionedPVTestDriver interface.
+// GetPersistentVolumeSource is part of the storageframework.PreprovisionedPVTestDriver interface.
 // GetPersistentVolumeSource returns a PersistentVolumeSource that appropriately references a pre-created directory
 // on a BeeGFS file system known to the driver.
 func (d *BeegfsDriver) GetPersistentVolumeSource(readOnly bool, fsType string,
@@ -188,7 +188,7 @@ func (d *baseBeegfsDriver) SetStorageClassParams(extraSCParams map[string]string
 	d.extraSCParams = extraSCParams
 }
 
-// UnsetStorageClassParams() reverses SetStorageClassParams.
+// UnsetStorageClassParams reverses SetStorageClassParams.
 func (d *baseBeegfsDriver) UnsetStorageClassParams() {
 	d.extraSCParams = nil
 }
@@ -233,7 +233,7 @@ type beegfsVolume struct {
 	volumeID string // pkg/beegfs.beegfsVolume.volumeID
 }
 
-// beegfsVolume implements the storageframework.TestVolume interface.
+// DeleteVolume is part of the storageframework.TestVolume interface.
 // We don't actually do anything when DeleteVolume() is called.
 func (v beegfsVolume) DeleteVolume() {
 	// Intentionally empty.

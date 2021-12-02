@@ -41,8 +41,8 @@ const (
 	permissionsModeKey            = "permissions/mode"
 	defaultPermissionsMode        = 0o0777
 
-	LogLevelDebug   = 3 // This log level is used for most informational logs in RPCs and GRPC calls
-	LogLevelVerbose = 5 // This log level is used for only very repetitive logs such as the Probe GRPC call
+	logLevelDebug   = 3 // This log level is used for most informational logs in RPCs and GRPC calls
+	logLevelVerbose = 5 // This log level is used for only very repetitive logs such as the Probe GRPC call
 )
 
 type beegfs struct {
@@ -154,6 +154,7 @@ var (
 	vendorVersion = "dev"
 )
 
+// NewBeegfsDriver configures and initializes a beegfs struct.
 func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
 	if driverName == "" {
@@ -213,9 +214,9 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 	}
 
 	// Create GRPC servers
-	driver.ids = NewIdentityServer(driver.driverName, driver.version)
-	driver.ns = NewNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
-	driver.cs = NewControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir,
+	driver.ids = newIdentityServer(driver.driverName, driver.version)
+	driver.ns = newNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
+	driver.cs = newControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir,
 		nodeUnstageTimeout)
 
 	return &driver, nil
@@ -229,7 +230,7 @@ func (b *beegfs) Run() {
 		b.ns.mounter = mount.New("")
 	}
 
-	s := NewNonBlockingGRPCServer()
+	s := newNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()
 }

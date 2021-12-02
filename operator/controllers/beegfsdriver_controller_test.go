@@ -249,12 +249,12 @@ var _ = Describe("Integration tests using envtest", func() {
 				By("Submitting a modified BeegfsDriver CR")
 				namespacedName := types.NamespacedName{Name: cr.Name, Namespace: cr.Namespace}
 				Eventually(func() error {
-					if err := k8sClient.Get(ctx, namespacedName, cr); err == nil {
+					var err error
+					if err = k8sClient.Get(ctx, namespacedName, cr); err == nil {
 						cr.Spec.PluginConfigFromFile.DefaultConfig.BeegfsClientConf["key"] = "newValue"
 						return k8sClient.Update(ctx, cr)
-					} else {
-						return err
 					}
+					return err
 				}, timeout).Should(Succeed())
 			})
 
@@ -291,13 +291,13 @@ var _ = Describe("Integration tests using envtest", func() {
 			BeforeEach(func() {
 				By("Submitting a modified Secret")
 				namespacedName := types.NamespacedName{Name: s.Name, Namespace: cr.Namespace}
+				var err error
 				Eventually(func() error {
-					if err := k8sClient.Get(ctx, namespacedName, s); err == nil {
+					if err = k8sClient.Get(ctx, namespacedName, s); err == nil {
 						s.StringData = map[string]string{deploy.KeyNameSecret: "secret"}
 						return k8sClient.Update(ctx, s)
-					} else {
-						return err
 					}
+					return err
 				}, timeout).Should(Succeed())
 			})
 

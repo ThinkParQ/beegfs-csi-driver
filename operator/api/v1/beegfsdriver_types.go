@@ -55,12 +55,15 @@ type BeegfsDriverStatus struct {
 	Conditions []metav1.Condition `json:"conditions"`
 }
 
+// Possible values for BeegfsDriverStatus.Conditions[].Type.
 const (
 	// Possible values for BeegfsDriverStatus.Conditions[].Type.
 	ConditionControllerServiceReady = "ControllerServiceReady"
 	ConditionNodeServiceReady       = "NodeServiceReady"
+)
 
-	// Possible values for BeegfsDriverStatus.Conditions[].Reason.
+// Possible values for BeegfsDriverStatus.Conditions[].Reason.
+const (
 	ReasonServiceNotCreated = "ServiceNotCreated"
 	ReasonPodsNotScheduled  = "PodsNotScheduled"
 	ReasonPodsNotReady      = "PodsNotReady"
@@ -85,7 +88,7 @@ type BeegfsDriver struct {
 
 //+kubebuilder:object:root=true
 
-// BeegfsDriverList contains a list of BeegfsDriver
+// BeegfsDriverList contains a list of BeegfsDrivers.
 type BeegfsDriverList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -114,6 +117,7 @@ type ContainerImageOverrides struct {
 	LivenessProbe ContainerImageOverride `json:"livenessProbe"`
 }
 
+// ContainerImageOverride allows for a default container image and tag to be overridden.
 type ContainerImageOverride struct {
 	// A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner or docker.io/netapp/beegfs-csi-driver).
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
@@ -150,6 +154,7 @@ type BeegfsConfig struct {
 	ConnAuth string `json:"-"` // Do not support unmarshalling from a configuration file.
 }
 
+// NewBeegfsConfig returns an initialized BeegfsConfig.
 func NewBeegfsConfig() *BeegfsConfig {
 	return &BeegfsConfig{
 		BeegfsClientConf: make(map[string]string),

@@ -382,10 +382,9 @@ func (v *threadSafeStringLock) obtainLockOnString(stringToLock string) bool {
 		// stringToLock is not in map (and not in use by another Goroutine). Lock stringToLock and return success.
 		v.items[stringToLock] = struct{}{}
 		return true
-	} else {
-		// stringToLock is in map (and in use by another Goroutine). Return failure.
-		return false
 	}
+	// stringToLock is in map (and in use by another Goroutine). Return failure.
+	return false
 }
 
 // releaseLockOnString releases the lock on a string.

@@ -33,7 +33,7 @@ type identityServer struct {
 	version string
 }
 
-func NewIdentityServer(name, version string) *identityServer {
+func newIdentityServer(name, version string) *identityServer {
 	return &identityServer{
 		name:    name,
 		version: version,

@@ -224,7 +224,7 @@ func TestDeleteVolumeUntilWaitEmptyNodesDir(t *testing.T) {
 		t.Fatal("error in setup")
 	}
 
-	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+	if err := deleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
 		t.Fatal("expected no error deleting volume")
 	}
 	if _, err := fs.Stat(vol.csiDirPath); err == nil {
@@ -243,7 +243,7 @@ func TestDeleteVolumeUntilWaitNoCSIDir(t *testing.T) {
 		t.Fatal("error in setup")
 	}
 
-	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+	if err := deleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
 		t.Fatal("expected no error deleting volume")
 	}
 	if _, err := fs.Stat(vol.volDirPath); err == nil {
@@ -263,7 +263,7 @@ func TestDeleteVolumeUntilWaitNodesDirNeverEmpties(t *testing.T) {
 		t.Fatal("error in setup")
 	}
 
-	if err := DeleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
+	if err := deleteVolumeUntilWait(context.TODO(), vol, 0); err != nil {
 		t.Fatal("expected no error deleting volume")
 	}
 	if _, err := fs.Stat(vol.csiDirPath); err == nil {
@@ -299,7 +299,7 @@ func TestDeleteVolumeUntilWaitNodesDirEmptiesEventually(t *testing.T) {
 
 	start := time.Now()
 	const waitTime = 10
-	if err := DeleteVolumeUntilWait(context.TODO(), vol, uint64(waitTime)); err != nil {
+	if err := deleteVolumeUntilWait(context.TODO(), vol, uint64(waitTime)); err != nil {
 		t.Fatal("expected no error deleting volume")
 	}
 	if _, err := fs.Stat(vol.csiDirPath); err == nil {

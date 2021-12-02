@@ -425,7 +425,7 @@ func TestThreadSafeStringLock(t *testing.T) {
 	}
 
 	// Verify that releasing each lock allows it to be obtained again.
-	for lockString, _ := range locks {
+	for lockString := range locks {
 		tssl.releaseLockOnString(lockString)
 		if !tssl.obtainLockOnString(lockString) {
 			t.Fatalf("expected to be able to relock released lock on %s but could not", lockString)
