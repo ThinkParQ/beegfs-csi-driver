@@ -109,7 +109,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	oldStatus := *driver.Status.DeepCopy() // Remember previous status for comparison.
 
-	statusCondition := metav1.Condition{}
+	var statusCondition metav1.Condition
 	stsFromCluster := new(appsv1.StatefulSet)
 	err = r.Get(ctx, types.NamespacedName{Name: sts.Name, Namespace: req.Namespace}, stsFromCluster)
 	if err != nil {
@@ -151,7 +151,6 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	meta.SetStatusCondition(&driver.Status.Conditions, statusCondition)
 
-	statusCondition = metav1.Condition{}
 	dsFromCluster := new(appsv1.DaemonSet)
 	err = r.Get(ctx, types.NamespacedName{Name: ds.Name, Namespace: req.Namespace}, dsFromCluster)
 	if err != nil {
@@ -249,7 +248,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Now attempt to get the rest of the expected objects and push them to the Kubernetes API server as necessary.
 
 	// Completely recreate the Config Map to ensure all fields specified in the deployment manifest are propagated.
-	cm := new(corev1.ConfigMap)
+	var cm *corev1.ConfigMap
 	if cm, err = newConfigMap(driver); err != nil {
 		return ctrl.Result{}, err
 	}
