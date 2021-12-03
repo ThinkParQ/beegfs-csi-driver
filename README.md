@@ -1,5 +1,9 @@
 # BeeGFS CSI Driver
 
+[![License](https://img.shields.io/github/license/netapp/beegfs-csi-driver)](LICENSE)
+[![Docker pulls](https://img.shields.io/docker/pulls/netapp/beegfs-csi-driver)](https://hub.docker.com/r/netapp/beegfs-csi-driver)
+[![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver)
+
 ## Contents
 <a name="contents"></a>
 
