@@ -109,7 +109,10 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES')
             }
             steps {
-                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                // envtest sets up a variety of services that listen on different ports. While we can change the ports
+                // used relatively easily, we cannot easily make the ports random. Better to make sure envtest is only
+                // in use by one build at a time on a particular node.
+                lock(resource: "envtest-${env.NODE_NAME}") {
                     sh """
                         cd operator
                         make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} build docker-build
@@ -117,13 +120,18 @@ pipeline {
                         make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest bundle
                         if [[ \$(git diff) ]]
                         then
-                            # The above make steps have run all generators. The developer making changes should also 
-                            # have run all generators and committed the result. Do not proceed if the generators run 
-                            # here produce different output than the developer committed.
-                            echo "ERROR: Generated code and/or manifests are not up to date"
-                            git diff
-                            exit 1
+                        # The above make steps have run all generators. The developer making changes should also
+                        # have run all generators and committed the result. Do not proceed if the generators run
+                        # here produce different output than the developer committed.
+                        echo "ERROR: Generated code and/or manifests are not up to date"
+                        git diff
+                        exit 1
                         fi
+                    """
+                }
+                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                    sh """
+                        cd operator
                         docker tag ${uniqueOperatorImageTag} ${operatorImageTag}
                         make -e IMG=${uniqueOperatorImageTag} docker-push
                         make -e IMG=${operatorImageTag} docker-push
