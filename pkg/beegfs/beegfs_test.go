@@ -11,7 +11,90 @@ import (
 	"testing"
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
+	"github.com/spf13/afero"
 )
+
+// TestNewBeegfsDriver only tests various expected failure conditions. Some string parameters are not allowed to be
+// empty. Many of these parameters are file paths. It is not possible to validate file paths because Linux allows
+// paths with virtually all characters. However, we can ensure that a file exists at a path and can be read if it is
+// supposed to.
+func TestNewBeegfsDriver(t *testing.T) {
+	fs = afero.NewMemMapFs()
+	fsutil = afero.Afero{Fs: fs}
+
+	const goodClientConfTemplatePath = "/goodClientConfTemplatePath"
+	const badPermissionsClientConfTemplatePath = "/badPermissionsClientConfTemplatePath"
+
+	type testCase struct {
+		connAuthPath           string
+		configPath             string
+		csDataDir              string
+		driverName             string
+		endpoint               string
+		nodeID                 string
+		clientConfTemplatePath string
+		version                string
+		nodeUnstageTimeout     uint64
+	}
+	defaultTestCase := testCase{
+		connAuthPath:           "", // Failure behavior tested in TestParseConnAuthFromFile.
+		configPath:             "", // Failure behavior tested in TestParseConfigFromFile.
+		csDataDir:              "/csDataDir",
+		driverName:             "beegfs.csi.netapp.com",
+		endpoint:               "/someEndpoint",
+		nodeID:                 "node1",
+		clientConfTemplatePath: goodClientConfTemplatePath,
+	}
+
+	_ = fsutil.WriteFile(goodClientConfTemplatePath, []byte{}, 0644)
+	_ = fsutil.WriteFile(badPermissionsClientConfTemplatePath, []byte{}, 0100)
+
+	tests := map[string]func() testCase{
+		"no csDataDir": func() testCase {
+			tc := defaultTestCase
+			tc.csDataDir = ""
+			return tc
+		},
+		"no endpoint": func() testCase {
+			tc := defaultTestCase
+			tc.endpoint = ""
+			return tc
+		},
+		"no nodeID": func() testCase {
+			tc := defaultTestCase
+			tc.nodeID = ""
+			return tc
+		},
+		"bad clientConfTemplatePath": func() testCase {
+			tc := defaultTestCase
+			tc.clientConfTemplatePath = "/badClientConfTemplatePath"
+			return tc
+		},
+		"no clientConfTemplatePath": func() testCase {
+			tc := defaultTestCase
+			tc.clientConfTemplatePath = ""
+			return tc
+		},
+		// TODO(webere, A336): Add this test case when https://github.com/spf13/afero/issues/150 is resolved.
+		// "bad permissions on clientConfTemplatePath": func() testCase {
+		//	 tc := defaultTestCase
+		//	 tc.clientConfTemplatePath = badPermissionsClientConfTemplatePath
+		//	 t.Log("uid", os.Getuid())
+		//	 return tc
+		// },
+	}
+
+	for name, tcFunc := range tests {
+		t.Run(name, func(t *testing.T) {
+			tc := tcFunc()
+			_, err := NewBeegfsDriver(tc.connAuthPath, tc.configPath, tc.csDataDir, tc.driverName, tc.endpoint,
+				tc.nodeID, tc.clientConfTemplatePath, tc.version, tc.nodeUnstageTimeout)
+			if err == nil {
+				t.Fatal("expected error but got none")
+			}
+		})
+	}
+}
 
 func TestHasNonDefaultOwnerOrGroup(t *testing.T) {
 	tests := map[string]struct {
