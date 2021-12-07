@@ -13,7 +13,7 @@ package deploy
 
 import (
 	"bytes"
-	_ "embed"
+	_ "embed" // This is required for the //go:embed directive (https://pkg.go.dev/embed#hdr-Strings_and_Bytes).
 
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -119,18 +119,22 @@ func GetRBAC() ([]interface{}, error) {
 	return objects, nil
 }
 
+// GetControllerServiceStatefulSet returns the embedded byte slice as a Stateful Set object representing the controller
+// service.
 func GetControllerServiceStatefulSet() (*appsv1.StatefulSet, error) {
 	sts := new(appsv1.StatefulSet)
 	err := yaml.UnmarshalStrict(csBytes, sts)
 	return sts, err
 }
 
+// GetCSIDriver returns the embedded byte slice as a CSI Driver object.
 func GetCSIDriver() (*storagev1.CSIDriver, error) {
 	d := new(storagev1.CSIDriver)
 	err := yaml.UnmarshalStrict(driverBytes, d)
 	return d, err
 }
 
+// GetNodeServiceDaemonSet returns the embedded byte slice as a Daemon Set object representing the node service.
 func GetNodeServiceDaemonSet() (*appsv1.DaemonSet, error) {
 	ds := new(appsv1.DaemonSet)
 	err := yaml.UnmarshalStrict(dsBytes, ds)

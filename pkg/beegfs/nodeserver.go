@@ -48,7 +48,7 @@ type nodeServer struct {
 	mounter                mount.Interface
 }
 
-func NewNodeServer(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) *nodeServer {
+func newNodeServer(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
 		ctlExec:                &beegfsCtlExecutor{},
 		nodeID:                 nodeId,

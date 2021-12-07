@@ -57,7 +57,7 @@ type controllerServer struct {
 	nodeUnstageTimeout     uint64
 }
 
-func NewControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
+func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
 	nodeUnstageTimeout uint64) *controllerServer {
 	return &controllerServer{
 		ctlExec: &beegfsCtlExecutor{},
@@ -225,7 +225,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 
 	// Delete volume from mounted BeeGFS.
-	if err = DeleteVolumeUntilWait(ctx, vol, cs.nodeUnstageTimeout); err != nil {
+	if err = deleteVolumeUntilWait(ctx, vol, cs.nodeUnstageTimeout); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
@@ -300,11 +300,10 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 				// Parameters: req.GetParameters(),
 			},
 		}, nil
-	} else {
-		return &csi.ValidateVolumeCapabilitiesResponse{
-			Message: reason,
-		}, nil
 	}
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Message: reason,
+	}, nil
 }
 
 func (cs *controllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
@@ -433,7 +432,7 @@ func (cs *controllerServer) newBeegfsVolumeFromID(volumeID string) (beegfsVolume
 	return newBeegfsVolumeFromID(mountDirPath, volumeID, cs.pluginConfig)
 }
 
-func DeleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint64) error {
+func deleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint64) error {
 	start := time.Now()
 	nodesPath := path.Join(vol.csiDirPath, "nodes")
 	for {

@@ -41,7 +41,10 @@ import (
 	"k8s.io/klog/v2/klogr"
 )
 
-const ctxRequestID = "reqID"
+// Use a package scoped type to avoid clashing with other packages that might use "reqID" as a context key.
+type contextKey string
+
+const ctxRequestID contextKey = "reqID"
 
 var requestIDCounter uint32
 
@@ -88,7 +91,7 @@ func (e grpcError) Format(s fmt.State, verb rune) {
 }
 func (e grpcError) GetStatusErr() error { return e.statusErr }
 
-func NewNonBlockingGRPCServer() *nonBlockingGRPCServer {
+func newNonBlockingGRPCServer() *nonBlockingGRPCServer {
 	return &nonBlockingGRPCServer{}
 }
 
@@ -211,7 +214,8 @@ func logger(ctx context.Context) logr.Logger {
 	newLogger := klogr.New()
 	if ctx != nil {
 		if ctxRqId, ok := ctx.Value(ctxRequestID).(string); ok {
-			newLogger = newLogger.WithValues(ctxRequestID, ctxRqId)
+			// klogr requires a string type (not a contextKey type) key.
+			newLogger = newLogger.WithValues(string(ctxRequestID), ctxRqId)
 		}
 	} else {
 		newLogger = newLogger.WithValues("goroutine", "main")
@@ -219,20 +223,23 @@ func logger(ctx context.Context) logr.Logger {
 	return newLogger
 }
 
+// LogDebug writes a request ID aware log message at -v=3 (the default).
 func LogDebug(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	l := logger(ctx).V(LogLevelDebug)
+	l := logger(ctx).V(logLevelDebug)
 	logr.
 		WithCallDepth(l, 1).
 		Info(msg, keysAndValues...)
 }
 
+// LogVerbose writes a request ID aware log message at -v=5.
 func LogVerbose(ctx context.Context, msg string, keysAndValues ...interface{}) {
-	l := logger(ctx).V(LogLevelVerbose)
+	l := logger(ctx).V(logLevelVerbose)
 	logr.
 		WithCallDepth(l, 1).
 		Info(msg, keysAndValues...)
 }
 
+// LogError writes a request ID aware log message at the error level.
 func LogError(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
 	logr.
@@ -240,6 +247,7 @@ func LogError(ctx context.Context, err error, msg string, keysAndValues ...inter
 		Error(err, msg, keysAndValues...)
 }
 
+// LogFatal writes a request ID aware log message at the error level and immediately exit.
 func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
 	logr.
