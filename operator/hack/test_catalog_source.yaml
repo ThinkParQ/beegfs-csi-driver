@@ -15,9 +15,11 @@ metadata:
   namespace: openshift-marketplace
 spec:
   displayName: NetApp Operators
-  image: docker.repo.eng.netapp.com/<username>/beegfs-csi-driver-operator-catalog:v1.2.0
+  image: docker.repo.eng.netapp.com/<username>/beegfs-csi-driver-operator-catalog:<vX.X.X>
   publisher: NetApp
   sourceType: grpc
   updateStrategy:
     registryPoll:
-      interval: 24h  # When polling is enabled, the catalog Pod gets imagePullPolicy: Always. Handy for development.
+      # When polling is enabled, the catalog Pod gets imagePullPolicy: Always. Handy for development.
+      # A short polling interval ensures we quickly detect new versions and attempt to upgrade.
+      interval: 30s
