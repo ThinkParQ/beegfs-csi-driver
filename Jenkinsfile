@@ -120,12 +120,12 @@ pipeline {
                         make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest bundle
                         if [[ \$(git diff) ]]
                         then
-                        # The above make steps have run all generators. The developer making changes should also
-                        # have run all generators and committed the result. Do not proceed if the generators run
-                        # here produce different output than the developer committed.
-                        echo "ERROR: Generated code and/or manifests are not up to date"
-                        git diff
-                        exit 1
+                            # The above make steps have run all generators. The developer making changes should also 
+                            # have run all generators and committed the result. Do not proceed if the generators run 
+                            # here produce different output than the developer committed.
+                            echo "ERROR: Generated code and/or manifests are not up to date"
+                            git diff
+                            exit 1
                         fi
                     """
                 }
@@ -259,8 +259,10 @@ pipeline {
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
                             new TestEnvironment("1.21", "beegfs-7.1.5", "1.21", "static4", false),
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.21", "", true),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
+                            new TestEnvironment("1.22", "beegfs-7.1.5", "1.22", "static5", false),
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
+                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.22", "", true),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
                         ]
                     } else {
                         testEnvironments = [
@@ -269,7 +271,8 @@ pipeline {
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
                         ]
                     }
 
