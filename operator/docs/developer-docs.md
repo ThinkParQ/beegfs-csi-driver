@@ -46,7 +46,7 @@ automatic download of necessary binaries (e.g., controller-gen, kustomize,
 etc.). The following are not automatically downloaded and must be pre-installed
 in a dev environment:
 * [Golang (the version specified in *go.mod*)](https://golang.org/doc/install)
-* [Operator SDK (currently v1.11.0)](https://sdk.operatorframework.io/docs/installation/)
+* [Operator SDK (currently v1.15.0)](https://sdk.operatorframework.io/docs/installation/)
 
 ## Directory Structure
 <a name="directory-structure"></a>
