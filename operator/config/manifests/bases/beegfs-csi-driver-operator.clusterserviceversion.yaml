@@ -291,7 +291,7 @@ spec:
   - email: justin.bostian@netapp.com
     name: Justin Bostian
   maturity: stable
-  minKubeVersion: 1.18.0
+  minKubeVersion: 1.19.0
   provider:
     name: NetApp
     url: https://www.netapp.com

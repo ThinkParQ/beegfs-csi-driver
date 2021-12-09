@@ -252,8 +252,6 @@ pipeline {
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.18", "beegfs-7.1.5", "1.18", "static1", false),
-                            new TestEnvironment("1.18", "beegfs-7.2", "1.18", "static1", false),
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static3", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
@@ -267,7 +265,6 @@ pipeline {
                     } else {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.18", "beegfs-7.2", "1.18", "static1", false),
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
@@ -310,11 +307,6 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
     if (!env.BRANCH_NAME.matches('master')) {
         ginkgoSkipRegex += "|\\[Slow\\]"
-    }
-    if (testEnv.k8sVersion == "1.18") {
-        // Generic ephemeral volumes aren't supported in v1.18, but the end-to-end tests
-        // incorrectly identify our v1.18 cluster as being ephemeral-capable.
-        ginkgoSkipRegex += "|ephemeral"
     }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
