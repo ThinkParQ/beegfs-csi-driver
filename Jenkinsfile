@@ -109,7 +109,10 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES')
             }
             steps {
-                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                // envtest sets up a variety of services that listen on different ports. While we can change the ports
+                // used relatively easily, we cannot easily make the ports random. Better to make sure envtest is only
+                // in use by one build at a time on a particular node.
+                lock(resource: "envtest-${env.NODE_NAME}") {
                     sh """
                         cd operator
                         make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} build docker-build
@@ -124,6 +127,11 @@ pipeline {
                             git diff
                             exit 1
                         fi
+                    """
+                }
+                withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
+                    sh """
+                        cd operator
                         docker tag ${uniqueOperatorImageTag} ${operatorImageTag}
                         make -e IMG=${uniqueOperatorImageTag} docker-push
                         make -e IMG=${operatorImageTag} docker-push
@@ -251,8 +259,10 @@ pipeline {
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
                             new TestEnvironment("1.21", "beegfs-7.1.5", "1.21", "static4", false),
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.21", "", true),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
+                            new TestEnvironment("1.22", "beegfs-7.1.5", "1.22", "static5", false),
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
+                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.22", "", true),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
                         ]
                     } else {
                         testEnvironments = [
@@ -261,7 +271,8 @@ pipeline {
                             new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
                             new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.21", "", true)
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
                         ]
                     }
 
