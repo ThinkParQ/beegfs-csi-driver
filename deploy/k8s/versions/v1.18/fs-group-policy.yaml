@@ -1,9 +1,0 @@
-# Copyright 2021 NetApp, Inc. All Rights Reserved.
-# Licensed under the Apache License, Version 2.0.
-
-# Do not modify this file. Changes may be overwritten in subsequent driver versions.
-
-# fsGroupPolicy is not a valid field for a CSI Driver object in Kubernetes 1.18.
-
-- op: remove
-  path: /spec/fsGroupPolicy
