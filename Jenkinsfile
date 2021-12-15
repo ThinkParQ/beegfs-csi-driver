@@ -163,10 +163,6 @@ pipeline {
             when {
                 expression { shouldHubScan }
             }
-            environment {
-                // TODO(webere, A279): Stop pinning this version when Synopsys Detect v7.9.0 is officially released.
-                DETECT_SOURCE = 'https://sig-repo.synopsys.com/artifactory/bds-integrations-snapshot/com/synopsys/integration/synopsys-detect/7.9.0-SIGQA9-SNAPSHOT/synopsys-detect-7.9.0-SIGQA9-20211202.213902-5.jar'
-            }
             steps {
                 // Do not scan the vendor directory. Everything in the vendor director is already discovered by the
                 // GO_MOD detector and scanning it provides duplicate results with erroneous versions.
