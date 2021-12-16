@@ -1,7 +1,7 @@
 # BeeGFS CSI Driver Deployment
 
-## Contents
 <a name="contents"></a>
+## Contents
 
 * [Deploying to Kubernetes](#deploying-to-kubernetes)
   * [Kubernetes Node Preparation](#kubernetes-node-preparation)
@@ -18,11 +18,12 @@
   * [Security and Networking Considerations](#security-considerations)
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
-## Deploying to Kubernetes
 <a name="deploying-to-kubernetes"></a>
+## Deploying to Kubernetes
 
-### Kubernetes Node Preparation
 <a name="kubernetes-node-preparation"></a>
+### Kubernetes Node Preparation
+
 The following MUST be completed on any Kubernetes node (master OR worker) that
 runs a component of the driver:
 * Download the [BeeGFS repository
@@ -40,8 +41,9 @@ IMPORTANT: By default the driver uses the beegfs-client.conf file at
 */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the location
 of this file is not currently supported without changing kustomization files.
 
-### Kubernetes Deployment
 <a name="kubernetes-deployment"></a>
+### Kubernetes Deployment
+
 Deployment manifests are provided in this repository under *deploy/k8s/* along with
 a default BeeGFS Client ConfigMap. The driver is deployed using `kubectl apply
 -k` (kustomize). For more detailed information on how the manifests are organized or 
@@ -113,8 +115,9 @@ Next Steps:
 * For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md)
   documentation.
 
-### Air-Gapped Kubernetes Deployment
 <a name="air-gapped-kubernetes-deployment"></a>
+### Air-Gapped Kubernetes Deployment
+
 This section provides guidance on deploying the BeeGFS CSI driver in
 environments where Kubernetes nodes do not have internet access. 
 
@@ -136,8 +139,9 @@ to them. Adjust the `images[].newTag` fields as necessary to ensure they either
 match images that exist on the Kubernetes nodes or reference your internal 
 registry. Then follow the above commands for Kubernetes deployment.
 
-### Deployment to Kubernetes Clusters With Mixed Nodes
 <a name="mixed-kubernetes-deployment"></a>
+### Deployment to Kubernetes Clusters With Mixed Nodes
+
 In some Kubernetes clusters, not all nodes are capable of running the BeeGFS 
 CSI driver (or it may not be desirable for all nodes to do so). For example:
 * A cluster may be shared by multiple departments and one department may not 
@@ -176,8 +180,8 @@ StatefulSets, Deployments) that depend on BeeGFS MUST be deployed with the same
 nodeAffinity assigned to the driver node service. Provide your users with the 
 labels or nodes they must run their workloads on.
 
-### Deployment to Kubernetes Using the Operator
 <a name="operator-deployment"></a>
+### Deployment to Kubernetes Using the Operator
 
 An [operator](https://operatorframework.io/what/) can be used to deploy the 
 BeeGFS CSI driver to a cluster and manage its configuration/state within that 
@@ -192,8 +196,9 @@ operator to install the driver directly from this repository.
 See the [BeeGFS CSI Driver Operator](../operator/README.md) documentation for 
 details.
 
-## Example Application Deployment
 <a name="example-application-deployment"></a>
+## Example Application Deployment
+
 Verify that a BeeGFS file system is accessible from the Kubernetes nodes.
 Minimally, verify that the BeeGFS servers are up and listening from a
 workstation that can access them:
@@ -349,8 +354,8 @@ Next Steps:
   documentation.
 * For additional examples see *examples/k8s/README.md*. 
 
-## Managing BeeGFS Client Configuration
 <a name="managing-beegfs-client-configuration"></a>
+## Managing BeeGFS Client Configuration
 
 Currently the only tested and supported container orchestrator (CO) for the
 BeeGFS CSI driver is Kubernetes. Notes in the General Configuration section
@@ -358,8 +363,8 @@ below would apply to other COs if supported. For Kubernetes the preferred method
 to apply desired BeeGFS Client configuration is using a Kubernetes ConfigMap and
 Secret, as described in [Kubernetes Configuration](#kubernetes-configuration).
 
-### General Configuration
 <a name="general-configuration"></a>
+### General Configuration
 
 The driver is ready to be used right out of the box, but many environments may
 either require or benefit from additional configuration.
@@ -462,8 +467,9 @@ nodeSpecificConfigs:  # OPTIONAL
     fileSystemSpecificConfigs:  # as above
 ```
 
-#### ConnAuth Configuration
 <a name="connauth-configuration"></a>
+#### ConnAuth Configuration
+
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
 separate file. This file is optional, and should only be used if the
 connAuthFile configuration option is used on a file system's other services.
@@ -483,8 +489,9 @@ NOTE: Unlike general configuration, connAuth configuration is only applied at a
 per file system level. There is no default connAuth and the concept of a node 
 specific connAuth doesn't make sense.
 
-### Kubernetes Configuration
 <a name="kubernetes-configuration"></a>
+### Kubernetes Configuration
+
 When deployed into Kubernetes, a single Kubernetes ConfigMap contains the
 configuration for all Kubernetes nodes. When the driver starts up on a node, it
 uses the node's name to filter the global ConfigMap down to a node-specific
@@ -516,16 +523,18 @@ all nodes so that it picks up the latest changes.
 NOTE: To validate the BeeGFS Client configuration file used for a specific PVC, 
 see the [Troubleshooting Guide](troubleshooting.md#k8s-determining-the-beegfs-client-conf-for-a-pvc)
 
-### BeeGFS Client Parameters (beegfsClientConf)
 <a name="beegfs-client-parameters"></a>
+### BeeGFS Client Parameters (beegfsClientConf)
+
 The following beegfs-client.conf parameters appear in the BeeGFS v7.2
 [beegfs-client.conf
 file](https://git.beegfs.io/pub/v7/-/blob/7.2/client_module/build/dist/etc/beegfs-client.conf).
 Other parameters may exist for newer or older BeeGFS versions. The list a
 parameter falls under determines its level of support in the driver.
 
-#### No Effect
 <a name="no-effect"></a>
+#### No Effect
+
 These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or
 are determined dynamically and have no effect when specified in the
 `beeGFSClientConf` configuration section.
@@ -542,8 +551,9 @@ are determined dynamically and have no effect when specified in the
   nodes.)
 * `connPortShift`
 
-#### Unsupported
 <a name="unsupported"></a>
+#### Unsupported
+
 These parameters are specified elsewhere and may exhibit undocumented behavior
 if specified here.
 
@@ -555,14 +565,16 @@ if specified here.
 * `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
   file.
 
-### Tested
 <a name="tested"></a>
+### Tested
+
 These parameters have been tested and verified to have the desired effect.
 
 * `quotaEnabled` - Documented in [Quotas](quotas.md).
 
-#### Untested
 <a name="untested"></a>
+#### Untested
+
 These parameters SHOULD result in the desired effect but have not been tested.
 
 * `connHelperdPortTCP`
@@ -596,11 +608,11 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `tuneUseGlobalFileLocks`
 * `sysACLsEnabled`
 
-## Notes for Kubernetes Administrators
 <a name="kubernetes-administrator-notes"></a>
+## Notes for Kubernetes Administrators
 
-### Security and Networking Considerations
 <a name="security-considerations"></a>
+### Security and Networking Considerations
 
 **The driver must be allowed to mount and unmount file systems.**
 
@@ -634,8 +646,9 @@ Inbound UDP traffic from nodes serving up BeeGFS file systems to arbitrary
 ports on all BeeGFS clients must be allowed. Each volume requires its own port
 and it is not currently possible to configure an allowed port range.
 
-## Removing the Driver from Kubernetes
 <a name="removing-the-driver-from-kubernetes"></a>
+## Removing the Driver from Kubernetes
+
 If you're experiencing any issues, find functionality lacking, or our
 documentation is unclear, we'd appreciate if you let us know:
 https://github.com/NetApp/beegfs-csi-driver/issues. 

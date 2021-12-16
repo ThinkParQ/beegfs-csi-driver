@@ -1,13 +1,13 @@
 # Kustomize Specific Deployment Details
 
-## Contents
 <a name="contents"></a>
+## Contents
 
 * [Basics](#basics)
 * [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
 
-## Basics
 <a name="basics"></a>
+## Basics
 
 The BeeGFS CSI driver uses [Kustomize](https://kustomize.io/) as its default 
 deployment mechanism. While Kustomize CAN be downloaded, installed, and run as 
@@ -45,8 +45,8 @@ by the development team to the base manifests or version patches will be picked
 up when you pull a new version of the project and your custom modifications will 
 continue to work unless otherwise noted.
 
-### Upgrading to v1.2.0
 <a name="upgrade-1.2.0-kubernetes-deployment"></a>
+### Upgrading to v1.2.0
 
 v1.2.0 includes changes to the structure of the deployment manifests. To upgrade
 from v1.1.0, follow these steps:

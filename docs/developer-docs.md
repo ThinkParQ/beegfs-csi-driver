@@ -93,11 +93,11 @@ csi-beegfs-node-ntcpc                     3/3     Running   0          2m27s
 csi-beegfs-socat-0                        0/1     Pending   0          17h
 ```
 
-## Style Guidelines
 <a name="style-guidelines"></a>
+## Style Guidelines
 
-### YAML Files
 <a name="style-guidelines-yaml"></a>
+### YAML Files
 
 YAML files in this project are formatted according to the following 
 rules/restrictions:
@@ -113,8 +113,8 @@ rules/restrictions:
     where a boolean is expected.
 * If it is necessary to quote a string, double quotes `"` are preferred.
 
-## Frequently Asked Questions
 <a name="style-guidelines"></a>
+## Frequently Asked Questions
 
 ### Why do we use sigs.k8s.io/yaml instead of gopkg.in/yaml?
 

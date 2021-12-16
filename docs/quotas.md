@@ -1,15 +1,16 @@
 # Using BeeGFS Quotas with the CSI Driver
 
-## Contents
 <a name="contents"></a>
+## Contents
 
 * [Overview](#overview)
 * [Prerequisites](#prerequisites)
 * [Enabling Quotas](#enabling-quotas)
 * [Tracking BeeGFS Consumption by Storage Class](#tracking-beegfs-consumption-by-sc)
 
-## Overview 
 <a name="overview"></a>
+## Overview 
+
 To provide administrators visibility and control over file system utilization,
 BeeGFS supports both [quota
 tracking](https://doc.beegfs.io/latest/advanced_topics/quota.html#quota-tracking)
@@ -24,8 +25,9 @@ configuration for the BeeGFS clients (i.e., Kubernetes nodes). This document
 will also demonstrate how to leverage quotas to track BeeGFS consumption with an
 example that can be extended to any number of use cases.
 
-## Prerequisites
 <a name="prerequisites"></a>
+## Prerequisites
+
 * The BeeGFS server nodes (Management, Metadata, and Storage) must already have
   quota tracking and optionally quota enforcement enabled. See the [BeeGFS
   documentation](https://doc.beegfs.io/latest/advanced_topics/quota.html) if you
@@ -36,8 +38,9 @@ example that can be extended to any number of use cases.
   NetApp](https://blog.netapp.com/solution-support-for-beegfs-and-e-series/) for 
   use in production.
 
-## Enabling Quotas
 <a name="enabling-quotas"></a>
+## Enabling Quotas
+
 In addition to the prerequisite steps for BeeGFS server nodes, to enable quotas
 each client must set `quotaEnabled = true` in the configuration file
 corresponding with the mount point for that file system. For container
@@ -74,11 +77,12 @@ when existing volumes are remounted, for example if a pod moves between nodes.
 For any volumes that don't have this setting enabled, all I/O will continue to 
 affect the quota consumption of the root user, instead of the actual caller.
 
-## Tracking BeeGFS Consumption by Storage Class
 <a name="tracking-beegfs-consumption-by-sc"></a>
+## Tracking BeeGFS Consumption by Storage Class
 
-### Introduction 
 <a name="tracking-beegfs-consumption-by-sc-intro"></a>
+### Introduction 
+
 If your containers are running with a meaningful user ID from a quota
 perspective, the above configuration is all that is needed to take advantage of
 BeeGFS quotas. However in some environments the user in a container may vary,
@@ -113,8 +117,9 @@ documentation on [Pod Security
 Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/)
 for ways to prevent users from running containers as root if desired. 
 
-### Linux User/Group IDs and Containers
 <a name="tracking-beegfs-consumption-by-sc-linux-uid-gid-and-containers"></a>
+### Linux User/Group IDs and Containers
+
 Typically BeeGFS
 [recommends](https://doc.beegfs.io/latest/advanced_topics/quota.html#requirements-and-general-notes)
 ensuring the local systems of all nodes are configured correctly to query passwd
@@ -133,8 +138,9 @@ storage nodes along with any client nodes used for administrative purposes to
 query/set BeeGFS quota information using `beegfs-ctl`, should have a
 synchronized view of this mapping to avoid confusion. 
 
-### Example Steps to setup a Storage Class that use setgid to set a specific group
 <a name="tracking-beegfs-consumption-by-sc-example-steps"></a>
+### Example Steps to setup a Storage Class that use setgid to set a specific group
+
 Note: Any steps specific to creating groups or querying quota information should
 take place on a node with a synchronized view of the user and group IDs as
 described in the last section. 
