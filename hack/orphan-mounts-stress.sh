@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
 # Prior to the v1.2.1 release, on certain versions of Kubernetes, the driver's node service would infrequently leave
 # behind some number of orphan mounts (mounted BeeGFS file systems that could not be cleaned up without manual
 # intervention, even though the associated Persistent Volume had been deleted from the Kubernetes API server already).
