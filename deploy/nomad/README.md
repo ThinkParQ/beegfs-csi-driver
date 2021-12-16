@@ -1,32 +1,38 @@
-# BeeGFS CSI Driver
+# Hashicorp Nomad Deployment
 
-This directory includes a demo using the [BeeGFS CSI
-Driver](https://github.com/NetApp/beegfs-csi-driver) to create
-local "BeeGFS" volumes that can be mounted via the Nomad CSI
-implementation.
+This directory includes a demo that uses
+the [BeeGFS CSI Driver](https://github.com/NetApp/beegfs-csi-driver) to create
+local BeeGFS volumes that can be mounted via the Nomad CSI implementation. 
+Driver deployment files are located in this directory and example volumes and 
+workloads are located in `/examples/nomad`.
 
 ## What Is This For?
 
-At this time the BeeGFS CSI plugin is NOT SUPPORTED on Nomad, and is for demonstration and development purposes only. 
-It shouldn't be used for production. If you want to get a quick idea of how BeeGFS CSI plugin works on 
-Nomad in a single node environment, this demo is a good option. At a high-level, the BeeGFS CSI Plugin 
-is for a single node deployment (for now), two volumes are created, volumes are mounted into a Redis workload,
-status is shown, Redis workload is stopped, volumes are deleted, and the plugin is stopped. 
-Overall, this shows the entire lifecycle of the plugin. You may run/modify "./run.sh" as is 
-or run each command separately (recommended for debugging purposes). 
+At this time the BeeGFS CSI driver is NOT SUPPORTED on Nomad, and is for
+demonstration and development purposes only. DO NOT USE IT IN PRODUCTION. If you
+want to get a quick idea of how the BeeGFS CSI driver works on Nomad in a single
+node environment, this demo is a good option. 
+
+At a high level, this demo deploys the BeeGFS CSI driver into a single node 
+Nomad installation, creates two BeeGFS volumes, deploys a Redis workload that 
+mounts these volumes, shows status, and cleans up. Overall, this shows the
+entire lifecycle of the plugin. You may run/modify "./run.sh" as is or run each
+command separately (recommended for debugging purposes).
 
 ## Requirements
 
-* Preinstall the beegfs-client-dkms (https://doc.beegfs.io/latest/advanced_topics/client_dkms.html)
-and beegfs-util package on any Nomad node that will be used with BeeGFS.
-
+* Preinstall the
+  [beegfs-client-dkms](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html)
+  and beegfs-util packages on any Nomad node that will be used with BeeGFS.
 * A running Nomad cluster with `docker.privileged.enabled = true`.
+* Copy/Move the Nomad agent config file `nomad-agent.hcl` in this repo to the
+  default path that Nomad recognizes of (e.g. `/etc/nomad.d/nomad.hcl`).
+  Alternatively, ensure that the options from the included `plugin "docker"`
+  block are included in your existing agent configuration.
+* Modify `examples/nomad/volume.hcl` to refer to an existing BeeGFS file system.
 
-* Copy/Move the Nomad agent config file `nomad-agent.hcl` in this repo to the default path that Nomad 
-recognizes of `/etc/nomad.d/nomad.hcl` (unless specified elsewhere).
-
-Running the `run.sh` script in this directory will output the Nomad command
-used to run the demo, as well as their outputs:
+The `run.sh` script in this directory prints the demo commands and their 
+outputs.
 
 ```
 $ nomad job run ./plugin.nomad 

@@ -39,12 +39,12 @@ create_volumes() {
     echo
     echo "$ cat volume.hcl | sed | nomad volume create -"
     sed -e "s/VOLUME_NAME/${VOLUME_BASE_NAME}[0]/" \
-        "${DEPLOY_DIR}/volume.hcl" | nomad volume create -
+        "${EXAMPLE_DIR}/volume.hcl" | nomad volume create -
 
     echo
     echo "$ cat volume.hcl | sed | nomad volume create -"
     sed -e "s/VOLUME_NAME/${VOLUME_BASE_NAME}[1]/" \
-        "${DEPLOY_DIR}/volume.hcl" | nomad volume create -
+        "${EXAMPLE_DIR}/volume.hcl" | nomad volume create -
 }
 
 claim_volumes() {

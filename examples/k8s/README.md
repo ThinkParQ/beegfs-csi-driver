@@ -1,4 +1,4 @@
-# BeeGFS CSI Driver Examples 
+# BeeGFS CSI Driver Kubernetes Examples 
 
 This directory contains example Kubernetes applications:
 
