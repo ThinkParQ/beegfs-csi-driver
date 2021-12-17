@@ -14,7 +14,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
     These are being provided as an example for others who might want to
     experiment with using BeeGFS and Nomad, in particular anyone interested in
     [contributing](CONTRIBUTING.md) to any future efforts around Nomad.
-- [Documentation](docs/deployment.md##mixed-kubernetes-deployment) on how to
+- [Documentation](docs/deployment.md#mixed-kubernetes-deployment) on how to
   deploy the driver to Kubernetes clusters where some nodes can access BeeGFS
   volumes, and some cannot.
 - Support for BeeGFS v7.2.4, Kubernetes v1.21, and RedHat OpenShift v4.8. 
