@@ -3,12 +3,12 @@ NetApp Notice Report
 Copyright 2021
 
 About this document
-The following copyright statements and licenses apply to the software components that are distributed with the esg-beegfs-csi-driver version 1.2.0 product.  This product does not necessarily use all the software components referred to below.
+The following copyright statements and licenses apply to the software components that are distributed with the esg-beegfs-csi-driver version 1.2.1 product.  This product does not necessarily use all the software components referred to below.
 
 Where required, source code is published at the following location.
 https://opensource.netapp.com/
 
-Components: 
+Components:
 
 AWS SDK for Go 1.38.49 : (MIT License AND BSD 2-clause "Simplified" License AND Apache License 2.0 AND BSD 3-clause "New" or "Revised" License)
 
@@ -18,6 +18,8 @@ benbjohnson-clock v1.0.3 : MIT License
 
 beorn7-perks v1.0.1 : MIT License
 
+blang-semver 3.5.1 : MIT License
+
 client-go v0.22.2 : Apache License 2.0
 
 client_golang v1.11.0 : Apache License 2.0
@@ -26,7 +28,13 @@ container-storage-interface/spec v1.5.0 : Apache License 2.0
 
 cyphar/filepath-securejoin v0.2.2 : BSD 3-clause "New" or "Revised" License
 
+docker-registry 2.7.1 : Apache License 2.0
+
+evanphx/json-patch v4.11.0 : BSD 3-clause "New" or "Revised" License
+
 felixge/httpsnoop v1.0.1 : MIT License
+
+form3tech-oss/jwt-go v3.2.3 : MIT License
 
 fsnotify-fsnotify v1.4.9 : BSD 3-clause "New" or "Revised" License
 
@@ -38,11 +46,7 @@ github.com/moby/spdystream v0.2.0 : Apache License 2.0
 
 Go Testify v1.7.0 : MIT License
 
-go-check-check 20171108-snapshot-20d25e28 : BSD 2-clause "Simplified" License
-
-go-check-check 20180628-snapshot-788fd784 : BSD 2-clause "Simplified" License
-
-go-check-check 20190902-snapshot-41f04d3b : BSD 2-clause "Simplified" License
+go-autorest v14.2.0 : Apache License 2.0
 
 go-check-check 20200227-snapshot-8fa46927 : BSD 2-clause "Simplified" License
 
@@ -72,151 +76,21 @@ golang protobuf v1.5.2 : BSD 3-clause "New" or "Revised" License
 
 golang-github-spf13-pflag-dev v1.0.5 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/crypto 20180503-snapshot-c2843e01 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/crypto 20190820-snapshot-60c769a6 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/crypto 20200521-snapshot-7f63de1d : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/crypto 20200622-snapshot-75b28801 : BSD 3-clause "New" or "Revised" License
-
 golang.org/x/crypto 20210219-snapshot-5ea612d1 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/lint 20181011-snapshot-c67002cb : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/lint 20190215-snapshot-5b3e6a55 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/lint 20190930-snapshot-16217165 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/lint 20200301-snapshot-738671d3 : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/lint 20210508-snapshot-6edffad5 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/net 20180724-snapshot-3673e40b : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20180825-snapshot-8a410e7b : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20180906-snapshot-161cd47e : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20181114-snapshot-adae6a3d : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20181219-snapshot-1e06a53d : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190211-snapshot-3a22650c : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190311-snapshot-d8887717 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190402-snapshot-eb5bcb51 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190603-snapshot-60506f45 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190613-snapshot-d28f0bde : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20190620-snapshot-3b0461ee : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20191105-snapshot-2180aed2 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200224-snapshot-0de0cce0 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200227-snapshot-244492df : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200324-snapshot-d3edc997 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200518-snapshot-59133d7f : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200624-snapshot-4c525460 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200628-snapshot-f5854403 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200706-snapshot-ab342639 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20200716-snapshot-c8904581 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20201105-snapshot-69a78807 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20201123-snapshot-a5a99cb3 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20201223-snapshot-6772e930 : BSD 3-clause "New" or "Revised" License
-
 golang.org/x/net 20210418-snapshot-37e1c6af : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/net 20210423-snapshot-89ef3d95 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/oauth2 20180821-snapshot-d2e62024 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/oauth2 20190211-snapshot-e64efc72 : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/oauth2 20200107-snapshot-bf48bf16 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/sys 20180830-snapshot-49385e6e : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20180908-snapshot-d0be0721 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20181116-snapshot-5ac8a444 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20190215-snapshot-d0b11bda : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20190405-snapshot-97732733 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20190904-snapshot-749cb33b : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20191005-snapshot-aed5e4c7 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20191025-snapshot-33540a1f : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20191113-snapshot-4c7a9d0f : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20191120-snapshot-bd437916 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200106-snapshot-b016eb3d : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200302-snapshot-5c8b2ff6 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200323-snapshot-85ca7c5b : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200518-snapshot-fe76b779 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200615-snapshot-f1bc7362 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200625-snapshot-ddb9806d : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20200930-snapshot-fdedc70b : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20201118-snapshot-f84b799f : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210111-snapshot-489259a8 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210124-snapshot-22da62e1 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210330-snapshot-4fbd30ee : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210422-snapshot-04245dca : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210426-snapshot-d19ff857 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210510-snapshot-977fb726 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/sys 20210602-snapshot-ebe580a8 : BSD 3-clause "New" or "Revised" License
-
 golang.org/x/sys 20210616-snapshot-59db8d76 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/term 20200929-snapshot-f5c789dd : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/term 20201126-snapshot-7de9c90e : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/term 20210219-snapshot-6a3ed077 : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/text v0.3.6 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/time 20210219-snapshot-f8bda1e9 : BSD 3-clause "New" or "Revised" License
-
 golang.org/x/time 20210721-snapshot-1f47c861 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/xerrors 20190516-snapshot-a985d340 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/xerrors 20190719-snapshot-9bdfabe6 : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/xerrors 20191005-snapshot-1b5146ad : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/xerrors 20200804-snapshot-5ec99f83 : BSD 3-clause "New" or "Revised" License
 
@@ -233,20 +107,6 @@ google-gofuzz v1.1.0 : Apache License 2.0
 google.golang.org/protobuf v1.26.0 : BSD 3-clause "New" or "Revised" License
 
 google/go-cmp v0.5.5 : BSD 3-clause "New" or "Revised" License
-
-google/go-genproto 20180817-snapshot-c66870c0 : Apache License 2.0
-
-google/go-genproto 20190830-snapshot-24fa4b26 : Apache License 2.0
-
-google/go-genproto 20191114-snapshot-6bbd0075 : Apache License 2.0
-
-google/go-genproto 20200305-snapshot-50648415 : Apache License 2.0
-
-google/go-genproto 20200513-snapshot-09dca8ec : Apache License 2.0
-
-google/go-genproto 20200526-snapshot-cb27e3aa : Apache License 2.0
-
-google/go-genproto 20201019-snapshot-1ed22bb0 : Apache License 2.0
 
 google/go-genproto 20210602-snapshot-f16073e3 : Apache License 2.0
 
@@ -268,21 +128,19 @@ jmespath-go-jmespath v0.4.0 : Apache License 2.0
 
 jsoniter-go v1.1.11 : MIT License
 
+k8s.io/cloud-provider v0.22.2 : Apache License 2.0
+
 k8s.io/component-helpers v0.22.2 : Apache License 2.0
 
 k8s.io/kube-openapi 20210421-snapshot-95288971 : Apache License 2.0
 
 k8s.io/kubelet v0.22.2 : Apache License 2.0
 
-k8s.io/utils 20210527-snapshot-6fdb442a : Apache License 2.0
-
 k8s.io/utils 20210819-snapshot-bdf08cb9 : Apache License 2.0
 
 kr/pretty v0.2.0 : MIT License
 
 kubectl v0.22.2 : Apache License 2.0
-
-kubernetes-csi/csi-driver-host-path v1.4.0 : Apache License 2.0
 
 kubernetes/api v0.22.2 : Apache License 2.0
 
@@ -294,19 +152,19 @@ kubernetes/apiserver v0.22.2 : Apache License 2.0
 
 kubernetes/component-base v0.22.2 : Apache License 2.0
 
+kubernetes/csi-translation-lib v0.22.2 : Apache License 2.0
+
+kubernetes/mount-utils v0.22.2 : Apache License 2.0
+
 matttproud-golang_protobuf_extensions v1.0.1 : Apache License 2.0
 
 mergo 0.3.12 : BSD 3-clause "New" or "Revised" License
-
-modern-go/concurrent 0.0.0-20180306012644-bacd9c7ef1dd : Apache License 2.0
 
 modern-go/concurrent 20180305-snapshot-bacd9c7e : Apache License 2.0
 
 modern-go/reflect2 1.0.1 : Apache License 2.0
 
 NetBase 5.6 : GNU General Public License v2.0 or later
-
-nxadm/tail v1.4.4 : MIT License
 
 nxadm/tail v1.4.8 : MIT License
 
@@ -324,8 +182,6 @@ prometheus-common v0.26.0 : Apache License 2.0
 
 prometheus-procfs v0.6.0 : Apache License 2.0
 
-runc v1.0.2 : Apache License 2.0
-
 sigs.k8s.io/controller-runtime v0.9.0 : Apache License 2.0
 
 sigs.k8s.io/yaml v1.2.0 : (MIT License AND BSD 3-clause "New" or "Revised" License)
@@ -334,7 +190,7 @@ spf13-afero 1.5.1 : Apache License 2.0
 
 spf13-cobra v1.1.3 : Apache License 2.0
 
-stretchr/objx v0.1.0 : MIT License
+stretchr/objx v0.2.0 : MIT License
 
 Time Zone Database 2021a : Public Domain
 
@@ -343,12 +199,12 @@ uber-go/atomic 1.7.0 : MIT License
 yaml for Go v2.4.0 : Apache License 2.0
 
 
-Licenses: 
+Licenses:
 
 
 Apache License 2.0
 
-(AWS SDK for Go 1.38.49, client-go v0.22.2, client_golang v1.11.0, container-storage-interface/spec v1.5.0, github.com/go-logr/zapr 0.4.0, github.com/kubernetes-csi/csi-lib-utils v0.9.0, github.com/moby/spdystream v0.2.0, go-ini-ini v1.62.0, go-logr/logr 0.4.0, golang/appengine v1.6.7, gomodules/jsonpatch v2.2.0, Google Cloud Client Libraries for Go v0.54.0, google-gofuzz v1.1.0, google/go-genproto 20180817-snapshot-c66870c0, google/go-genproto 20190830-snapshot-24fa4b26, google/go-genproto 20191114-snapshot-6bbd0075, google/go-genproto 20200305-snapshot-50648415, google/go-genproto 20200513-snapshot-09dca8ec, google/go-genproto 20200526-snapshot-cb27e3aa, google/go-genproto 20201019-snapshot-1ed22bb0, google/go-genproto 20210602-snapshot-f16073e3, googleapis/gnostic v0.5.5, groupcache 20210331-snapshot-41bb18bf, grpc-go v1.38.0, inconshreveable/mousetrap 1.0.0, jmespath-go-jmespath v0.4.0, k8s.io/component-helpers v0.22.2, k8s.io/kube-openapi 20210421-snapshot-95288971, k8s.io/kubelet v0.22.2, k8s.io/utils 20210527-snapshot-6fdb442a, k8s.io/utils 20210819-snapshot-bdf08cb9, kubectl v0.22.2, kubernetes-csi/csi-driver-host-path v1.4.0, kubernetes/api v0.22.2, kubernetes/apiextensions-apiserver v0.22.2, kubernetes/apimachinery v0.22.2, kubernetes/apiserver v0.22.2, kubernetes/component-base v0.22.2, matttproud-golang_protobuf_extensions v1.0.1, modern-go/concurrent 0.0.0-20180306012644-bacd9c7ef1dd, modern-go/concurrent 20180305-snapshot-bacd9c7e, modern-go/reflect2 1.0.1, opencontainers/go-digest 1.0.0, prometheus-client_model v0.2.0, prometheus-common v0.26.0, prometheus-procfs v0.6.0, runc v1.0.2, sigs.k8s.io/controller-runtime v0.9.0, spf13-afero 1.5.1, spf13-cobra v1.1.3, yaml for Go v2.4.0)
+(AWS SDK for Go 1.38.49, client-go v0.22.2, client_golang v1.11.0, container-storage-interface/spec v1.5.0, docker-registry 2.7.1, github.com/go-logr/zapr 0.4.0, github.com/kubernetes-csi/csi-lib-utils v0.9.0, github.com/moby/spdystream v0.2.0, go-autorest v14.2.0, go-ini-ini v1.62.0, go-logr/logr 0.4.0, golang/appengine v1.6.7, gomodules/jsonpatch v2.2.0, Google Cloud Client Libraries for Go v0.54.0, google-gofuzz v1.1.0, google/go-genproto 20210602-snapshot-f16073e3, googleapis/gnostic v0.5.5, groupcache 20210331-snapshot-41bb18bf, grpc-go v1.38.0, inconshreveable/mousetrap 1.0.0, jmespath-go-jmespath v0.4.0, k8s.io/cloud-provider v0.22.2, k8s.io/component-helpers v0.22.2, k8s.io/kube-openapi 20210421-snapshot-95288971, k8s.io/kubelet v0.22.2, k8s.io/utils 20210819-snapshot-bdf08cb9, kubectl v0.22.2, kubernetes/api v0.22.2, kubernetes/apiextensions-apiserver v0.22.2, kubernetes/apimachinery v0.22.2, kubernetes/apiserver v0.22.2, kubernetes/component-base v0.22.2, kubernetes/csi-translation-lib v0.22.2, kubernetes/mount-utils v0.22.2, matttproud-golang_protobuf_extensions v1.0.1, modern-go/concurrent 20180305-snapshot-bacd9c7e, modern-go/reflect2 1.0.1, opencontainers/go-digest 1.0.0, prometheus-client_model v0.2.0, prometheus-common v0.26.0, prometheus-procfs v0.6.0, sigs.k8s.io/controller-runtime v0.9.0, spf13-afero 1.5.1, spf13-cobra v1.1.3, yaml for Go v2.4.0)
 
 Apache License
 
@@ -716,7 +572,7 @@ third-party archives.
 
 BSD 2-clause "Simplified" License
 
-(AWS SDK for Go 1.38.49, go-check-check 20190902-snapshot-41f04d3b, go-check-check 20200227-snapshot-8fa46927)
+(AWS SDK for Go 1.38.49, go-check-check 20200227-snapshot-8fa46927)
 
 BSD Two Clause License
 
@@ -763,58 +619,6 @@ STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 
 DAMAGE.
-
----
-
-BSD 2-clause "Simplified" License
-
-(go-check-check 20171108-snapshot-20d25e28, go-check-check 20180628-snapshot-788fd784)
-
-Copyright (c) 2010-2013 Gustavo Niemeyer <gustavo@niemeyer.net>
-
-
-
-All rights reserved.
-
-
-
-Redistribution and use in source and binary forms, with or without
-
-modification, are permitted provided that the following conditions are met: 
-
-
-
-1. Redistributions of source code must retain the above copyright notice, this
-
-   list of conditions and the following disclaimer. 
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-
-   this list of conditions and the following disclaimer in the documentation
-
-   and/or other materials provided with the distribution. 
-
-
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
-
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 ---
 
@@ -872,9 +676,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(golang.org/x/net 20180724-snapshot-3673e40b)
+(cyphar/filepath-securejoin v0.2.2)
 
-Copyright (c) 2009 The Go Authors. All rights reserved.
+Copyright (C) 2014-2015 Docker Inc & Go Authors. All rights reserved.
+
+Copyright (C) 2017 SUSE LLC. All rights reserved.
 
 
 
@@ -1298,68 +1104,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(cyphar/filepath-securejoin v0.2.2)
-
-Copyright (C) 2014-2015 Docker Inc & Go Authors. All rights reserved.
-
-Copyright (C) 2017 SUSE LLC. All rights reserved.
-
-
-
-Redistribution and use in source and binary forms, with or without
-
-modification, are permitted provided that the following conditions are
-
-met:
-
-
-
-   * Redistributions of source code must retain the above copyright
-
-notice, this list of conditions and the following disclaimer.
-
-   * Redistributions in binary form must reproduce the above
-
-copyright notice, this list of conditions and the following disclaimer
-
-in the documentation and/or other materials provided with the
-
-distribution.
-
-   * Neither the name of Google Inc. nor the names of its
-
-contributors may be used to endorse or promote products derived from
-
-this software without specific prior written permission.
-
-
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
----
-
-BSD 3-clause "New" or "Revised" License
-
 (grpc-gateway v1.16.0)
 
 Copyright (c) 2015, Gengo, Inc.
@@ -1420,7 +1164,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(AWS SDK for Go 1.38.49, go.googlesource.com/tools v0.1.2, gogo-protobuf v1.3.2, golang protobuf v1.5.2, golang.org/x/crypto 20180503-snapshot-c2843e01, golang.org/x/crypto 20190820-snapshot-60c769a6, golang.org/x/crypto 20200521-snapshot-7f63de1d, golang.org/x/crypto 20200622-snapshot-75b28801, golang.org/x/crypto 20210219-snapshot-5ea612d1, golang.org/x/lint 20181011-snapshot-c67002cb, golang.org/x/lint 20190215-snapshot-5b3e6a55, golang.org/x/lint 20190930-snapshot-16217165, golang.org/x/lint 20200301-snapshot-738671d3, golang.org/x/lint 20210508-snapshot-6edffad5, golang.org/x/net 20180825-snapshot-8a410e7b, golang.org/x/net 20180906-snapshot-161cd47e, golang.org/x/net 20181114-snapshot-adae6a3d, golang.org/x/net 20181219-snapshot-1e06a53d, golang.org/x/net 20190211-snapshot-3a22650c, golang.org/x/net 20190311-snapshot-d8887717, golang.org/x/net 20190402-snapshot-eb5bcb51, golang.org/x/net 20190603-snapshot-60506f45, golang.org/x/net 20190613-snapshot-d28f0bde, golang.org/x/net 20190620-snapshot-3b0461ee, golang.org/x/net 20191105-snapshot-2180aed2, golang.org/x/net 20200224-snapshot-0de0cce0, golang.org/x/net 20200227-snapshot-244492df, golang.org/x/net 20200324-snapshot-d3edc997, golang.org/x/net 20200518-snapshot-59133d7f, golang.org/x/net 20200624-snapshot-4c525460, golang.org/x/net 20200628-snapshot-f5854403, golang.org/x/net 20200706-snapshot-ab342639, golang.org/x/net 20200716-snapshot-c8904581, golang.org/x/net 20201105-snapshot-69a78807, golang.org/x/net 20201123-snapshot-a5a99cb3, golang.org/x/net 20201223-snapshot-6772e930, golang.org/x/net 20210418-snapshot-37e1c6af, golang.org/x/net 20210423-snapshot-89ef3d95, golang.org/x/oauth2 20180821-snapshot-d2e62024, golang.org/x/oauth2 20190211-snapshot-e64efc72, golang.org/x/oauth2 20200107-snapshot-bf48bf16, golang.org/x/sys 20180830-snapshot-49385e6e, golang.org/x/sys 20180908-snapshot-d0be0721, golang.org/x/sys 20181116-snapshot-5ac8a444, golang.org/x/sys 20190215-snapshot-d0b11bda, golang.org/x/sys 20190405-snapshot-97732733, golang.org/x/sys 20190904-snapshot-749cb33b, golang.org/x/sys 20191005-snapshot-aed5e4c7, golang.org/x/sys 20191025-snapshot-33540a1f, golang.org/x/sys 20191113-snapshot-4c7a9d0f, golang.org/x/sys 20191120-snapshot-bd437916, golang.org/x/sys 20200106-snapshot-b016eb3d, golang.org/x/sys 20200302-snapshot-5c8b2ff6, golang.org/x/sys 20200323-snapshot-85ca7c5b, golang.org/x/sys 20200518-snapshot-fe76b779, golang.org/x/sys 20200615-snapshot-f1bc7362, golang.org/x/sys 20200625-snapshot-ddb9806d, golang.org/x/sys 20200930-snapshot-fdedc70b, golang.org/x/sys 20201118-snapshot-f84b799f, golang.org/x/sys 20210111-snapshot-489259a8, golang.org/x/sys 20210124-snapshot-22da62e1, golang.org/x/sys 20210330-snapshot-4fbd30ee, golang.org/x/sys 20210422-snapshot-04245dca, golang.org/x/sys 20210426-snapshot-d19ff857, golang.org/x/sys 20210510-snapshot-977fb726, golang.org/x/sys 20210602-snapshot-ebe580a8, golang.org/x/sys 20210616-snapshot-59db8d76, golang.org/x/term 20200929-snapshot-f5c789dd, golang.org/x/term 20201126-snapshot-7de9c90e, golang.org/x/term 20210219-snapshot-6a3ed077, golang.org/x/text v0.3.6, golang.org/x/time 20210219-snapshot-f8bda1e9, golang.org/x/time 20210721-snapshot-1f47c861, golang.org/x/xerrors 20190516-snapshot-a985d340, golang.org/x/xerrors 20190719-snapshot-9bdfabe6, golang.org/x/xerrors 20191005-snapshot-1b5146ad, golang.org/x/xerrors 20200804-snapshot-5ec99f83, google.golang.org/protobuf v1.26.0, google/go-cmp v0.5.5, goproxy 20180725-snapshot-947c36da, mergo 0.3.12)
+(AWS SDK for Go 1.38.49, evanphx/json-patch v4.11.0, go.googlesource.com/tools v0.1.2, gogo-protobuf v1.3.2, golang protobuf v1.5.2, golang.org/x/crypto 20210219-snapshot-5ea612d1, golang.org/x/lint 20210508-snapshot-6edffad5, golang.org/x/net 20210418-snapshot-37e1c6af, golang.org/x/oauth2 20200107-snapshot-bf48bf16, golang.org/x/sys 20210616-snapshot-59db8d76, golang.org/x/term 20210219-snapshot-6a3ed077, golang.org/x/text v0.3.6, golang.org/x/time 20210721-snapshot-1f47c861, golang.org/x/xerrors 20200804-snapshot-5ec99f83, google.golang.org/protobuf v1.26.0, google/go-cmp v0.5.5, goproxy 20180725-snapshot-947c36da, mergo 0.3.12)
 
 Copyright (c) <YEAR>, <OWNER>
 
@@ -2260,26 +2004,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE
 
 MIT License
 
-(nxadm/tail v1.4.4)
-
-Copyright (C) 2013 99designs
-
-
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
-
----
-
-MIT License
-
 (beorn7-perks v1.0.1)
 
 Copyright (C) 2013 Blake Mizerany
@@ -2570,7 +2294,73 @@ Permission is hereby granted, free of charge, to any person obtaining a copy
 
 MIT License
 
-(stretchr/objx v0.1.0)
+(blang-semver 3.5.1)
+
+Source: https://github.com/blang/semver
+
+
+
+Files: *
+
+Copyright: 2014-2017 Benedikt Lang <github@benediktlang.de>
+
+License: Expat
+
+
+
+Files: debian/*
+
+Copyright: 2016 Dmitry Smirnov <onlyjob@debian.org>
+
+           2017 Dr. Tobias Quathamer <toddy@debian.org>
+
+License: Expat
+
+
+
+License: Expat
+
+
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+
+ of this software and associated documentation files (the "Software"), to deal
+
+ in the Software without restriction, including without limitation the rights
+
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+
+ copies of the Software, and to permit persons to whom the Software is
+
+ furnished to do so, subject to the following conditions:
+
+ .
+
+  The above copyright notice and this permission notice shall be included in
+
+  all copies or substantial portions of the Software.
+
+ .
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+
+ THE SOFTWARE
+
+---
+
+MIT License
+
+(stretchr/objx v0.2.0)
 
 The MIT License
 
@@ -2620,7 +2410,7 @@ SOFTWARE
 
 MIT License
 
-(AWS SDK for Go 1.38.49, Go Testify v1.7.0, go-zap v1.17.0, gomega v1.16.0, jsoniter-go v1.1.11, nxadm/tail v1.4.8, onsi/ginkgo 1.16.4)
+(AWS SDK for Go 1.38.49, form3tech-oss/jwt-go v3.2.3, Go Testify v1.7.0, go-zap v1.17.0, gomega v1.16.0, jsoniter-go v1.1.11, nxadm/tail v1.4.8, onsi/ginkgo 1.16.4)
 
 The MIT License
 
@@ -2816,4 +2606,4 @@ Public Domain
 
 Public domain code is not subject to any license.
 
----
+--- 
