@@ -315,6 +315,13 @@ created Kubernetes Persistent Volume Claim.
   */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the
   location of this file is not currently supported without changing
   kustomization files. 
+* When using dynamic provisioning, if `--node-unstage-timeout` is set to a nonzero value
+  (default: 60) the driver will create a directory structure at `volDirBasePath/.csi/` 
+  (in the BeeGFS filesystem) and use it to persist any state used by the driver, 
+  [for example to prevent orphaned mounts](troubleshooting.md#orphan-mounts). 
+  This behavior can optionally be disabled, but is strongly recommended for the driver 
+  to function optimally.
+
 
 <a name="beegfs-mount-options"></a>
 ### BeeGFS Mount Options

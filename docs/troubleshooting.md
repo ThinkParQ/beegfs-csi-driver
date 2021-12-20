@@ -83,7 +83,7 @@ There are a number of circumstances that can cause orphaned mounts to remain on
 the nodes of a container orchestrator after a BeeGFS volume is deleted. These
 are largely outside the control of the BeeGFS CSI driver and occur due to how a
 particular container orchestrator interacts with CSI drivers in general.
-Starting in v1.2.1 the BeeGFS CSI driver introduced functionality that can
+Starting in v1.2.1 the BeeGFS CSI driver introduced functionality that
 mitigates common causes of this behavior in Kubernetes, but administrators
 should be aware of the potential, and the measures taken by the driver to
 mitigate it.
