@@ -1,7 +1,7 @@
 # BeeGFS CSI Driver Usage
 
-## Contents
 <a name="contents"></a>
+## Contents
 
 * [Important Concepts](#important-concepts)
 * [Dynamic Provisioning Workflow](#dynamic-provisioning-workflow)
@@ -10,11 +10,11 @@
 * [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
 * [Limitations and Known Issues](#limitations-and-known-issues)
 
-## Important Concepts
 <a name="important-concepts"></a>
+## Important Concepts
 
-### Definition of a "Volume"
 <a name="definition-of-a-volume"></a>
+### Definition of a "Volume"
 
 Within the context of this driver, a "volume" is simply a directory within a
 BeeGFS filesystem. When a volume is mounted by a Kubernetes Pod, only files
@@ -24,8 +24,8 @@ in the static provisioning workflow) or a single subdirectory many levels deep
 can be a volume (e.g. by specifying */a/very/deep/directory* as the
 *volDirBasePath* in the dynamic provisioning workflow).
 
-### Capacity
 <a name="capacity"></a>
+### Capacity
 
 In this version, the driver ignores the capacity requested for a Kubernetes
 Persistent Volume. Consider the definition of a "volume" above. While an entire
@@ -35,11 +35,11 @@ any POSIX) filesystem. The driver does provide integration with BeeGFS permissio
 and quotas which provides ways to limit the capacity consumed by containers. For
 more details refer to the documentation on [Quotas](quotas.md).
 
-### Static vs Dynamic Provisioning
 <a name="static-vs-dynamic-provisioning"></a>
+### Static vs Dynamic Provisioning
 
-#### Dynamic Provisioning Use Case
 <a name="dynamic-provisioning-use-case"></a>
+#### Dynamic Provisioning Use Case
 
 As a user, I want a volume to use as high-performance scratch space or
 semi-temporary storage for my workload. I want the volume to be empty when my
@@ -53,8 +53,8 @@ the driver automatically creates a new subdirectory underneath that parent
 directory and binds it to the PVC. To the user and/or workload, the subdirectory
 is the entire volume. It exists as long as the PVC exists.
 
-#### Static Provisioning Use Case
 <a name="static-provisioning-use-case"></a>
+#### Static Provisioning Use Case
 
 As an administrator, I want to make a directory within an existing BeeGFS file
 system available to be mounted by multiple users and/or workloads. This
@@ -69,8 +69,8 @@ creates a PV and PVC representing an existing BeeGFS file system directory.
 Multiple users and/or workloads can mount that PVC and consume the data the
 directory contains.
 
-### BeeGFS Version Compatibility
 <a name="beegfs-version-compatibility"></a>
+### BeeGFS Version Compatibility
 
 This version of the driver is ONLY tested for compatibility with BeeGFS v7.1.5
 and v7.2. The BeeGFS filesystem services and the BeeGFS clients running on the
@@ -85,8 +85,8 @@ versions before v7.1.4 do not include the beegfs-client-dkms package, which the
 driver uses to build the BeeGFS client kernel module and mount BeeGFS file
 systems. 
 
-### Client Configuration and Tuning
 <a name="client-configuration-and-tuning"></a>
+### Client Configuration and Tuning
 
 Depending on your topology, different nodes within your cluster or different
 BeeGFS file systems accessible by your cluster may need different client
@@ -96,8 +96,8 @@ Managing BeeGFS Client Configuration in the [deployment guide](deployment.md)
 for detailed instructions on how to prepare your cluster to mount various BeeGFS
 file systems.
 
-## Dynamic Provisioning Workflow
 <a name="dynamic-provisioning-workflow"></a>
+## Dynamic Provisioning Workflow
 
 ### Assumptions
 
@@ -219,8 +219,8 @@ Who: A Kubernetes user
 Follow standard Kubernetes practices to deploy a Pod that consumes the newly
 created Kubernetes Persistent Volume Claim.
 
-## Static Provisioning Workflow
 <a name="static-provisioning-workflow"></a>
+## Static Provisioning Workflow
 
 ### Assumptions
 
@@ -294,8 +294,8 @@ Who: A Kubernetes user
 Follow standard Kubernetes practices to deploy a Pod that consumes the newly
 created Kubernetes Persistent Volume Claim.
 
-## Best Practices
 <a name="best-practices"></a>
+## Best Practices
 
 * While multiple Kubernetes clusters can use the same BeeGFS file system, it is
   not recommended to have more than one cluster use the same `volDirBasePath`
@@ -306,8 +306,8 @@ created Kubernetes Persistent Volume Claim.
   permissions, especially on static directories containing shared datasets (more
   details [below](#read-only-and-access-modes-in-kubernetes)). 
 
-## Notes for BeeGFS Administrators
 <a name="notes-for-beegfs-administrators"></a>
+## Notes for BeeGFS Administrators
 
 ### General
 
@@ -315,9 +315,16 @@ created Kubernetes Persistent Volume Claim.
   */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the
   location of this file is not currently supported without changing
   kustomization files. 
+* When using dynamic provisioning, if `--node-unstage-timeout` is set to a nonzero value
+  (default: 60) the driver will create a directory structure at `volDirBasePath/.csi/` 
+  (in the BeeGFS filesystem) and use it to persist any state used by the driver, 
+  [for example to prevent orphaned mounts](troubleshooting.md#orphan-mounts). 
+  This behavior can optionally be disabled, but is strongly recommended for the driver 
+  to function optimally.
 
-### BeeGFS Mount Options
+
 <a name="beegfs-mount-options"></a>
+### BeeGFS Mount Options
 
 Except for `cfgFile` (which has to be set by the driver) mount options supported
 by BeeGFS can be specified on a [persistent
@@ -341,8 +348,9 @@ is much more likely to be an issue on BeeGFS storage and metadata servers than
 the Kubernetes nodes themselves (since multiple clients connect to each server).
 Administrators are advised to spec out BeeGFS servers accordingly.
 
-### Permissions
 <a name="permissions"></a>
+### Permissions
+
 Note: See the section on [Creating a Storage Class](#create-a-storage-class) for
 how to set permissions using the CSI driver.
 
@@ -391,8 +399,8 @@ parameters to allow access:
 * spec.container.securityContext.runAsUser
 * spec.container.securityContext.runAsGroup
 
-#### fsGroup Behavior
 <a name="fsgroup-behavior"></a>
+#### fsGroup Behavior
 
 Some CSI drivers support a recursive operation in which the permissions and
 ownership of all files and directories in a provisioned volume are changed to
@@ -415,8 +423,8 @@ required), the `csiDriver.spec.fsGroupPolicy` parameter can be used to disable
 this behavior for all volumes. The beegfs-csi-driver deploys with this parameter 
 set to "None" in case it is deployed to a cluster that supports it.
 
-## Limitations and Known Issues
 <a name="limitations-and-known-issues"></a>
+## Limitations and Known Issues
 
 ### General 
 

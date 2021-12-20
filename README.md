@@ -4,8 +4,8 @@
 [![Docker pulls](https://img.shields.io/docker/pulls/netapp/beegfs-csi-driver)](https://hub.docker.com/r/netapp/beegfs-csi-driver)
 [![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver)
 
-## Contents
 <a name="contents"></a>
+## Contents
 
 * [Overview](#overview)
 * [Getting Started](#getting-started)
@@ -15,8 +15,9 @@
 * [License](#license)
 * [Maintainers](#maintainers)
 
-## Overview 
 <a name="overview"></a>
+## Overview 
+
 The BeeGFS Container Storage Interface (CSI) driver provides high performing and
 scalable storage for workloads running in container orchestrators like
 Kubernetes. This driver allows containers to access existing datasets or request
@@ -29,8 +30,9 @@ configure) and day-2 (reconfigure/update) tasks for the driver. This especially 
 discovery and installation from Operator Lifecycle Manger (OLM) enabled clusters like Red Hat 
 OpenShift. 
 
-### Notable Features
 <a name="notable-features"></a>
+### Notable Features
+
 * Integration of [Storage Classes in Kubernetes](docs/usage.md#create-a-storage-class) with [storage
   pools](https://doc.beegfs.io/latest/advanced_topics/storage_pools.html) in
   BeeGFS, allowing different tiers of storage within the same file system to be
@@ -51,8 +53,8 @@ OpenShift.
   share access to the same working directories and enable multi-user/application
   access to common datasets.
 
-### Interoperability and CSI Feature Matrix
 <a name="interoperability-and-csi-feature-matrix"></a>
+### Interoperability and CSI Feature Matrix
 
 | beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions | BeeGFS Versions | CSI Version  |
 | ---------------------- | -------------------------------- | -------------------------- | --------------- | ------------ |
@@ -147,11 +149,12 @@ the use of the BeeGFS CSI driver with HashiCorp Nomad, we may not test with
 Nomad for every driver release and do not currently consider Nomad to be a 
 supported container orchestrator.
 
-## Getting Started 
 <a name="getting-started"></a>
+## Getting Started
 
-### Prerequisite(s) 
 <a name="prerequisites"></a>
+### Prerequisite(s)
+
 * Deploying the driver requires access to a terminal with kubectl. 
 * The [BeeGFS DKMS
   client](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html) must be
@@ -169,8 +172,9 @@ supported container orchestrator.
   nodes over a TCP/IP and/or RDMA (InfiniBand/RoCE) capable network (not
   required to deploy the driver).
 
-### Quick Start
 <a name="quick-start"></a>
+### Quick Start
+
 The steps in this section allow you to get the driver up and running quickly.
 For production use cases or air-gapped environments it is recommended to read
 through the full [kubectl deployment guide](docs/deployment.md) or [operator 
@@ -193,8 +197,9 @@ pods -n kube-system | grep csi-beegfs`
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.
 
-## Basic Use
 <a name="basic-use"></a>
+## Basic Use
+
  This section provides a quick summary of basic driver use and functionality.
  Please see the full [usage documentation](docs/usage.md) for a complete
  overview of all available functionality. The driver was designed to support
@@ -206,28 +211,32 @@ sections for how to get started using the driver.
  isolation between multiple applications and users using the same BeeGFS file
  system when desired. 
 
-### Dynamic Storage Provisioning:
 <a name="dynamic-storage-provisioning"></a>
+### Dynamic Storage Provisioning:
+
 Administrators create a Storage Class in Kubernetes referencing at minimum a
 specific BeeGFS file system and parent directory within that file system. Users
 can then submit PVCs against the Storage Class, and are provided isolated access
 to new directories under the parent specified in the Storage Class. 
 
-### Static Provisioning:
 <a name="static-provisioning"></a>
+### Static Provisioning:
+
 Administrators create a PV and PVC representing an existing directory in a
 BeeGFS file system. This is useful for exposing some existing dataset or shared
 directory to Kubernetes users and applications.
 
-### Examples
 <a name="examples"></a>
+### Examples
+
 [Example Kubernetes manifests](examples/k8s/README.md) of how to use the driver are
 provided. These are meant to be repurposed to simplify creating objects related
 to the driver including Storage Classes, Persistent Volumes, and Persistent
 Volume Claims in your environment.
 
-## Requesting Enhancements and Reporting Issues 
 <a name="requesting-enhancements-and-reporting-issues"></a>
+## Requesting Enhancements and Reporting Issues 
+
 If you have any questions, feature requests, or would like to report an issue
 please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
 
@@ -236,12 +245,14 @@ The BeeGFS CSI Driver maintainers welcome improvements from the BeeGFS and
 open source community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for how 
 to get started.
 
-## License 
 <a name="license"></a>
+## License 
+
 Apache License 2.0
 
-## Maintainers 
 <a name="maintainers"></a>
+## Maintainers 
+
 * Eric Weber (@ejweber).
 * Jason Eastburn
 * Joe McCormick (@iamjoemccormick).

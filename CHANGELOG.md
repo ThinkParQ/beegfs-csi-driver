@@ -1,6 +1,28 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.2.1] - 2021-12-20
+--------------------
+### Added
+- Support for BeeGFS v7.2.5, Kubernetes v1.22, and RedHat OpenShift v4.9. 
+- The ability to persist state in BeeGFS using a .csi/ directory structure that
+  exists alongside dynamically provisioned volumes in their `volDirBasePath`.
+  This is automatically enabled by default but can be [optionally
+  disabled](docs/usage.md#notes-for-beegfs-administrators).
+
+### Fixed
+- Common causes of [orphaned BeeGFS
+  mounts](docs/troubleshooting.md#orphan-mounts) being left on Kubernetes nodes
+  (listed as a known issue in v1.2.0) by maintaining a record of nodes with
+  active BeeGFS mounts for each volume in the new .csi/ directory and falling
+  back on a newly added timeout (`--node-unstage-timeout`) when needed.
+
+### Security
+Note: The BeeGFS CSI driver is written in Golang and does not import or
+implement any functionality that makes it susceptible to the recent Log4j
+vulnerability threat. For more details please refer to [NetApp's official
+response](https://www.netapp.com/newsroom/netapp-apache-log4j-response/).
+
 [1.2.0] - 2021-10-11
 --------------------
 ### Added
@@ -14,7 +36,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
     These are being provided as an example for others who might want to
     experiment with using BeeGFS and Nomad, in particular anyone interested in
     [contributing](CONTRIBUTING.md) to any future efforts around Nomad.
-- [Documentation](docs/deployment.md##mixed-kubernetes-deployment) on how to
+- [Documentation](docs/deployment.md#mixed-kubernetes-deployment) on how to
   deploy the driver to Kubernetes clusters where some nodes can access BeeGFS
   volumes, and some cannot.
 - Support for BeeGFS v7.2.4, Kubernetes v1.21, and RedHat OpenShift v4.8. 
