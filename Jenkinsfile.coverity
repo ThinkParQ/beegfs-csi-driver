@@ -26,7 +26,7 @@ pipeline {
         COVERITY_CREDS= credentials('coverity-creds') // stored in Jenkins
         COVERITY_STREAM='BeeGFS_CSI_Driver'
         CA_FILE= credentials('coverity-certs') // stored in Jenkins
-        ANALYSIS_TOOLS_BIN="/usr/local/cov-analysis-linux64-2021.03/bin" // pre-installed on Jenkins nodes
+        ANALYSIS_TOOLS_BIN="/usr/local/cov-analysis-linux64/bin" // pre-installed on Jenkins nodes
         INTERMEDIATE_DIR="$WORKSPACE/CoverityIDIR"
         CONFIG_FILE="$WORKSPACE/coverityconfig/coverity_config.xml"
     }
