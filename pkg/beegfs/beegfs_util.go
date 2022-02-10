@@ -179,7 +179,7 @@ func mountIfNecessary(ctx context.Context, vol beegfsVolume, desiredMountOpts []
 	var mountOpts []string
 	if len(desiredMountOpts) == 0 {
 		// If no mount options are specified, use these defaults
-		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
+		mountOpts = []string{"rw", "relatime", "context=system_u:object_r:container_file_t:s0", "cfgFile=" + vol.clientConfPath}
 	} else {
 		// Use all specified mount options, ignoring duplicates
 		mountOpts = append(removeInvalidMountOptions(desiredMountOpts), "cfgFile="+vol.clientConfPath)

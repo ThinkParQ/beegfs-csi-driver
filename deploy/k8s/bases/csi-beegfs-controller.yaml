@@ -30,6 +30,10 @@ spec:
             - --csi-address=/csi/csi.sock
             - --volume-name-uuid-length=8
             - -v=$(LOG_LEVEL)
+          securityContext:
+            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket 
+            # created by the privileged driver container. 
+            privileged: true
           env:
             - name: LOG_LEVEL
               value: '3'
