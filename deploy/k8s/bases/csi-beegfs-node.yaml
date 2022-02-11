@@ -29,9 +29,8 @@ spec:
             - name: LOG_LEVEL
               value: '3'
           securityContext:
-            # This is necessary only for systems with SELinux, where
-            # non-privileged sidecar containers cannot access unix domain socket
-            # created by privileged CSI driver container.
+            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket 
+            # created by the privileged driver container. 
             privileged: true
           volumeMounts:
           - mountPath: /csi
