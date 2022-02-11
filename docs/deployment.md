@@ -646,6 +646,27 @@ Inbound UDP traffic from nodes serving up BeeGFS file systems to arbitrary
 ports on all BeeGFS clients must be allowed. Each volume requires its own port
 and it is not currently possible to configure an allowed port range.
 
+**SELinux**
+
+[SELinux](https://selinuxproject.org/page/Main_Page) is a security enhancement to Linux which allows users and
+administrators fine-grained access control. With SELinux enabled, every process and file is assigned a security context.
+Typically, default SELinux policies provided by a Linux distribution's maintainers determine how each process context
+can interact with each file context (though these policies may be modified as needed). Files are typically automatically
+"labeled" with a context at creation, and each file's label is stored in its extended attributes.
+
+Though BeeGFS does support extended attributes, it [does not officially support SELinux
+labeling](https://doc.beegfs.io/latest/trouble_shooting/general.html#access-denied-error-on-the-client-even-with-correct-permissions)
+and it is not currently possible to assign labels to BeeGFS files and directories. By default, all BeeGFS files and
+directories on an SELinux system are treated as if they have the system_u:object_r:unlabeled_t:s0 security context.
+Privileged containers (which typically run with the system_u:system_r:spc_t:s0 context) can access them, but standard
+containers (which typically run with the system_u:system_r:container_t:s0 context) cannot.
+
+By default, when SELinux is enabled, the BeeGFS CSI driver mounts all file systems using the `-o
+context=system_u:object_r:container_file_t:s0` option. This causes SELinux to treat all BeeGFS files and directories as
+if they have this same, single context and allows typical containers to read, write and execute BeeGFS files (within the
+bounds of file access permissions). While this is not full SELinux support, it allows administrators to leave SELinux
+enabled and helps to prevent the exploitation of container runtime vulnerabilities.
+
 <a name="removing-the-driver-from-kubernetes"></a>
 ## Removing the Driver from Kubernetes
 

@@ -84,7 +84,6 @@ Additional Notes:
   Kubernetes supported by a given version of the driver. While an older version 
   of Kubernetes may appear to work, it may not include critical fixes that 
   ensure driver stability.
-* The driver has not been tested with SELinux.
 * For environments where the driver is used with both BeeGFS 7.1.x and 
   7.2.x, Kubernetes nodes should have the 7.2 BeeGFS DKMS client installed.
 
