@@ -8,6 +8,9 @@
   * [Determining the BeeGFS Client Configuration 
   for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
   * [Orphaned BeeGFS Mounts Remain on Nodes](#orphan-mounts)
+* [Access Denied Issues](#access-denied-issues)
+   * [Discretionary Access Control](#discretionary-access-control)
+   * [SELinux](#selinux)
 
 <a name="overview"></a>
 ## Overview
@@ -254,3 +257,39 @@ rm -rf /var/lib/kubelet/pods/<orphaned pod>
 
 To prevent a reoccurrence, identify the root cause (if it is listed above) and 
 take the required steps.
+
+<a name="access-denied-issues"></a>
+## Access Denied Issues
+
+The BeeGFS CSI driver itself runs in a privileged container for a number of reasons and does not generally see "access 
+denied" type issues. However, arbitrary containers attempting to read, write, or execute files stored in a BeeGFS file 
+system may fail to do so. Typically, this results in crash-looping containers or containers that log "permission denied" 
+type messages.
+
+<a name="discretionary-access-control"></a>
+### Discretionary Access Control
+
+The most obvious culprits are Discretionary Access Control (DAC) permissions. These are the typical 0644 or -rw-r--r--
+type permissions most Linux users are familiar with. See the [permissions section of usage.md](usage.md/permissions) for
+a comprehensive discussion on how to correct these issues.
+
+<a name="selinux"></a>
+### SELinux
+
+If you are confident DAC permissions are not an issue and still seeing "permission denied" in your container logs,
+consider whether SELinux is involved. SELinux is enabled by default on Fedora, RedHat Enterprise Linux, RedHat CoreOS,
+and similar distributions. When SELinux is enabled, the BeeGFS CSI driver automatically mounts BeeGFS file systems with
+the `-o context=system_u:object_r:container_file_t:s0` mount flag (see the [SELinux section in
+deployment.md](deployment.md/selinux) for more information). However, this may not be enough in all environments or for
+all use cases.
+
+Administrators with SELinux experience can:
+* Change the security context the BeeGFS CSI driver uses to mount BeeGFS file systems with the `mountOptions` field in a
+  Kubernetes Storage Class, the `mountOptions` field in a Kubernetes Persistent Volume, or a similar field when using
+  another container orchestator. For example, supply `context=system_u:object_r:nfs_t:s0` as one of a set of mount
+  options.
+* Modify the existing SELinux security policy or add an additional SELinux security policy that allows container
+  processes to access files and directories with the BeeGFS CSI driver default security context.
+
+If these options do not work, or if you are running a non-production system, putting SELinux into permissive mode will
+also alleviate this issue. It is not recommended to take this action on a production system.

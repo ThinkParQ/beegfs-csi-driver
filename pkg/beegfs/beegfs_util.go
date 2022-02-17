@@ -19,6 +19,7 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
+	"github.com/opencontainers/selinux/go-selinux"
 	"github.com/pkg/errors"
 	"github.com/spf13/afero"
 	"golang.org/x/net/context"
@@ -176,14 +177,7 @@ func squashConfigForSysMgmtdHost(sysMgmtdHost string, config beegfsv1.PluginConf
 // mountIfNecessary mounts a BeeGFS file system to vol.mountPath assuming configuration files have been written to
 // vol.mountDirPath by writeClientFiles.
 func mountIfNecessary(ctx context.Context, vol beegfsVolume, desiredMountOpts []string, mounter mount.Interface) (err error) {
-	var mountOpts []string
-	if len(desiredMountOpts) == 0 {
-		// If no mount options are specified, use these defaults
-		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
-	} else {
-		// Use all specified mount options, ignoring duplicates
-		mountOpts = append(removeInvalidMountOptions(desiredMountOpts), "cfgFile="+vol.clientConfPath)
-	}
+	mountOpts := constructMountOptions(ctx, desiredMountOpts, vol)
 
 	// Check to make sure file system is not already mounted.
 	notMnt, err := mounter.IsLikelyNotMountPoint(vol.mountPath)
@@ -213,14 +207,59 @@ func mountIfNecessary(ctx context.Context, vol beegfsVolume, desiredMountOpts []
 	return nil
 }
 
+// constructMountOptions takes a slice of desired mount options and a beegfsVolume. If the slice is empty, it returns
+// a slice of default mount options with the cfgFile option necessary to mount BeeGFS included. If the slice is
+// not empty, it returns a sanitized version of the slice with the required cfgFile option. If SELinux is enabled,
+// a security context mount option is always included in the return.
+func constructMountOptions(ctx context.Context, desiredMountOpts []string, vol beegfsVolume) []string {
+	var mountOpts []string
+	if len(desiredMountOpts) == 0 {
+		// If no mount options are specified, use these defaults.
+		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
+	} else {
+		// Use all specified mount options, ignoring duplicates.
+		mountOpts = append(removeInvalidMountOptions(ctx, desiredMountOpts), "cfgFile="+vol.clientConfPath)
+	}
+
+	// If SELinux is enabled, ensure we mount with some context. Use a default if one isn't provided.
+	// go-selinux looks for a mounted file system with type selinuxfs. We must execute in an environment that gives us
+	// a holistic view of the host's mounts for this to work.
+	if selinux.GetEnabled() {
+		LogVerbose(ctx, "SELinux is enabled. Ensuring we mount with context.")
+		mountOpts = addContextToMountOptionsIfNecessary(mountOpts)
+	}
+
+	return mountOpts
+}
+
+// addContextToMountOptionsIfNecessary returns a slice of mount options that is guaranteed to include a security
+// context option. If a security context option is not included in the input slice, the return includes a default.
+func addContextToMountOptionsIfNecessary(inputMountOpts []string) []string {
+	for _, inputMountOpt := range inputMountOpts {
+		if strings.HasPrefix(inputMountOpt, "context=") {
+			// We already have some context.
+			return inputMountOpts
+		}
+	}
+
+	// Return mount options with a default "system_u:object_r:container_file_t:s0" context option.
+	defaultContext := selinux.Context{
+		"user":  "system_u",
+		"role":  "object_r",
+		"type":  "container_file_t",
+		"level": "s0",
+	}
+	return append(inputMountOpts, "context="+defaultContext.Get())
+}
+
 // removeInvalidMountOptions takes a slice of mount options and returns the slice, with any duplicates and any other
 // invalid mount options (such as cfgFile) removed
-func removeInvalidMountOptions(inputMountOpts []string) []string {
+func removeInvalidMountOptions(ctx context.Context, inputMountOpts []string) []string {
 	var mountOpts []string
 	for _, opt := range inputMountOpts {
 		if strings.Contains(strings.ToLower(opt), "cfgfile") {
 			// The cfgFile mount option is automatically added by our driver, so we ignore a cfgFile provided by the user
-			LogDebug(nil, "Explicit cfgFile mount option specified. Ignoring.")
+			LogDebug(ctx, "Explicit cfgFile mount option specified. Ignoring.")
 			continue
 		}
 

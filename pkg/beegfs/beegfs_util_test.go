@@ -433,10 +433,38 @@ func TestThreadSafeStringLock(t *testing.T) {
 	}
 }
 
+func TestAddContextToMountOptionsIfNecessary(t *testing.T) {
+	tests := map[string]struct {
+		input []string
+		want  []string
+	}{
+		"input with context at the end": {
+			input: []string{"some", "mount", "options", "context=some_user:some_role:some_type:some_level"},
+			want:  []string{"some", "mount", "options", "context=some_user:some_role:some_type:some_level"},
+		},
+		"input with context at some arbitrary location": {
+			input: []string{"some", "context=some_user:some_role:some_type:some_level", "mount", "options"},
+			want:  []string{"some", "context=some_user:some_role:some_type:some_level", "mount", "options"},
+		},
+		"input without context": {
+			input: []string{"some", "mount", "options"},
+			want:  []string{"some", "mount", "options", "context=system_u:object_r:container_file_t:s0"},
+		},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := addContextToMountOptionsIfNecessary(tc.input)
+			if !reflect.DeepEqual(tc.want, got) {
+				t.Fatalf("expected: %v, got: %v", tc.want, got)
+			}
+		})
+	}
+}
+
 func TestRemoveInvalidMountOptions(t *testing.T) {
 	inputOpts := []string{"option1", "option1", "cfgFile", "option2"}
 	expectedOutput := []string{"option1", "option2"}
-	actualOutput := removeInvalidMountOptions(inputOpts)
+	actualOutput := removeInvalidMountOptions(context.TODO(), inputOpts)
 	if len(expectedOutput) != len(actualOutput) {
 		t.Fatalf("removeInvalidMountOptions didn't produce expected output. Expected: %v\tActual: %v",
 			expectedOutput, actualOutput)

@@ -130,7 +130,7 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 		// work as expected for other COs.
 		opts = append(opts, "ro")
 	}
-	opts = removeInvalidMountOptions(opts)
+	opts = removeInvalidMountOptions(ctx, opts)
 	LogDebug(ctx, "Mounting volume", "volDirPath", vol.volDirPath, "targetPath", targetPath, "options", opts)
 	err = ns.mounter.Mount(vol.volDirPath, targetPath, "beegfs", opts)
 	if err != nil {

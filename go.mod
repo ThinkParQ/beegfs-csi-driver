@@ -9,6 +9,7 @@ require (
 	github.com/kubernetes-csi/csi-test/v4 v4.0.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
+	github.com/opencontainers/selinux v1.8.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.5.1
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
