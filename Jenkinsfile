@@ -115,9 +115,9 @@ pipeline {
                 lock(resource: "envtest-${env.NODE_NAME}") {
                     sh """
                         cd operator
-                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} build docker-build
+                        make -e IMG=${uniqueOperatorImageTag} build docker-build
                         # Build bundle without modification to verify that generated code and manifests are up to date.
-                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest bundle
+                        make bundle
                         if [[ \$(git diff) ]]
                         then
                             # The above make steps have run all generators. The developer making changes should also 
@@ -150,8 +150,8 @@ pipeline {
                 withDockerRegistry([credentialsId: 'mswbuild', url: 'https://docker.repo.eng.netapp.com']) {
                     sh """
                         cd operator
-                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${uniqueOperatorImageTag} -e BUNDLE_IMG=${uniqueBundleImageTag} bundle bundle-build bundle-push
-                        make -e ENVTEST_ASSETS_DIR=/var/lib/jenkins/operator-sdk-envtest -e IMG=${operatorImageTag} -e BUNDLE_IMG=${bundleImageTag} bundle bundle-build bundle-push
+                        make -e IMG=${uniqueOperatorImageTag} -e BUNDLE_IMG=${uniqueBundleImageTag} bundle bundle-build bundle-push
+                        make -e IMG=${operatorImageTag} -e BUNDLE_IMG=${bundleImageTag} bundle bundle-build bundle-push
                     """
                 }
             }
