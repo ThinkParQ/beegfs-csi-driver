@@ -246,6 +246,11 @@ spec:
     matrix](https://github.com/netapp/beegfs-csi-driver/blob/master/README.md#interoperability-and-csi-feature-matrix)
     for additional information.
 
+    We have recently published experimental manifests that enable the BeeGFS CSI driver on OpenShift nodes running
+    RHCOS. These manifests are not intended for production use. See [this
+    README](https://github.com/netapp/beegfs-csi-driver/blob/master/deploy/openshift-rhcos-client/README.md) for more
+    details.
+
     All driver configuration can be specified through the BeegfsDrivers API (in a BeegfsDriver Custom Resource)
     except for BeeGFS connAuth information, which must be placed separately into a Kubernetes Secret. See the [ConnAuth
     Configuration

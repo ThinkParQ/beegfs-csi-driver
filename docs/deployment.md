@@ -149,7 +149,8 @@ CSI driver (or it may not be desirable for all nodes to do so). For example:
   of nodes.
 * Some nodes in a cluster may be running an OS that is not supported for the
   BeeGFS client (e.g. a specialized Linux distribution or Red Hat CoreOS in an 
-  OpenShift cluster).
+  OpenShift cluster, which currently has [experimental 
+  support](../deploy/openshift-beegfs-client/README.md)).
 * Some nodes in a cluster may be capable of running the BeeGFS client, but the
   user installing the driver does not have the permissions required to install 
   it.
