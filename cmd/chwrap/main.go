@@ -41,7 +41,9 @@ func validBinary(path string) bool {
 }
 
 func findBinary(prefix, binary string) string {
-	for _, part1 := range []string{"usr/local/", "usr/", ""} {
+	// Some automatic worker node prep workflows put BeeGFS utilities in the plugin-owned
+	// /var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin directory to avoid base OS "contamination".
+	for _, part1 := range []string{"var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/", "usr/local/", "usr/", ""} {
 		for _, part2 := range []string{"sbin", "bin"} {
 			path := "/" + part1 + part2 + "/" + binary
 			if validBinary(prefix + path) {
@@ -59,7 +61,10 @@ func modifyEnv(oldEnv []string) []string {
 			newEnv = append(newEnv, e)
 		}
 	}
-	newEnv = append(newEnv, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+	// Some automatic worker node prep workflows put BeeGFS utilities in the plugin-owned
+	// /var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin directory to avoid base OS "contamination".
+	newEnv = append(newEnv, "PATH=/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin:"+
+		"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
 	return newEnv
 }
 
