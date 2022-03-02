@@ -43,7 +43,6 @@ spec:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
             - --endpoint=unix://csi/csi.sock
-            - --client-conf-template-path=/host/etc/beegfs/beegfs-client.conf  # The host filesystem is mounted at /host.
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
             - -v=$(LOG_LEVEL)
