@@ -34,21 +34,6 @@ spec:
           matchExpressions:
             - key: node-role.kubernetes.io/master
               operator: Exists
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: node.openshift.io/os_id
-              operator: NotIn
-              values:
-                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
-  nodeAffinityNodeService:
-    requiredDuringSchedulingIgnoredDuringExecution:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: node.openshift.io/os_id
-              operator: NotIn
-              values:
-                - rhcos  # The BeeGFS CSI driver does not run on Red Hat CoreOS.
   pluginConfig:
     fileSystemSpecificConfigs:
       - sysMgmtdHost: 10.113.4.59

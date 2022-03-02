@@ -1,0 +1,84 @@
+# Copyright 2022 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: beegfs-client
+  name: beegfs-client
+  namespace: beegfs-csi
+spec: {}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beegfs-client-poststart
+  namespace: beegfs-csi
+data:
+  poststart.sh: |
+    #! /bin/bash
+
+    # Place the template beegfs-client.conf file and necessary BeeGFS utilities where the CSI driver can get at them. 
+    # This is necessary on all nodes. Use backlash to force no alias (in case cp aliases to cp -i). 
+    \cp /etc/beegfs/beegfs-client.conf /plugin/client/beegfs-client.conf
+    mkdir /plugin/client/sbin
+    \cp /opt/beegfs/sbin/beegfs-ctl /plugin/client/sbin/beegfs-ctl
+
+    # Install the correct version of kernel-devel and restart the client if necessary. This should only be necessary 
+    # on RHEL nodes (entitlements required) running a different kernel version than the RHCOS nodes in a cluster.
+    if ! yum -q list installed kernel-devel-$(uname -r); then
+        # The kernel-modules package contains the headers for the rdma_cm and ib_core modules.
+        yum -qy install kernel-devel-$(uname -r) kernel-modules-$(uname -r)
+        systemctl restart beegfs-client
+    fi
+
+---
+
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    app: beegfs-client
+  name: beegfs-client
+  namespace: beegfs-csi
+spec:
+  runPolicy: "Serial"
+  triggers:
+    - type: "ConfigChange"
+    - type: "ImageChange"
+
+  source:
+    configMaps:
+      - configMap:
+          name: beegfs-client-poststart
+    dockerfile: |
+      # The base image used to build is overridden by the spec.strategy.dockerStrategy.from field. The ImageStreamTag
+      # it points to should always provide a toolkit with up-to-date kernel headers.
+      FROM driver-toolkit
+      
+      ARG BEEGFS_CLIENT_VERSION
+
+      RUN wget https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/dists/beegfs-rhel8.repo -O /etc/yum.repos.d/beegfs-rhel8.repo
+      RUN rpm --import https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/gpg/RPM-GPG-KEY-beegfs
+      RUN yum install -y beegfs-client beegfs-utils beegfs-helperd
+      RUN echo "" > /etc/beegfs/beegfs-mounts.conf
+
+      ADD poststart.sh /usr/local/sbin/poststart.sh
+      RUN chmod +x /usr/local/sbin/poststart.sh
+  strategy:
+    dockerStrategy:
+      buildArgs:
+        - name: BEEGFS_CLIENT_VERSION
+          value: 7.2.5
+      from:
+        api: image.openshift.io/v1
+        kind: ImageStreamTag
+        name: driver-toolkit:latest
+        namespace: openshift
+  output:
+    to:
+      kind: ImageStreamTag
+      name: beegfs-client:latest

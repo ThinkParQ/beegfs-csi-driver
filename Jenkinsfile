@@ -226,9 +226,9 @@ pipeline {
                 timeout(time: 6, unit: 'HOURS')
             }
             environment {
-                // The disruptive test suite will try to SSH into k8s cluster nodes, defaulting as the jenkins user,
-                // which doesn't exist on those nodes. This changes the test suite to SSH as the root user instead.
-                KUBE_SSH_USER = "root"
+                // OpenShift will not remember authorized keys between upgrades, so it is not practical to do an 
+                // ssh-copy-id from a Jenkins worker node to each OpenShift node.
+                SSH_OPENSHIFT = credentials('ssh-openshift')
             }
             steps {
                 script {
@@ -349,9 +349,8 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         operator-sdk scorecard ./operator/bundle -w 180s > ${resultsDir}/scorecard.txt 2>&1 || (echo "SCORECARD FAILURE!" && exit 1)
                         operator-sdk run bundle ${uniqueBundleImageTag}
                         sed 's/tag: replaced-by-jenkins/tag: ${uniqueImageTag.split(':')[1]}/g' test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml | kubectl apply -f -
-                        # This is a hack to ensure no e2e test Pods schedule to nodes without the driver.
-                        # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
-                        oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule --overwrite
+                        export KUBE_SSH_USER=\${SSH_OPENSHIFT_USR}
+                        export KUBE_SSH_KEY_PATH=\${SSH_OPENSHIFT}
                         ${testCommand} || (echo "INTEGRATION TEST FAILURE!" && exit 1)
                         ${testCommandDisruptive} || (echo "DISRUPTIVE INTEGRATION TEST FAILURE!" && exit 1)
                     """
@@ -360,9 +359,6 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
                         oc get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- |
                             grep -v beegfs-csi | xargs kubectl delete ns --cascade=foreground || true
-                        # This is a hack to undo the previous hack.
-                        # TODO (webere, A236): Remove this hack when a topology implementation makes it obselete.
-                        oc adm taint nodes -l node.openshift.io/os_id!=rhel node.beegfs.csi.netapp.com/os_id:NoSchedule- || true
                         oc delete -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
                     """

@@ -173,22 +173,23 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 		vendorVersion = version
 	}
 
-	if clientConfTemplatePath == "" {
-		return nil, errors.New("no client configuration template path provided")
-	} else if _, err := fsutil.ReadFile(clientConfTemplatePath); err != nil {
-		return nil, errors.WithMessage(err, "failed to read client configuration template file")
+	var err error
+	if clientConfTemplatePath != "" {
+		if _, err := fsutil.ReadFile(clientConfTemplatePath); err != nil {
+			return nil, errors.WithMessage(err, "failed to read client configuration template file")
+		}
+	} else if clientConfTemplatePath = getDefaultClientConfTemplatePath(); clientConfTemplatePath == "" {
+		return nil, errors.New("failed to get valid default client configuration template file")
 	}
 
 	var pluginConfig beegfsv1.PluginConfig
 	if configPath != "" {
-		var err error
 		if pluginConfig, err = parseConfigFromFile(configPath, nodeID); err != nil {
 			return nil, errors.WithMessage(err, "failed to handle configuration file")
 		}
 	}
 
 	if connAuthPath != "" {
-		var err error
 		if err = parseConnAuthFromFile(connAuthPath, &pluginConfig); err != nil {
 			return nil, errors.WithMessage(err, "failed to handle connAuth file")
 		}
@@ -202,8 +203,7 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 
 	logger(nil).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
 
-	var driver beegfs
-	driver = beegfs{
+	driver := beegfs{
 		driverName:             driverName,
 		version:                vendorVersion,
 		nodeID:                 nodeID,
@@ -267,4 +267,26 @@ func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig beegfsv1.
 		return beegfsVolume{}, err
 	}
 	return newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot, pluginConfig), nil
+}
+
+// getDefaultClientConfTemplatePath looks for a beegfs-client.conf file in an ordered slice of default paths. It
+// returns the first valid path it finds or an empty string if none of the default paths are valid.
+func getDefaultClientConfTemplatePath() string {
+	defaultPaths := []string{
+		// Default beegfs-client.conf install location.
+		"/etc/beegfs/beegfs-client.conf",
+		// Default beegfs-client.conf install location inside CSI container.
+		"/host/etc/beegfs/beegfs-client.conf",
+		// Client files subdirectory of plugin data directory.
+		"/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/beegfs-client.conf",
+		// Client files subdirectory of plugin data directory inside CSI container.
+		"/host/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/beegfs-client.conf",
+	}
+	for _, path := range defaultPaths {
+		if _, err := fsutil.ReadFile(path); err == nil {
+			return path
+		}
+	}
+	// None of the default paths pointed to a readable file.
+	return ""
 }

@@ -70,7 +70,7 @@ func TestNewBeegfsDriver(t *testing.T) {
 			tc.clientConfTemplatePath = "/badClientConfTemplatePath"
 			return tc
 		},
-		"no clientConfTemplatePath": func() testCase {
+		"no clientConfTemplatePathAndNoDefault": func() testCase {
 			tc := defaultTestCase
 			tc.clientConfTemplatePath = ""
 			return tc
@@ -224,5 +224,22 @@ func TestNewBeegfsVolumeFromID(t *testing.T) {
 	}
 	if !reflect.DeepEqual(want, got) {
 		t.Fatalf("\nexpected: \n%+v, \ngot: \n%+v", want, got)
+	}
+}
+
+func TestGetDefaultClientConfTemplatePath(t *testing.T) {
+	fs = afero.NewMemMapFs()
+	fsutil = afero.Afero{Fs: fs}
+
+	// Should return an empty string if a file doesn't exist at any default path.
+	if path := getDefaultClientConfTemplatePath(); path != "" {
+		t.Fatalf("expected no valid default path; got %s", path)
+	}
+
+	// Should return a default path a file exists at one.
+	const defaultPath = "/host/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/beegfs-client.conf"
+	_ = fsutil.WriteFile(defaultPath, []byte{}, 0644)
+	if path := getDefaultClientConfTemplatePath(); path != defaultPath {
+		t.Fatalf("expected default path %s; got %s", defaultPath, path)
 	}
 }

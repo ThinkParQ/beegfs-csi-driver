@@ -39,7 +39,7 @@ var (
 	endpoint               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	nodeID                 = flag.String("node-id", "", "node id")
 	showVersion            = flag.Bool("version", false, "Show version.")
-	clientConfTemplatePath = flag.String("client-conf-template-path", "/etc/beegfs/beegfs-client.conf", "path to template beegfs-client.conf")
+	clientConfTemplatePath = flag.String("client-conf-template-path", "", "path to template beegfs-client.conf")
 	nodeUnstageTimeout     = flag.Uint64("node-unstage-timeout", 0, "seconds DeleteVolume waits for NodeUnstageVolume to complete on all nodes")
 
 	// Set by the build process

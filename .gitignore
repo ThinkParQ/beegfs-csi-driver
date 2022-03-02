@@ -5,3 +5,4 @@ ignored/
 deploy/k8s/overlays/dev
 junit/
 *.test
+.vscode

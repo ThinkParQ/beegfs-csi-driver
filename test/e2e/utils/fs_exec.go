@@ -82,6 +82,9 @@ func (e *FSExec) IssueCommandWithBeegfsPaths(cmdFmtString string, beegfsPaths ..
 // IssueCommandWithResult works exactly like hostExec.IssueCommandWithResult, except that it identifies the
 // correct node (the one with our BeeGFS file system mounted) on which to execute the passed command automatically.
 func (e *FSExec) IssueCommandWithResult(cmd string) (string, error) {
+	// Some automatic worker node prep workflows put BeeGFS utilities in the plugin-owned
+	// /var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin directory to avoid base OS "contamination".
+	cmd = "PATH=$PATH:/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin " + cmd
 	node, err := e.cfg.Framework.ClientSet.CoreV1().Nodes().Get(context.TODO(), e.pod.Spec.NodeName, metav1.GetOptions{})
 	e2eframework.ExpectNoError(err)
 	return e.hostExec.IssueCommandWithResult(cmd, node)
