@@ -248,24 +248,25 @@ pipeline {
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
-                            new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static3", false),
-                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
-                            new TestEnvironment("1.21", "beegfs-7.1.5", "1.21", "static4", false),
-                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("1.22", "beegfs-7.1.5", "1.22", "static5", false),
-                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
-                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.22", "", true),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
+                            new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static3", "root", false),
+                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", "root", false),
+                            new TestEnvironment("1.21", "beegfs-7.1.5", "1.21", "static4", "root", false),
+                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", "root", false),
+                            new TestEnvironment("1.22", "beegfs-7.1.5", "1.22", "static5", "root", false),
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", "root", false),
+                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.2-rh8-rdma", "1.23", "static6", "user", false),
+                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.1.5", "1.23", "static6", "user", false),
+                            new TestEnvironment("openshift", "beegfs-7.1.5", "1.22", "", "root", true),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", "root", true)
                         ]
                     } else {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.19-rdma", "beegfs-7.2-rdma", "1.19", "static2", false),
-                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", false),
-                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", false),
-                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", false),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", true)
+                            new TestEnvironment("1.20", "beegfs-7.2", "1.20", "static3", "root", false),
+                            new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", "root", false),
+                            new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", "root", false),
+                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.2-rh8-rdma", "1.23", "static6", "user", false),
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", "root", true)
                         ]
                     }
 
@@ -398,6 +399,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-config.yaml ${overlay}/csi-beegfs-config.yaml
                         cp test/env/${testEnv.beegfsHost}/csi-beegfs-connauth.yaml ${overlay}/csi-beegfs-connauth.yaml
                         kubectl apply -k ${overlay}
+                        export KUBE_SSH_USER=${testEnv.sshUser}
                         ${testCommand} || (echo "INTEGRATION TEST FAILURE!" && exit 1)
                         ${testCommandDisruptive} || (echo "DISRUPTIVE INTEGRATION TEST FAILURE!" && exit 1)
                     """
@@ -423,17 +425,19 @@ class TestEnvironment {
     String beegfsHost
     String k8sVersion
     String staticVolDirName
+    String sshUser
     // useOperator could somewhat equivalently be called inOpenShift. When this is true, we assume testing occurs in an
     // OpenShift cluster (which carries certain extra burdens) AND the driver should be deployed using the operator and
     // OLM. If we ever increase our test coverage so that we use OLM in a Kubesprayed cluster or deploy to OpenShift
     // without OLM, we may need to decouple this field into useOperator and inOpenShift.
     boolean useOperator
 
-    TestEnvironment(String k8sCluster, String beegfsHost, String k8sVersion, String staticVolDirName, boolean useOperator) {
+    TestEnvironment(String k8sCluster, String beegfsHost, String k8sVersion, String staticVolDirName, String sshUser, boolean useOperator) {
         this.k8sCluster = k8sCluster
         this.beegfsHost = beegfsHost
         this.k8sVersion = k8sVersion
         this.staticVolDirName = staticVolDirName
+        this.sshUser = sshUser
         this.useOperator = useOperator
     }
 }
