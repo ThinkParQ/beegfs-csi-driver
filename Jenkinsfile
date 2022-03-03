@@ -5,7 +5,10 @@
 properties([
     parameters([
         string(name: 'hubProjectVersion', defaultValue: '', description: 'Set this to force a Black Duck scan and ' +
-               'manually tag it to a particular Black Duck version (e.g. 1.0.1).')
+            'manually tag it to a particular Black Duck version (e.g. 1.0.1).'),
+        booleanParam(name: 'shouldEndToEndTest', defaultValue: false, description: 'Set this to true to force ' +
+            'end-to-end testing for a branch build. Note that end-to-end testing always occurs on PR and master ' +
+            'builds.')
     ])
 ])
 
@@ -24,6 +27,11 @@ if (params.hubProjectVersion != '') {
     // Scan the project and tag the branch name if this is the release or master branch.
     hubProjectVersion = env.BRANCH_NAME
     shouldHubScan = true
+}
+
+shouldEndToEndTest = params.shouldEndToEndTest  // Definitely end-to-end test if requested.
+if (env.BRANCH_NAME.matches('(master)|(release-.+)|PR-.+')) {  // Always end-to-end test master, release, and PR builds.
+    shouldEndToEndTest = true
 }
 
 // We do NOT rely on release-tools tagging mechanism for internal builds because it does not provide mechanisms for
@@ -217,10 +225,7 @@ pipeline {
         }
         stage("End-to-End Test") {
             when {
-                expression {
-                    return env.BRANCH_NAME.startsWith('PR-') || env.BRANCH_NAME.matches('master') ||
-                            !currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()
-                }
+                expression { shouldEndToEndTest }
             }
             options {
                 timeout(time: 6, unit: 'HOURS')
@@ -232,13 +237,6 @@ pipeline {
             }
             steps {
                 script {
-                    if (env.BRANCH_NAME.startsWith('PR-') && currentBuild.getBuildCauses('hudson.model.Cause$UserIdCause').isEmpty()) {
-                        // We want to ensure the integration tests pass before merging pull requests, but we don't want them to run
-                        // after every push to conserve resources. This stage will only pass on a PR if it is triggered manually
-                        // in Jenkins and all integration tests pass.
-                        error("Integration tests are not run automatically by Bitbucket. Trigger a build manually to run integration tests.")
-                    }
-
                     TestEnvironment[] testEnvironments
                     // Most Pre-provisioned PV tests use createVolumeResource(), which calls createPVCPV(). createPVCPV()
                     // creates a PVC and PV that reference a Storage Class with the same name as the test Namespace, but it
