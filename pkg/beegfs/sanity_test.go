@@ -14,7 +14,6 @@ import (
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
 	"github.com/onsi/ginkgo/config"
 	"github.com/spf13/afero"
-	"k8s.io/utils/mount"
 )
 
 func TestSanity(t *testing.T) {
@@ -34,20 +33,15 @@ func TestSanity(t *testing.T) {
 		t.Fatalf("failed to write template beegfs-client.conf: %v", err)
 	}
 
-	// Create and run the driver
-	driver, err := NewBeegfsDriver("", "", csDataDirPath, "testDriver", endpoint, "testID",
+	// Create and run the driver.
+	driver, err := NewBeegfsDriverSanity("", "", csDataDirPath, "testDriver", endpoint, "testID",
 		clientConfTemplatePath, "v0.1", 10)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var mps []mount.MountPoint
-	driver.cs.mounter = mount.NewFakeMounter(mps)
-	driver.ns.mounter = mount.NewFakeMounter(mps)
-	driver.cs.ctlExec = &fakeBeegfsCtlExecutor{}
-	driver.ns.ctlExec = &fakeBeegfsCtlExecutor{}
 	go driver.Run()
 
-	// Setup configuration parameters
+	// Set up configuration parameters.
 	reqParams := make(map[string]string)
 	reqParams[sysMgmtdHostKey] = "localhost"
 	reqParams[volDirBasePathKey] = "unittest"
@@ -56,9 +50,9 @@ func TestSanity(t *testing.T) {
 	cfg.TargetPath = path.Join(sanityDir, "mnt")
 	cfg.Address = endpoint
 	cfg.TestVolumeParameters = reqParams
-	// Run the sanity tests
+	// Run the sanity tests.
 	sanity.Test(t, cfg)
-	// Cleanup
+	// Do cleanup.
 	if err := os.RemoveAll(sanityDir); err != nil {
 		t.Fatal(err)
 	}

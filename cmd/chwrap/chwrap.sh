@@ -11,7 +11,7 @@
 PREFIX=/tmp/$(uuidgen)
 mkdir -p $PREFIX/netapp
 cp "$1" $PREFIX/netapp/chwrap
-for BIN in beegfs-ctl mount touch umount; do
+for BIN in beegfs-ctl lsmod modprobe mount touch umount; do
   ln -s chwrap $PREFIX/netapp/$BIN
 done
 tar --owner=0 --group=0 -C $PREFIX -cf "$2" netapp

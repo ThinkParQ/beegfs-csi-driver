@@ -6,12 +6,14 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -431,4 +433,46 @@ func (v *threadSafeStringLock) releaseLockOnString(stringToUnlock string) {
 	v.rwMutex.Lock()
 	defer v.rwMutex.Unlock()
 	delete(v.items, stringToUnlock)
+}
+
+// verifyBeeGFSModuleIsAvailable attempts to confirm that the BeeGFS client module either is running or can run. It
+// returns nil if this requirement is met and a descriptive error from a failed check if it is not.
+func verifyBeegfsModuleIsAvailable() error {
+	var stdoutBuffer bytes.Buffer
+	var stderrBuffer bytes.Buffer
+
+	// Attempt to use "lsmod" to verify the BeeGFS module is running.
+	cmd := exec.Command("lsmod")
+	cmd.Stdout = &stdoutBuffer
+	cmd.Stderr = &stderrBuffer
+	LogDebug(context.TODO(), "Executing command", "command", cmd.Args)
+	err := cmd.Run()
+	stdOutString := stdoutBuffer.String()
+	stdErrString := stderrBuffer.String()
+	if err != nil {
+		err = errors.Wrapf(err, "lsmod failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
+		// Log an error instead of returning because we have another method of checking.
+		LogError(context.TODO(), err, "failed to check the status of the BeeGFS module with lsmod")
+	} else if strings.Contains(stdOutString, "beegfs") {
+		LogDebug(context.TODO(), "Found the BeeGFS client module with lsmod")
+		return nil
+	}
+
+	// Even if the BeeGFS module is not currently running, it may automatically be inserted by the DKMS infrastructure
+	// when needed. Use "modprobe -R" (which does not actually insert the module) to check.
+	stdoutBuffer.Reset()
+	stderrBuffer.Reset()
+	cmd = exec.Command("modprobe", "-R", "beegfs")
+	cmd.Stdout = &stdoutBuffer
+	cmd.Stderr = &stderrBuffer
+	LogDebug(context.TODO(), "Executing command", "command", cmd.Args)
+	err = cmd.Run()
+	stdOutString = stdoutBuffer.String()
+	stdErrString = stderrBuffer.String()
+	if err != nil {
+		err = errors.Wrapf(err, "modprobe failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
+		return errors.Wrap(err, "the BeeGFS client module is likely not installed")
+	}
+	LogDebug(context.TODO(), "Found the BeeGFS client module with modprobe")
+	return nil
 }
