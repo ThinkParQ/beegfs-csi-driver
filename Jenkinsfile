@@ -264,7 +264,7 @@ pipeline {
                             new TestEnvironment("1.21", "beegfs-7.2", "1.21", "static4", "root", false),
                             new TestEnvironment("1.22", "beegfs-7.2", "1.22", "static5", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.2-rh8-rdma", "1.23", "static6", "user", false),
-                            new TestEnvironment("openshift", "beegfs-7.2", "1.22", "", "root", true)
+                            new TestEnvironment("openshift", "beegfs-7.2", "1.23", "", "root", true)
                         ]
                     }
 
