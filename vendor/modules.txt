@@ -48,9 +48,6 @@ github.com/aws/aws-sdk-go/service/ec2
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
-# github.com/bits-and-blooms/bitset v1.2.0
-## explicit; go 1.14
-github.com/bits-and-blooms/bitset
 # github.com/blang/semver v3.5.1+incompatible
 ## explicit
 github.com/blang/semver
@@ -209,10 +206,11 @@ github.com/opencontainers/go-digest
 ## explicit; go 1.13
 github.com/opencontainers/runc/libcontainer/apparmor
 github.com/opencontainers/runc/libcontainer/utils
-# github.com/opencontainers/selinux v1.8.2
+# github.com/opencontainers/selinux v1.10.0
 ## explicit; go 1.13
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/pkg/pwalk
+github.com/opencontainers/selinux/pkg/pwalkdir
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors

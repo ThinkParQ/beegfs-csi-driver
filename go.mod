@@ -9,7 +9,7 @@ require (
 	github.com/kubernetes-csi/csi-test/v4 v4.0.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
-	github.com/opencontainers/selinux v1.8.2
+	github.com/opencontainers/selinux v1.10.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/afero v1.8.2
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
@@ -36,7 +36,6 @@ require (
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/aws/aws-sdk-go v1.38.49 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
