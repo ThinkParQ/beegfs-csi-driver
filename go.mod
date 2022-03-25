@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/go-logr/logr v0.4.0
-	github.com/kubernetes-csi/csi-lib-utils v0.9.0
+	github.com/kubernetes-csi/csi-lib-utils v0.11.0
 	github.com/kubernetes-csi/csi-test/v4 v4.0.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.16.0
