@@ -6,3 +6,4 @@ deploy/k8s/overlays/dev
 junit/
 *.test
 .vscode
+coverity.conf

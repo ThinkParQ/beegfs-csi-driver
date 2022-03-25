@@ -27,7 +27,6 @@ import (
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
-	"k8s.io/utils/mount"
 )
 
 const (
@@ -154,8 +153,51 @@ var (
 	vendorVersion = "dev"
 )
 
-// NewBeegfsDriver configures and initializes a beegfs struct.
+// NewBeegfsDriver initializes a working BeegfsDriver.
 func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
+	driver, err := newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID,
+		clientConfTemplatePath, version, nodeUnstageTimeout)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create complex GRPC servers.
+	if driver.ns, err = newNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath); err != nil {
+		return nil, err
+	}
+	if driver.cs, err = newControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath,
+		driver.csDataDir, nodeUnstageTimeout); err != nil {
+		return nil, err
+	}
+
+	if err = verifyBeegfsModuleIsAvailable(); err != nil {
+		return nil, err
+	}
+
+	return driver, nil
+}
+
+// NewBeegfsDriverSanity initializes a BeegfsDriver that doesn't have a working mounter or beegfs-ctl execution
+// capabilities. This BeegfsDriver can be used for sanity testing on any machine.
+func NewBeegfsDriverSanity(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
+	driver, err := newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID,
+		clientConfTemplatePath, version, nodeUnstageTimeout)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create complex GRPC servers.
+	driver.ns = newNodeServerSanity(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
+	driver.cs = newControllerServerSanity(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath,
+		driver.csDataDir, nodeUnstageTimeout)
+
+	return driver, nil
+}
+
+// newBeegfsDriver is used by both NewBeegfsDriver and NewBeegfsDriverSanity for common initialization.
+func newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
@@ -213,23 +255,13 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 		csDataDir:              csDataDir,
 	}
 
-	// Create GRPC servers
+	// Create simple gRPC identity server.
 	driver.ids = newIdentityServer(driver.driverName, driver.version)
-	driver.ns = newNodeServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath)
-	driver.cs = newControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath, driver.csDataDir,
-		nodeUnstageTimeout)
 
 	return &driver, nil
 }
 
 func (b *beegfs) Run() {
-	if b.cs.mounter == nil {
-		b.cs.mounter = mount.New("")
-	}
-	if b.ns.mounter == nil {
-		b.ns.mounter = mount.New("")
-	}
-
 	s := newNonBlockingGRPCServer()
 	s.Start(b.endpoint, b.ids, b.cs, b.ns)
 	s.Wait()

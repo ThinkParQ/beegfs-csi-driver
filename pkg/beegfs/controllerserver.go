@@ -58,9 +58,31 @@ type controllerServer struct {
 }
 
 func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
+	nodeUnstageTimeout uint64) (*controllerServer, error) {
+	if executor, err := newBeeGFSCtlExecutor(); err != nil {
+		return nil, err
+	} else {
+		return &controllerServer{
+			ctlExec: executor,
+			caps: getControllerServiceCapabilities(
+				[]csi.ControllerServiceCapability_RPC_Type{
+					csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+				}),
+			nodeID:                 nodeID,
+			pluginConfig:           pluginConfig,
+			clientConfTemplatePath: clientConfTemplatePath,
+			csDataDir:              csDataDir,
+			mounter:                mount.New(""),
+			volumeIDsInFlight:      newThreadSafeStringLock(),
+			nodeUnstageTimeout:     nodeUnstageTimeout,
+		}, err
+	}
+}
+
+func newControllerServerSanity(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
 	nodeUnstageTimeout uint64) *controllerServer {
 	return &controllerServer{
-		ctlExec: &beegfsCtlExecutor{},
+		ctlExec: &fakeBeegfsCtlExecutor{},
 		caps: getControllerServiceCapabilities(
 			[]csi.ControllerServiceCapability_RPC_Type{
 				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
@@ -69,7 +91,7 @@ func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 		pluginConfig:           pluginConfig,
 		clientConfTemplatePath: clientConfTemplatePath,
 		csDataDir:              csDataDir,
-		mounter:                nil,
+		mounter:                mount.NewFakeMounter([]mount.MountPoint{}),
 		volumeIDsInFlight:      newThreadSafeStringLock(),
 		nodeUnstageTimeout:     nodeUnstageTimeout,
 	}

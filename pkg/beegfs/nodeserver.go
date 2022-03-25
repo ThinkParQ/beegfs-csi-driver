@@ -48,13 +48,27 @@ type nodeServer struct {
 	mounter                mount.Interface
 }
 
-func newNodeServer(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) *nodeServer {
+func newNodeServer(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) (*nodeServer, error) {
+	if executor, err := newBeeGFSCtlExecutor(); err != nil {
+		return nil, err
+	} else {
+		return &nodeServer{
+			ctlExec:                executor,
+			nodeID:                 nodeId,
+			pluginConfig:           pluginConfig,
+			clientConfTemplatePath: clientConfTemplatePath,
+			mounter:                mount.New(""),
+		}, nil
+	}
+}
+
+func newNodeServerSanity(nodeId string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) *nodeServer {
 	return &nodeServer{
-		ctlExec:                &beegfsCtlExecutor{},
+		ctlExec:                &fakeBeegfsCtlExecutor{},
 		nodeID:                 nodeId,
 		pluginConfig:           pluginConfig,
 		clientConfTemplatePath: clientConfTemplatePath,
-		mounter:                nil,
+		mounter:                mount.NewFakeMounter([]mount.MountPoint{}),
 	}
 }
 

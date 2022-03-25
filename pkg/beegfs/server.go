@@ -247,7 +247,7 @@ func LogError(ctx context.Context, err error, msg string, keysAndValues ...inter
 		Error(err, msg, keysAndValues...)
 }
 
-// LogFatal writes a request ID aware log message at the error level and immediately exit.
+// LogFatal writes a request ID aware log message at the error level and immediately exits.
 func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
 	logr.

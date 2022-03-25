@@ -27,6 +27,17 @@ type beegfsCtlExecutorInterface interface {
 // beegfsCtlExecutor is the standard implementation of beegfsCtlExecutorInterface.
 type beegfsCtlExecutor struct{}
 
+// newBeeGFSCtlExecutor returns a *beegfsCtlExecutor but fails if beegfs-ctl is not available.
+func newBeeGFSCtlExecutor() (*beegfsCtlExecutor, error) {
+	// We cannot simply use exec.LookPath to determine this because chwrap confuses it. Instead, we execute beegfs-ctl
+	// with the --help option.
+	executor := beegfsCtlExecutor{}
+	if _, err := executor.execute(context.TODO(), "", []string{"--help"}); err != nil {
+		return nil, errors.Wrap(err, "beegfs-ctl is likely not installed or not in path")
+	}
+	return &executor, nil
+}
+
 // createDirectoryForVolume uses a "beegfs-ctl --createdir" command to create the directory specified by dirPath on the
 // BeeGFS file system specified by vol.sysMgmtdHost. createDirectoryForPath returns an error if it cannot create the
 // directory, but does not return an error if the directory already exists.
@@ -133,6 +144,7 @@ func (ctlExec *beegfsCtlExecutor) setPatternForVolume(ctx context.Context, vol b
 // when running at a high verbosity and returns stdout as a string (as well as any potential errors). execute fails if
 // beegfs-ctl is not on the PATH.
 func (*beegfsCtlExecutor) execute(ctx context.Context, clientConfPath string, args []string) (stdOut string, err error) {
+	isHelpCommand := args[0] == "--help" // We want to log differently if this is just a --help command.
 	args = append([]string{fmt.Sprintf("--cfgFile=%s", clientConfPath)}, args...)
 	cmd := exec.Command("beegfs-ctl", args...)
 	LogDebug(ctx, "Executing command", "command", cmd.Args)
@@ -154,7 +166,7 @@ func (*beegfsCtlExecutor) execute(ctx context.Context, clientConfPath string, ar
 			err = errors.Wrapf(err, "beegfs-ctl failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
 		}
 	}
-	if stdOutString != "" {
+	if stdOutString != "" && !isHelpCommand { // Don't log the --help output.
 		LogVerbose(ctx, "stdout from command", "command", cmd.Args, "stdout", stdOutString)
 	}
 	if stdErrString != "" {
