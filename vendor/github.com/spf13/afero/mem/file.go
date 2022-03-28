@@ -71,7 +71,7 @@ func CreateFile(name string) *FileData {
 }
 
 func CreateDir(name string) *FileData {
-	return &FileData{name: name, memDir: &DirMap{}, dir: true}
+	return &FileData{name: name, memDir: &DirMap{}, dir: true, modtime: time.Now()}
 }
 
 func ChangeFileName(f *FileData, newname string) {
@@ -267,7 +267,7 @@ func (f *File) Write(b []byte) (n int, err error) {
 		tail = f.fileData.data[n+int(cur):]
 	}
 	if diff > 0 {
-		f.fileData.data = append(bytes.Repeat([]byte{00}, int(diff)), b...)
+		f.fileData.data = append(f.fileData.data, append(bytes.Repeat([]byte{00}, int(diff)), b...)...)
 		f.fileData.data = append(f.fileData.data, tail...)
 	} else {
 		f.fileData.data = append(f.fileData.data[:cur], b...)
