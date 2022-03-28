@@ -35,6 +35,13 @@ spec:
             - key: node-role.kubernetes.io/master
               operator: Exists
   pluginConfig:
+    config:
+      # Test file systems are intentionally misconfigured to first advertise an interface/address that is unreachable. 
+      # This connNetFilter configuration overcomes that misconfiguration and speeds up mounting for test cases that 
+      # don't make use of it.
+      connNetFilter:
+        - 192.168.55.0/24
+        - 10.113.4.0/24
     fileSystemSpecificConfigs:
       - sysMgmtdHost: 192.168.55.15
         config:
