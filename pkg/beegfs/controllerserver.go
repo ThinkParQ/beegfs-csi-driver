@@ -54,6 +54,7 @@ type controllerServer struct {
 	mounter                mount.Interface
 	csDataDir              string
 	volumeIDsInFlight      *threadSafeStringLock
+	volumeStatusMap        *threadSafeStatusMap
 	nodeUnstageTimeout     uint64
 }
 
@@ -74,6 +75,7 @@ func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 			csDataDir:              csDataDir,
 			mounter:                mount.New(""),
 			volumeIDsInFlight:      newThreadSafeStringLock(),
+			volumeStatusMap:        newThreadSafeStatusMap(),
 			nodeUnstageTimeout:     nodeUnstageTimeout,
 		}, err
 	}
@@ -93,6 +95,7 @@ func newControllerServerSanity(nodeID string, pluginConfig beegfsv1.PluginConfig
 		csDataDir:              csDataDir,
 		mounter:                mount.NewFakeMounter([]mount.MountPoint{}),
 		volumeIDsInFlight:      newThreadSafeStringLock(),
+		volumeStatusMap:        newThreadSafeStatusMap(),
 		nodeUnstageTimeout:     nodeUnstageTimeout,
 	}
 }
@@ -135,8 +138,19 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
 
-	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
+	// Construct an internal representation of the volume.
 	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
+
+	// Return success if we don't need to do anything.
+	if status, ok := cs.volumeStatusMap.readStatus(vol.volumeID); ok && status == statusCreated {
+		return &csi.CreateVolumeResponse{
+			Volume: &csi.Volume{
+				VolumeId: vol.volumeID,
+			},
+		}, nil
+	}
+
+	// Obtain exclusive control over the volume.
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
 		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
 	}
@@ -192,6 +206,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 		LogVerbose(ctx, "Node tracking not enabled", "volumeID", vol.volumeID)
 	}
 
+	// Update status and return.
+	cs.volumeStatusMap.writeStatus(vol.volumeID, statusCreated)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId: vol.volumeID,
@@ -208,11 +224,18 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, status.Errorf(codes.InvalidArgument, "Volume ID not provided")
 	}
 
-	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
+	// Construct an internal representation of the volume.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
+
+	// Return success if we don't need to do anything.
+	if status, ok := cs.volumeStatusMap.readStatus(vol.volumeID); ok && status == statusDeleted {
+		return &csi.DeleteVolumeResponse{}, nil
+	}
+
+	// Obtain exclusive control over the volume.
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
 		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
 	}
@@ -251,6 +274,8 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
+	// Update status and return.
+	cs.volumeStatusMap.writeStatus(vol.volumeID, statusDeleted)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
