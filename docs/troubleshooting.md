@@ -5,12 +5,12 @@
 
 * [Overview](#overview)
 * [Kubernetes](#kubernetes)
-  * [Determining the BeeGFS Client Configuration 
-  for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
+  * [Determining the BeeGFS Client Configuration for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
   * [Orphaned BeeGFS Mounts Remain on Nodes](#orphan-mounts)
 * [Access Denied Issues](#access-denied-issues)
    * [Discretionary Access Control](#discretionary-access-control)
    * [SELinux](#selinux)
+* [Frequent Slow Operations and/or gRPC ABORTED Response Codes](#frequent-slow-operations--grpc-aborted-response-codes)
 
 <a name="overview"></a>
 ## Overview
@@ -293,3 +293,32 @@ Administrators with SELinux experience can:
 
 If these options do not work, or if you are running a non-production system, putting SELinux into permissive mode will
 also alleviate this issue. It is not recommended to take this action on a production system.
+
+<a name="#frequent-slow-operations-grpc-aborted-response-codes"></a>
+## Freqeunt Slow Operations and/or gRPC ABORTED Response Codes
+
+The controller service must execute multiple beegfs-ctl commands to fulfill a CreateVolume request. In an optimal
+networking environment, each command takes milliseconds to complete and CreateVolume returns quickly. However, each
+command can take considerably longer when a BeeGFS service (mgmtd, metadata, or storage) is improperly configured. If
+the total time for all commands is longer than the gRPC client is willing to wait, the client may issue a duplicate
+CreateVolume request. The driver immediately responds to this new request with the ABORTED response code and the
+message, "volumeID is in use by another request; check BeeGFS network configuration if this problem persists". The
+driver continues to work to create the underlying BeeGFS directory in the background. If the client sends a CreateVolume
+request after the directory is created, the driver returns the OK response code and the container orchestrator continues
+on to schedule the volume to a node.
+
+The most common recurring cause for this issue is a BeeGFS service using an inaccessible primary interface. For example,
+a BeeGFS storage service might listen on eth1 with IP address 10.10.10.10 (or more inappropriately docker0 with some
+private IP address). The BeeGFS storage service advertises that it wants all clients to attempt to communicate with it
+on this interface. When a BeeGFS client can't route traffic to the interface, it eventually falls back and attempts to
+communicate with a different interface. This fallback takes (a currently unconfigurable) five seconds, and it occurs for
+each new beegfs-ctl command.
+
+Potential solutions:
+* Configure BeeGFS services to use a
+  [connInterfacesFile](#https://doc.beegfs.io/latest/advanced_topics/network_configuration.html) with interfaces ordered
+  so that an interface BeeGFS clients can route traffic to appears first.
+* Add specific subnets to the driver's
+  [connNetFilter](https://doc.beegfs.io/latest/advanced_topics/network_configuration.html) configuration so that it
+  automatically avoids contacting the inaccessible interface. (This may be necessary in environments where only specific
+  clients cannot access the advertised interface.)

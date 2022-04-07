@@ -152,7 +152,8 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 
 	// Obtain exclusive control over the volume.
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
-		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request; check BeeGFS network "+
+			"configuration if this problem persists", vol.volumeID)
 	}
 	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
@@ -237,7 +238,8 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 
 	// Obtain exclusive control over the volume.
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
-		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request; check BeeGFS network "+
+			"configuration if this problem persists", vol.volumeID)
 	}
 	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
@@ -311,7 +313,8 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
-		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request", vol.volumeID)
+		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request; check BeeGFS network "+
+			"configuration if this problem persists", vol.volumeID)
 	}
 	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
