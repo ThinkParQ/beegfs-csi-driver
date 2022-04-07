@@ -56,13 +56,13 @@ OpenShift.
 <a name="interoperability-and-csi-feature-matrix"></a>
 ### Interoperability and CSI Feature Matrix
 
-| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions          | BeeGFS Versions | CSI Version  |
-| ---------------------- | -------------------------------- | ----------------------------------- | --------------- | ------------ |
-| v1.0.0                 | 1.19                             |                                     | 7.2, 7.1.5      | v1.3.0       |
-| v1.1.0                 | 1.18, 1.19, 1.20                 |                                     | 7.2.1, 7.1.5    | v1.3.0       |
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8 (RHEL only)                     | 7.2.4, 7.1.5    | v1.5.0       |
-| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9 (RHEL only)                     | 7.2.5, 7.1.5    | v1.5.0       |
-| v1.3.0                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.9 (RHEL only; RHCOS experimental) | 7.2.5, 7.1.5    | v1.5.0       |
+| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Versions | CSI Version  |
+| ---------------------- | -------------------------------- | ------------------------------------ | --------------- | ------------ |
+| v1.0.0                 | 1.19                             |                                      | 7.2, 7.1.5      | v1.3.0       |
+| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1, 7.1.5    | v1.3.0       |
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4, 7.1.5    | v1.5.0       |
+| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5, 7.1.5    | v1.5.0       |
+| v1.3.0                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.2.5, 7.1.5    | v1.5.0       |
 
 The following CSI features are supported by all versions of the driver:
 * Access Modes: Read/Write Multiple Pods

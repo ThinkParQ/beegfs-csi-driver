@@ -22,7 +22,6 @@ Licensed under the Apache License, Version 2.0.
 package e2e
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -40,10 +39,7 @@ import (
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
-	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
 	"sigs.k8s.io/yaml"
@@ -108,24 +104,9 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// caused mounts to be orphaned.
 	utils.VerifyNoOrphanedMounts(cs)
 
-	// Get the controller Pod (usually csi-beegfs-controller-0 in default or kube-system namespace). Wait for it to be
-	// running so we don't read the stale ConfigMap from a terminated deployment.
-	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(cs, "",
-		labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
-	e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
-
-	// Get the name of the ConfigMap from the controller Pod.
-	var driverCMName string
-	controllerNS := controllerPods.Items[0].ObjectMeta.Namespace
-	for _, volume := range controllerPods.Items[0].Spec.Volumes {
-		if volume.Name == "config-dir" {
-			driverCMName = volume.ConfigMap.Name
-		}
-	}
-
-	// Read the ConfigMap and pass it to all nodes.
-	driverCM, err := cs.CoreV1().ConfigMaps(controllerNS).Get(context.TODO(), driverCMName, metav1.GetOptions{})
-	e2eframework.ExpectNoError(err, "expected to read ConfigMap")
+	// Get the driver's PluginConfig from the deployed ConfigMap and pass it as a byte slice (required by
+	// SynchronizedBeforeSuite) to all nodes.
+	driverCM := utils.GetConfigMapInUse(cs)
 	driverConfigString, ok := driverCM.Data["csi-beegfs-config.yaml"]
 	e2eframework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
 	return []byte(driverConfigString)
@@ -134,9 +115,9 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// Unmarshal the ConfigMap and use it to populate the global BeegfsDriver's perFSConfigs.
 	var pluginConfig beegfsv1.PluginConfig
 	err := yaml.UnmarshalStrict(driverConfigBytes, &pluginConfig)
-	e2eframework.ExpectNoError(err, "expected to successfully unmarshal ConfigMap")
+	e2eframework.ExpectNoError(err, "expected to successfully unmarshal PluginConfig")
 	e2eframework.ExpectNotEqual(len(pluginConfig.FileSystemSpecificConfigs), 0,
-		"expected csi-beegfs-config.yaml to include at least one config")
+		"expected PluginConfig to specifically reference at least one file system")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 })
