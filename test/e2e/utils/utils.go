@@ -28,7 +28,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
+	clientset "k8s.io/client-go/kubernetes"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
@@ -55,7 +56,7 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 // intermittently and it would be unlikely to catch an orphan mount without including an extremely long stress test
 // within the case. It is currently preferred to use VerifyNoOrphanedMounts before and after an entire suite of tests
 // runs to ensure none of the tests within the suite causes a mount to be orphaned.
-func VerifyNoOrphanedMounts(cs *kubernetes.Clientset) {
+func VerifyNoOrphanedMounts(cs clientset.Interface) {
 	// The external infrastructure taints nodes that cannot participate in the tests.
 	nodes, err := e2enode.GetReadySchedulableNodes(cs)
 	e2eframework.ExpectNoError(err)
@@ -77,21 +78,12 @@ func VerifyNoOrphanedMounts(cs *kubernetes.Clientset) {
 
 // ArchiveServiceLogs collects the logs on the node and controller service pods and writes them in the specified report
 // path. Logs will be collected from beegfs and csi-provisioner containers. This should typically be called after the
-// test suite completes.
-func ArchiveServiceLogs(cs *kubernetes.Clientset, reportPath string) {
+// test suite completes. It may also make sense to call it if a test will intentionally redeploy Pods (as this action
+// results in a reset of container logs).
+func ArchiveServiceLogs(cs clientset.Interface, reportPath string) {
 	// Get controller and node pod information
-	nodePods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-node"})
-	if err != nil {
-		e2eframework.ExpectNoError(err, "failed to get node pods")
-	}
-	controllerPods, err := e2epod.GetPods(cs, "", map[string]string{"app": "csi-beegfs-controller"})
-	if err != nil {
-		e2eframework.ExpectNoError(err, "failed to get controller pod")
-	}
-
-	// Verify that we have the expected number of node and controller pods
-	e2eframework.ExpectNotEqual(len(nodePods), 0, "expected to find at least one node pod")
-	e2eframework.ExpectEqual(len(controllerPods), 1, "expected to find exactly one controller pod")
+	controllerPod := GetRunningControllerPod(cs)
+	nodePods := GetRunningNodePods(cs)
 
 	// Dump logs of each node pod's beegfs container
 	for _, nodePod := range nodePods {
@@ -100,22 +92,59 @@ func ArchiveServiceLogs(cs *kubernetes.Clientset, reportPath string) {
 			e2eframework.ExpectNoError(err, "failed to get beegfs logs for node container beegfs")
 		}
 
-		err = os.WriteFile(path.Join(reportPath, fmt.Sprintf("container-logs-%s-beegfs.log", nodePod.Name)), []byte(logs), 0666)
-		if err != nil {
-			e2eframework.ExpectNoError(err, "failed to write to file")
-		}
+		filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-beegfs.log", nodePod.Name))
+		AppendBytesToFile(filePath, []byte(logs))
 	}
 
 	// Dump logs of controller pod's beegfs and csi-provisioner containers
 	for _, containerName := range []string{"beegfs", "csi-provisioner"} {
-		logs, err := e2epod.GetPodLogs(cs, controllerPods[0].Namespace, controllerPods[0].Name, containerName)
+		logs, err := e2epod.GetPodLogs(cs, controllerPod.Namespace, controllerPod.Name, containerName)
 		if err != nil {
 			e2eframework.ExpectNoError(err, fmt.Sprintf("failed to get logs for controller container %s", containerName))
 		}
 
-		err = os.WriteFile(path.Join(reportPath, fmt.Sprintf("container-logs-%s-%s.log", controllerPods[0].Name, containerName)), []byte(logs), 0666)
-		if err != nil {
-			e2eframework.ExpectNoError(err, "failed to write to file")
-		}
+		filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-%s.log", controllerPod.Name, containerName))
+		AppendBytesToFile(filePath, []byte(logs))
 	}
+}
+
+// AppendBytesToFile appends to a file if it already exists or creates it if it does not.
+func AppendBytesToFile(filePath string, logs []byte) {
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		e2eframework.ExpectNoError(err, "failed to write to open file %s", filePath)
+	}
+	if _, err = f.Write(logs); err != nil {
+		f.Close()
+		e2eframework.ExpectNoError(err, "failed to write logs to file %s", filePath)
+	}
+	if err := f.Close(); err != nil {
+		e2eframework.ExpectNoError(err, "failed to close file %s", filePath)
+	}
+}
+
+// GetRunningControllerPod waits PodStartTimeout for exactly one controller service Pod to be running (in any namespace)
+// and returns it. A consuming test fails if this is not possible.
+func GetRunningControllerPod(cs clientset.Interface) corev1.Pod {
+	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(cs, "",
+		labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
+	e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
+	return controllerPods.Items[0]
+}
+
+// GetRunningNodePods waits PodStartTimeout for at least one node service Pod to be running (in any namespace) and
+// returns all node service pods it finds. A consuming test fails if it cannot find at least one running Pod.
+func GetRunningNodePods(cs clientset.Interface) []corev1.Pod {
+	selector := labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"})
+	// Get node service Pods that should be running (we don't know how many up front).
+	nodePods, err := e2epod.WaitForPodsWithLabelScheduled(cs, "", selector)
+	if err != nil {
+		e2eframework.ExpectNoError(err, "failed to get any node pods")
+	}
+	// Get node service Pods one they are all running.
+	nodePods, err = e2epod.WaitForPodsWithLabelRunningReady(cs, "", selector, len(nodePods.Items), e2eframework.PodStartTimeout)
+	if err != nil {
+		e2eframework.ExpectNoError(err, "node pods took too long to run")
+	}
+	return nodePods.Items
 }

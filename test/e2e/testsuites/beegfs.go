@@ -34,6 +34,7 @@ package testsuites
 import (
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/utils"
@@ -212,13 +213,10 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		defer cleanup()
 
 		// Get the controller Pod, which could be running in any namespace.
-		pods, err := e2epod.WaitForPodsWithLabelRunningReady(f.ClientSet, "",
-			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
-		e2eframework.ExpectNoError(err, "There should be exactly one controller pod")
-		controllerPod := pods.Items[0]
+		controllerPod := utils.GetRunningControllerPod(f.ClientSet)
 
 		// Get a node Pod, which could be running in any namespace.
-		pods, err = e2epod.WaitForPodsWithLabel(f.ClientSet, "",
+		pods, err := e2epod.WaitForPodsWithLabel(f.ClientSet, "",
 			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"}))
 		e2eframework.ExpectNoError(err, "There should be at least one node pod")
 		nodePod := pods.Items[0]
@@ -401,5 +399,54 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Verify that the current state of volDirBasePath matches our original archive.
 		s, err := fsExec.IssueCommandWithBeegfsPaths("tar --exclude %s --diff -f %s", csiDirPathBeegfsRoot, tarPathBeegfsRoot)
 		e2eframework.ExpectNoError(err, "%s", s)
+	})
+
+	ginkgo.It("should eventually create and delete a volume despite interface fallback [Slow] [Serial]", func() {
+		// This test is marked [Serial] because it modifies the running configuration of the driver. This is dangerous
+		// to do while other tests are running.
+		//
+		// Test file systems have connInterfacesFiles that are purposely misconfigured. Usually connNetFilter
+		// configuration in the /test/env/.../csi-beegfs-config.yaml mitigates this misconfiguration. This test
+		// disables the connNetFilter, causing extreme slowdown for CreateVolume operations. The goal is to verify
+		// that these operations still eventually complete.
+
+		if pattern.VolType != storageframework.DynamicPV {
+			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
+		}
+
+		init()
+		defer cleanup()
+		cfg, _ := d.PrepareTest(f)
+		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
+
+		config := utils.GetPluginConfigInUse(f.ClientSet, f.DynamicClient)
+		oldConfig := config.DeepCopy() // Maintain an exact copy of the old config so we can revert.
+		// Disable the connNetFilters functionality preventing us from attempting to connect on an inaccessible
+		// interface. This should slow everything down.
+		config.DefaultConfig.ConnNetFilter = make([]string, 0) // Remove connNetFilter configuration.
+		utils.UpdatePluginConfigInUse(f.ClientSet, f.DynamicClient, config)
+
+		grpcWaitTime := 10 * time.Second         // External provisioner waits this long by default.
+		interfaceFallbackTime := 5 * time.Second // It appears to take this long for BeeGFS to fall back.
+
+		startTime := time.Now()
+		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resources = append(resources, resource) // Allow for cleanup if something goes wrong.
+		createTime := time.Since(startTime)
+		// If creation doesn't take longer than the grpcWaitTime or interfaceFallbackTime, this test is invalid. Figure
+		// out how creation is happening so fast in this environment.
+		gomega.Expect(createTime).To(gomega.BeNumerically(">=", grpcWaitTime))
+		gomega.Expect(createTime).To(gomega.BeNumerically(">=", interfaceFallbackTime))
+
+		startTime = time.Now()
+		resource.CleanupResource()
+		// Log output will be confusing if we attempt to clean up this resource again in teardown.
+		resources = make([]*storageframework.VolumeResource, 0)
+		deleteTime := time.Since(startTime)
+		// If deletion doesn't take longer than interfaceFallbackTime, this test is invalid. It might be faster than
+		// grpcWaitTime because deletion only involves one mount operation (instead of many beegfs-ctl operations).
+		gomega.Expect(deleteTime).To(gomega.BeNumerically(">=", interfaceFallbackTime))
+
+		utils.UpdatePluginConfigInUse(f.ClientSet, f.DynamicClient, *oldConfig) // Restore the original config.
 	})
 }
