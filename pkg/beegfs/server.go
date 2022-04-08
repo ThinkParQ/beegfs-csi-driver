@@ -226,32 +226,24 @@ func logger(ctx context.Context) logr.Logger {
 // LogDebug writes a request ID aware log message at -v=3 (the default).
 func LogDebug(ctx context.Context, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).V(logLevelDebug)
-	logr.
-		WithCallDepth(l, 1).
-		Info(msg, keysAndValues...)
+	l.WithCallDepth(1).Info(msg, keysAndValues...)
 }
 
 // LogVerbose writes a request ID aware log message at -v=5.
 func LogVerbose(ctx context.Context, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).V(logLevelVerbose)
-	logr.
-		WithCallDepth(l, 1).
-		Info(msg, keysAndValues...)
+	l.WithCallDepth(1).Info(msg, keysAndValues...)
 }
 
 // LogError writes a request ID aware log message at the error level.
 func LogError(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
-	logr.
-		WithCallDepth(l, 1).
-		Error(err, msg, keysAndValues...)
+	l.WithCallDepth(1).Error(err, msg, keysAndValues...)
 }
 
 // LogFatal writes a request ID aware log message at the error level and immediately exits.
 func LogFatal(ctx context.Context, err error, msg string, keysAndValues ...interface{}) {
 	l := logger(ctx).WithValues("fullError", fmt.Sprintf("%+v", err))
-	logr.
-		WithCallDepth(l, 1).
-		Error(err, "Fatal: "+msg, keysAndValues...)
+	l.WithCallDepth(1).Error(err, "Fatal: "+msg, keysAndValues...)
 	os.Exit(255)
 }
