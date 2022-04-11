@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -147,6 +147,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 				case csi.ControllerServiceCapability_RPC_LIST_VOLUMES_PUBLISHED_NODES:
 				case csi.ControllerServiceCapability_RPC_GET_VOLUME:
 				case csi.ControllerServiceCapability_RPC_VOLUME_CONDITION:
+				case csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER:
 				default:
 					Fail(fmt.Sprintf("Unknown capability: %v\n", cap.GetRpc().GetType()))
 				}
@@ -202,7 +203,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.Aborted))
+			Expect(serverError.Code()).To(Equal(codes.Aborted), "unexpected error: %s", serverError.Message())
 		})
 
 		It("check the presence of new volumes and absence of deleted ones in the volume list", func() {
@@ -384,7 +385,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
@@ -401,7 +402,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		// TODO: whether CreateVolume request with no capacity should fail or not depends on driver implementation
@@ -538,7 +539,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(err).To(HaveOccurred())
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.AlreadyExists))
+			Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should not fail when creating volume with maximum-length name", func() {
@@ -610,7 +611,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(err).To(HaveOccurred())
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should create volume from an existing source volume", func() {
@@ -656,7 +657,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 			Expect(err).To(HaveOccurred())
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -679,7 +680,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should succeed when an invalid volume id is used", func() {
@@ -741,7 +742,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume capabilities are provided", func() {
@@ -776,7 +777,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should return appropriate values (no optional values added)", func() {
@@ -837,7 +838,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -860,7 +861,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no node id is provided", func() {
@@ -876,7 +877,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when no volume capability is provided", func() {
@@ -893,7 +894,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when publishing more volumes than the node max attach limit", func() {
@@ -955,7 +956,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when the node does not exist", func() {
@@ -994,7 +995,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.NotFound))
+			Expect(serverError.Code()).To(Equal(codes.NotFound), "unexpected error: %s", serverError.Message())
 		})
 
 		It("should fail when the volume is already published but is incompatible", func() {
@@ -1048,7 +1049,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.AlreadyExists))
+			Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
 		})
 	})
 
@@ -1087,7 +1088,7 @@ var _ = DescribeSanity("Controller Service [Controller Server]", func(sc *TestCo
 
 			serverError, ok := status.FromError(err)
 			Expect(ok).To(BeTrue())
-			Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+			Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 		})
 	})
 })
@@ -1337,7 +1338,7 @@ var _ = DescribeSanity("DeleteSnapshot [Controller Server]", func(sc *TestContex
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should succeed when an invalid snapshot id is used", func() {
@@ -1394,7 +1395,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 		Expect(err).To(HaveOccurred())
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should fail when no source volume id is provided", func() {
@@ -1411,7 +1412,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 		Expect(err).To(HaveOccurred())
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should succeed when requesting to create a snapshot with already existing name and same source volume ID", func() {
@@ -1444,7 +1445,7 @@ var _ = DescribeSanity("CreateSnapshot [Controller Server]", func(sc *TestContex
 		Expect(err).To(HaveOccurred())
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.AlreadyExists))
+		Expect(serverError.Code()).To(Equal(codes.AlreadyExists), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should succeed when creating snapshot with maximum-length name", func() {
@@ -1500,7 +1501,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should fail if no capacity range is given", func() {
@@ -1514,7 +1515,7 @@ var _ = DescribeSanity("ExpandVolume [Controller Server]", func(sc *TestContext)
 
 		serverError, ok := status.FromError(err)
 		Expect(ok).To(BeTrue())
-		Expect(serverError.Code()).To(Equal(codes.InvalidArgument))
+		Expect(serverError.Code()).To(Equal(codes.InvalidArgument), "unexpected error: %s", serverError.Message())
 	})
 
 	It("should work", func() {

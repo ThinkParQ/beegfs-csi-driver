@@ -67,15 +67,17 @@ pipeline {
                 // using this tag for one build at a time.
                 lock(resource: "k8s-shellcheck-${env.NODE_NAME}") {
                     script {
+                        def testCommand = 'ACK_GINKGO_DEPRECATIONS=1.16.5 TESTARGS="-v -ginkgo.v" make test > ' +
+                            'results/unit-test.log'
                         if (env.BRANCH_NAME.matches('(master)|(release-.+)|(PR-.+)')) {
                             // When JOB_NAME is empty, the conditional logic in release-tools/verify-vendor.sh allows
                             // for vendor testing.
-                            sh 'JOB_NAME= make test'
+                            sh "mkdir results/ && JOB_NAME= ${testCommand}"
                         } else {
                             // When JOB_NAME is not empty (automatically set by Jenkins), the conditional logic in
                             // release-tools/verify-vendor.sh does not allow for vendor testing. This is good, because
                             // vendor testing forces a download of all modules, which is time/bandwidth intensive.
-                            sh 'make test'
+                            sh "mkdir results/ && ${testCommand}"
                         }
                     }
                 }
@@ -277,16 +279,12 @@ pipeline {
                     parallel integrationJobs
                 }
             }
-            post {
-                always {
-                    archiveArtifacts(artifacts: 'results/**/*')
-                }
-            }
         }
     }
 
     post {
         cleanup {
+            archiveArtifacts(artifacts: 'results/**/*')
             sh """
                 docker image list | grep ${env.BRANCH_NAME} | awk '{ print \$1 ":" \$2 }' | xargs -r docker rmi
             """

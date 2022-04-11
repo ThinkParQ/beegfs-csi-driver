@@ -6,7 +6,7 @@ require (
 	github.com/container-storage-interface/spec v1.5.0
 	github.com/go-logr/logr v1.2.3
 	github.com/kubernetes-csi/csi-lib-utils v0.11.0
-	github.com/kubernetes-csi/csi-test/v4 v4.0.2
+	github.com/kubernetes-csi/csi-test/v4 v4.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/opencontainers/selinux v1.10.0
