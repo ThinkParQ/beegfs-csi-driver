@@ -14,7 +14,7 @@ require (
 	github.com/spf13/afero v1.8.2
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.45.0
 	gopkg.in/ini.v1 v1.66.4
 	k8s.io/api v0.23.5
 	k8s.io/apimachinery v0.23.5
