@@ -160,6 +160,7 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not we created the volume.
+		// TODO(webere, A395): Consider changing this to match the behavior of DeleteVolume.
 		if err := unmountAndCleanUpIfNecessary(ctx, vol, true, cs.mounter); err != nil {
 			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
 		}
@@ -243,7 +244,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	}
 	defer cs.volumeIDsInFlight.releaseLockOnString(vol.volumeID)
 
-	// Write configuration files and mount BeeGFS.
+	// Prepare to clean up.
 	defer func() {
 		// Clean up no matter what and return an error if cleanup fails. Ignoring cleanup failure might lead to silent
 		// orphaned mounts. One occasional cause of cleanup failure is a mount reporting "busy" on attempted unmount
@@ -259,7 +260,14 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 				err = newGrpcErrorFromCause(codes.Internal, cleanupErr)
 			}
 		}
+		if err != nil {
+			// Only record success if both deletion and cleanup are successful. This allows a subsequent DeleteVolume
+			// request to attempt a failed cleanup again.
+			cs.volumeStatusMap.writeStatus(vol.volumeID, statusDeleted)
+		}
 	}()
+
+	// Write configuration files and mount BeeGFS.
 	if err = fs.MkdirAll(vol.mountDirPath, 0750); err != nil {
 		err = errors.WithStack(err)
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
@@ -276,8 +284,6 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
-	// Update status and return.
-	cs.volumeStatusMap.writeStatus(vol.volumeID, statusDeleted)
 	return &csi.DeleteVolumeResponse{}, nil
 }
 
@@ -321,6 +327,7 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	// Write configuration files but do not mount BeeGFS.
 	defer func() {
 		// Failure to clean up is an internal problem. The CO only cares whether or not the volume exists.
+		// TODO(webere, A395): Consider changing this to match the behavior of DeleteVolume.
 		if err := cleanUpIfNecessary(ctx, vol, true); err != nil {
 			LogError(ctx, err, "Failed to clean up path for volume", "path", vol.mountDirPath, "volumeID", vol.volumeID)
 		}
