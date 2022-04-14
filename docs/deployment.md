@@ -16,6 +16,7 @@
   * [BeeGFS Client Parameters](#beegfs-client-parameters)
 * [Notes for Kubernetes Administrators](#kubernetes-administrator-notes)
   * [Security and Networking Considerations](#security-considerations)
+  * [Resource and Performance Considerations](#resource-and-performance-considerations)
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 <a name="deploying-to-kubernetes"></a>
@@ -667,6 +668,25 @@ context=system_u:object_r:container_file_t:s0` option. This causes SELinux to tr
 if they have this same, single context and allows typical containers to read, write and execute BeeGFS files (within the
 bounds of file access permissions). While this is not full SELinux support, it allows administrators to leave SELinux
 enabled and helps to prevent the exploitation of container runtime vulnerabilities.
+
+<a name="resource-and-performance-considerations"></a>
+### Resource and Performance Considerations
+
+**Limit the number of in-flight requests.**
+
+The controller service responds to CreateVolume and DeleteVolume requests made by the [external-provisioner sidecar
+container](https://github.com/kubernetes-csi/external-provisioner) deployed alongside it. (The sidecar handles all
+communication with the Kubernetes API server.) The external-provisioner application accepts a --worker-threads argument,
+which can be used to [effectively
+limit](https://github.com/kubernetes-csi/external-provisioner#csi-error-and-timeout-handling) the in-flight number of
+these types of requests. Each CreateVolume request MAY cause the controller service to mount the associated BeeGFS
+filesystem, and each DeleteVolume request DOES cause the controller service to mount the associated BeeGFS filesystem,
+so there is a reasonable concern that too many such simultaneous operations could be problematic.
+
+Limited stress testing has found that no issues occur with 200 simultaneous Persistent Volume Claim creations or with
+200 simultaneous Persistent Volume Claim deletions, so the --worker-threads argument does not appear in the default
+manifests. Add it as an argument to the `csi-provisioner` Container in the `csi-beegfs-controller` Stateful Set
+definition if an issue is observed. See the [Kubernetes deployment README.md](../deploy/k8s/README.md) for instructions.
 
 <a name="removing-the-driver-from-kubernetes"></a>
 ## Removing the Driver from Kubernetes
