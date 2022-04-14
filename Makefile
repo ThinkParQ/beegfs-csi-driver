@@ -54,7 +54,5 @@ push: container  # not explicitly executed in release-tools/build.make
 override TESTARGS += -ginkgo.skip='Controller Service \[Controller Server\] CreateVolume should fail when requesting to create a volume with already existing name and different capacity'
 # TODO(webere, A388): Correctly adhere to the CSI spec.
 override TESTARGS += -ginkgo.skip='Controller Service \[Controller Server\] DeleteVolume should succeed when an invalid volume id is used'
-# TODO(webere, A389): Correctly adhere to the CSI spec.
-override TESTARGS += -ginkgo.skip='Controller Service \[Controller Server\] ValidateVolumeCapabilities should fail when the requested volume does not exist'
 
 include release-tools/build.make
