@@ -62,7 +62,8 @@ spec:
       ARG BEEGFS_CLIENT_VERSION
 
       RUN wget https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/dists/beegfs-rhel8.repo -O /etc/yum.repos.d/beegfs-rhel8.repo
-      RUN rpm --import https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/gpg/RPM-GPG-KEY-beegfs
+      # Change GPG-KEY-beegfs to RPM-GPG-KEY-beegfs for BeeGFS versions <7.2.5.
+      RUN rpm --import https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/gpg/GPG-KEY-beegfs
       RUN yum install -y beegfs-client beegfs-utils beegfs-helperd
       RUN echo "" > /etc/beegfs/beegfs-mounts.conf
 
@@ -72,7 +73,7 @@ spec:
     dockerStrategy:
       buildArgs:
         - name: BEEGFS_CLIENT_VERSION
-          value: 7.2.5
+          value: 7.2.6
       from:
         api: image.openshift.io/v1
         kind: ImageStreamTag
