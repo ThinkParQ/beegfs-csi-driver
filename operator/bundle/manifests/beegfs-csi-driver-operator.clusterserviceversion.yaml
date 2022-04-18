@@ -67,7 +67,7 @@ metadata:
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
-    operators.operatorframework.io/builder: operator-sdk-v1.16.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.19.0+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/netapp/beegfs-csi-driver
     support: NetApp
@@ -522,7 +522,9 @@ spec:
           - create
         serviceAccountName: beegfs-csi-driver-operator-controller-manager
       deployments:
-      - name: beegfs-csi-driver-operator-controller-manager
+      - label:
+          control-plane: controller-manager
+        name: beegfs-csi-driver-operator-controller-manager
         spec:
           replicas: 1
           selector:
