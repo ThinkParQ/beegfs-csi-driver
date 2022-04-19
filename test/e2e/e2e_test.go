@@ -124,13 +124,16 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 	cs, err := e2eframework.LoadClientset()
-	e2eframework.ExpectNoError(err, "expected to load a client set")
+	e2eframework.ExpectNoError(err, "expected to load a client set") // All remaining work requires a clientset.
+	// Archive logs from node and controller service pods. Do this BEFORE VerifyNoOrphanedMounts because
+	// VerifyNoOrphanedMounts does not generate service logs and because VerifyNoOrphanedMounts can fail.
+	utils.ArchiveServiceLogs(cs, e2eframework.TestContext.ReportDir)
 	// Check for orphaned mounts on all nodes. This MUST be done in SynchronizedAfterSuite (instead of AfterSuite)
 	// because some processes will be done running tests and check while others are still creating BeeGFS volumes. If
 	// the check fails here, it is likely that code changes introduced for this test run caused mounts to be orphaned.
+	// Do this check AFTER ArchiveServiceLogs to ensure logs are captured and allow failure to ensure visibility of
+	// orphaned mounts.
 	utils.VerifyNoOrphanedMounts(cs)
-	// Archive logs from node and controller service pods
-	utils.ArchiveServiceLogs(cs, e2eframework.TestContext.ReportDir)
 })
 
 var _ = ginkgo.Describe("E2E Tests", func() {

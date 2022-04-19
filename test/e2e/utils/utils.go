@@ -78,73 +78,117 @@ func VerifyNoOrphanedMounts(cs clientset.Interface) {
 
 // ArchiveServiceLogs collects the logs on the node and controller service pods and writes them in the specified report
 // path. Logs will be collected from beegfs and csi-provisioner containers. This should typically be called after the
-// test suite completes. It may also make sense to call it if a test will intentionally redeploy Pods (as this action
-// results in a reset of container logs).
-func ArchiveServiceLogs(cs clientset.Interface, reportPath string) {
-	// Get controller and node pod information
-	controllerPod := GetRunningControllerPod(cs)
-	nodePods := GetRunningNodePods(cs)
+// test suite completes. It may also make sense to call it if a test will intentionally redeploy pods (as this action
+// results in a reset of container logs). ArchiveServiceLogs returns the first error it generates instead of failing in
+// case the caller wants to proceed anyway.
+func ArchiveServiceLogs(cs clientset.Interface, reportPath string) error {
+	var returnError error = nil
 
-	// Dump logs of each node pod's beegfs container
-	for _, nodePod := range nodePods {
-		logs, err := e2epod.GetPodLogs(cs, nodePod.Namespace, nodePod.Name, "beegfs")
-		if err != nil {
-			e2eframework.ExpectNoError(err, "failed to get beegfs logs for node container beegfs")
+	// Dump logs of each node pod's beegfs container.
+	nodePods, err := GetRunningNodePods(cs)
+	if err != nil {
+		e2eframework.Logf("Failed to get node pods due to error: %w", err)
+		returnError = err
+	} else { // Only proceed if we have node pods to get get logs from.
+		for _, nodePod := range nodePods {
+			logs, err := e2epod.GetPodLogs(cs, nodePod.Namespace, nodePod.Name, "beegfs")
+			if err != nil {
+				e2eframework.Logf("Failed to get logs for node container beegfs due to error: %w", err)
+				if returnError == nil {
+					returnError = err
+				}
+			}
+			filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-beegfs.log", nodePod.Name))
+			AppendBytesToFile(filePath, []byte(logs))
 		}
-
-		filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-beegfs.log", nodePod.Name))
-		AppendBytesToFile(filePath, []byte(logs))
 	}
 
 	// Dump logs of controller pod's beegfs and csi-provisioner containers
-	for _, containerName := range []string{"beegfs", "csi-provisioner"} {
-		logs, err := e2epod.GetPodLogs(cs, controllerPod.Namespace, controllerPod.Name, containerName)
-		if err != nil {
-			e2eframework.ExpectNoError(err, fmt.Sprintf("failed to get logs for controller container %s", containerName))
+	controllerPod, err := GetRunningControllerPod(cs)
+	if err != nil {
+		e2eframework.Logf("Failed to get controller pod due to error: %w", err)
+		returnError = err
+	} else { // Only proceed if we have a controller pod to get get logs from.
+		for _, containerName := range []string{"beegfs", "csi-provisioner"} {
+			logs, err := e2epod.GetPodLogs(cs, controllerPod.Namespace, controllerPod.Name, containerName)
+			if err != nil {
+				e2eframework.Logf("Failed to get logs for controller container %s due to error: %w", containerName, err)
+				if returnError == nil {
+					returnError = err
+				}
+			}
+			filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-%s.log", controllerPod.Name, containerName))
+			AppendBytesToFile(filePath, []byte(logs))
 		}
-
-		filePath := path.Join(reportPath, fmt.Sprintf("container-logs-%s-%s.log", controllerPod.Name, containerName))
-		AppendBytesToFile(filePath, []byte(logs))
 	}
+
+	return returnError
 }
 
-// AppendBytesToFile appends to a file if it already exists or creates it if it does not.
-func AppendBytesToFile(filePath string, logs []byte) {
+// AppendBytesToFile appends to a file if it already exists or creates it if it does not. AppendBytesToFile returns an
+// error instead of failing if the write doesn't work in case the caller wants to proceed anyway.
+func AppendBytesToFile(filePath string, bytes []byte) error {
 	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		e2eframework.ExpectNoError(err, "failed to write to open file %s", filePath)
+		return err
 	}
-	if _, err = f.Write(logs); err != nil {
-		f.Close()
-		e2eframework.ExpectNoError(err, "failed to write logs to file %s", filePath)
+	defer func() {
+		if err = f.Close(); err != nil {
+			// Don't return an error on close failure as there isn't anything for the caller to do.
+			e2eframework.Logf("Failed to close file %s", filePath)
+		}
+	}()
+	if _, err = f.Write(bytes); err != nil {
+		return err
 	}
-	if err := f.Close(); err != nil {
-		e2eframework.ExpectNoError(err, "failed to close file %s", filePath)
-	}
+	return nil
 }
 
 // GetRunningControllerPod waits PodStartTimeout for exactly one controller service Pod to be running (in any namespace)
-// and returns it. A consuming test fails if this is not possible.
-func GetRunningControllerPod(cs clientset.Interface) corev1.Pod {
+// and returns it or an error.
+func GetRunningControllerPod(cs clientset.Interface) (corev1.Pod, error) {
 	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(cs, "",
 		labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
-	e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
-	return controllerPods.Items[0]
+	if err != nil {
+		return corev1.Pod{}, err
+	}
+	return controllerPods.Items[0], nil
+}
+
+// GetRunningControllerPodOrFail waits PodStartTimeout for exactly one controller service Pod to be running (in any
+// namespace) and returns it or fails.
+func GetRunningControllerPodOrFail(cs clientset.Interface) corev1.Pod {
+	controllerPod, err := GetRunningControllerPod(cs)
+	if err != nil {
+		e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
+	}
+	return controllerPod
 }
 
 // GetRunningNodePods waits PodStartTimeout for at least one node service Pod to be running (in any namespace) and
-// returns all node service pods it finds. A consuming test fails if it cannot find at least one running Pod.
-func GetRunningNodePods(cs clientset.Interface) []corev1.Pod {
+// returns all node service pods it finds or an error.
+func GetRunningNodePods(cs clientset.Interface) ([]corev1.Pod, error) {
 	selector := labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"})
 	// Get node service Pods that should be running (we don't know how many up front).
 	nodePods, err := e2epod.WaitForPodsWithLabelScheduled(cs, "", selector)
 	if err != nil {
-		e2eframework.ExpectNoError(err, "failed to get any node pods")
+		return []corev1.Pod{}, err
 	}
 	// Get node service Pods one they are all running.
-	nodePods, err = e2epod.WaitForPodsWithLabelRunningReady(cs, "", selector, len(nodePods.Items), e2eframework.PodStartTimeout)
+	nodePods, err = e2epod.WaitForPodsWithLabelRunningReady(cs, "", selector, len(nodePods.Items),
+		e2eframework.PodStartTimeout)
 	if err != nil {
-		e2eframework.ExpectNoError(err, "node pods took too long to run")
+		return []corev1.Pod{}, err
 	}
-	return nodePods.Items
+	return nodePods.Items, nil
+}
+
+// GetRunningNodePodsOrFail waits PodStartTimeout for at least one node service Pod to be running (in any namespace) and
+// returns all node service pods it finds or an error.
+func GetRunningNodePodsOrFail(cs clientset.Interface) []corev1.Pod {
+	nodePods, err := GetRunningNodePods(cs)
+	if err != nil {
+		e2eframework.ExpectNoError(err, "expected to find at least one node pod and for all node pods to run")
+	}
+	return nodePods
 }

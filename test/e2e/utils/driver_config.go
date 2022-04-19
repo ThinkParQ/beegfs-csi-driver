@@ -54,7 +54,7 @@ func GetBeegfsDriverInUse(dc dynamic.Interface) *beegfsv1.BeegfsDriver {
 //   * The ConfigMap can't be retrieved.
 func GetConfigMapInUse(cs clientset.Interface) corev1.ConfigMap {
 	// There may be many old ConfigMaps on the cluster. We need to get the one actually being used.
-	controllerPod := GetRunningControllerPod(cs)
+	controllerPod := GetRunningControllerPodOrFail(cs)
 	var configMapName string
 	for _, volume := range controllerPod.Spec.Volumes {
 		if volume.ConfigMap != nil && strings.HasPrefix(volume.ConfigMap.Name, "csi-beegfs-config") {
@@ -92,7 +92,9 @@ func GetPluginConfigInUse(cs clientset.Interface, dc dynamic.Interface) beegfsv1
 // Consuming tests fail if this does not work.
 func UpdatePluginConfigInUse(cs clientset.Interface, dc dynamic.Interface, config beegfsv1.PluginConfigFromFile) {
 	// Archive Pod logs so we don't lose them.
-	ArchiveServiceLogs(cs, e2eframework.TestContext.ReportDir)
+	err := ArchiveServiceLogs(cs, e2eframework.TestContext.ReportDir)
+	// Fail test to ensure visibility of missing service logs.
+	e2eframework.ExpectNoError(err, "expected to successfully archive service logs")
 
 	beegfsDriver := GetBeegfsDriverInUse(dc)
 	if beegfsDriver != nil {
@@ -117,14 +119,14 @@ func UpdatePluginConfigInUse(cs clientset.Interface, dc dynamic.Interface, confi
 	// Delete Pods so they can pick up the changes to the ConfigMap. Don't use the "other" e2epod.Delete functions
 	// because they wait for the Pod to no longer exist. That will not happen here, as the StatefulSet and DaemonSet
 	// controllers will recreate them.
-	controllerPod := GetRunningControllerPod(cs)
+	controllerPod := GetRunningControllerPodOrFail(cs)
 	e2epod.DeletePodOrFail(cs, controllerPod.Namespace, controllerPod.Name)
-	nodePods := GetRunningNodePods(cs)
+	nodePods := GetRunningNodePodsOrFail(cs)
 	for _, nodePod := range nodePods {
 		e2epod.DeletePodOrFail(cs, nodePod.Namespace, nodePod.Name)
 	}
 
 	// Wait for Pods to be running again.
-	_ = GetRunningControllerPod(cs)
-	_ = GetRunningNodePods(cs)
+	_ = GetRunningControllerPodOrFail(cs)
+	_ = GetRunningNodePodsOrFail(cs)
 }
