@@ -316,7 +316,8 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		return nil, newGrpcErrorFromCause(codes.Internal, err)
+		err = errors.WithMessage(err, "volume ID is invalid or the volume does not exist")
+		return nil, newGrpcErrorFromCause(codes.NotFound, err)
 	}
 	if !cs.volumeIDsInFlight.obtainLockOnString(vol.volumeID) {
 		return nil, status.Errorf(codes.Aborted, "volumeID %s is in use by another request; check BeeGFS network "+
