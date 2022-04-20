@@ -439,7 +439,8 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		gomega.Expect(createTime).To(gomega.BeNumerically(">=", interfaceFallbackTime))
 
 		startTime = time.Now()
-		resource.CleanupResource()
+		err := resource.CleanupResource()
+		e2eframework.ExpectNoError(err, "expected to delete volume despite interface fallback")
 		// Log output will be confusing if we attempt to clean up this resource again in teardown.
 		resources = make([]*storageframework.VolumeResource, 0)
 		deleteTime := time.Since(startTime)
