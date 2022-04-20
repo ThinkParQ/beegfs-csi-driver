@@ -261,7 +261,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 				err = newGrpcErrorFromCause(codes.Internal, cleanupErr)
 			}
 		}
-		if err != nil {
+		if err == nil {
 			// Only record success if both deletion and cleanup are successful. This allows a subsequent DeleteVolume
 			// request to attempt a failed cleanup again.
 			cs.volumeStatusMap.writeStatus(vol.volumeID, statusDeleted)
