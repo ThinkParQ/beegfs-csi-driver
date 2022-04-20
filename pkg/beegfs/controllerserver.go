@@ -229,7 +229,8 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 	// Construct an internal representation of the volume.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
-		return nil, newGrpcErrorFromCause(codes.Internal, err)
+		LogError(ctx, err, "Beegfs volume not found for deletion", "volumeID", volumeID)
+		return &csi.DeleteVolumeResponse{}, nil
 	}
 
 	// Return success if we don't need to do anything.
