@@ -77,16 +77,19 @@ func (e grpcError) Error() string {
 func (e grpcError) Cause() error  { return e.cause }
 func (e grpcError) Unwrap() error { return e.cause }
 func (e grpcError) Format(s fmt.State, verb rune) {
+	// Fprintf and WriteString errors are intentionally unhandled as:
+	// 1. It does not make sense to log within an exported method.
+	// 2. Format() is an interface method that doesn't allow returning an error.
 	switch verb {
 	case 'v':
 		if s.Flag('+') {
-			fmt.Fprintf(s, "%+v\n", e.Cause())
-			io.WriteString(s, e.statusErr.Error())
+			_, _ = fmt.Fprintf(s, "%+v\n", e.Cause())
+			_, _ = io.WriteString(s, e.statusErr.Error())
 			return
 		}
 		fallthrough
 	case 's', 'q':
-		io.WriteString(s, e.statusErr.Error())
+		_, _ = io.WriteString(s, e.statusErr.Error())
 	}
 }
 func (e grpcError) GetStatusErr() error { return e.statusErr }
