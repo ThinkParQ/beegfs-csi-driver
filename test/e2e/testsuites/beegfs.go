@@ -213,7 +213,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		defer cleanup()
 
 		// Get the controller Pod, which could be running in any namespace.
-		controllerPod := utils.GetRunningControllerPod(f.ClientSet)
+		controllerPod := utils.GetRunningControllerPodOrFail(f.ClientSet)
 
 		// Get a node Pod, which could be running in any namespace.
 		pods, err := e2epod.WaitForPodsWithLabel(f.ClientSet, "",
