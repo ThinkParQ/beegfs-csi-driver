@@ -35,7 +35,7 @@ job "beegfs-csi-plugin" {
         data        = <<EOH
 config:
   beegfsClientConf:
-    connUseRDMA: true
+    connUseRDMA: "true"
         EOH
         destination = "${NOMAD_TASK_DIR}/csi-beegfs-config.yaml"
       }
@@ -44,8 +44,8 @@ config:
       # https://github.com/NetApp/beegfs-csi-driver/blob/c65b53757afb1828d95521ec929e06a117f9a689/docs/deployment.md#connauth-configuration
       template {
         data        = <<EOH
-- connAuth: secret1
-  sysMgmtdHost: 1.1.1.1
+- connAuth: "secret1"
+  sysMgmtdHost: "1.1.1.1"
         EOH
         destination = "${NOMAD_SECRETS_DIR}/csi-beegfs-connauth.yaml"
       }
