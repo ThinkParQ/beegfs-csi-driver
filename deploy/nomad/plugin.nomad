@@ -64,7 +64,8 @@ config:
         }
 
         # Docker hub URL
-        image = "docker.repo.eng.netapp.com/netapp/beegfs-csi-driver:v1.2.0"
+        # image = "netapp/beegfs-csi-driver:v1.2.1"
+        image = "docker.repo.eng.netapp.com/netapp/beegfs-csi-driver:v1.2.1"
 
         # Arguments passed directly to the container, find in "var" in main.go.
         # https://github.com/NetApp/beegfs-csi-driver/blob/c65b53757afb1828d95521ec929e06a117f9a689/cmd/beegfs-csi-driver/main.go
