@@ -36,15 +36,15 @@ validate the deployed ConfigMap as follows:
 1. Run the following to confirm the name of the ConfigMap currently being used
    by the driver: 
 ```
-joe-mac-0:Desktop joe$ kubectl get pod -n kube-system csi-beegfs-controller-0 -o=custom-columns="CURRENT-BEEGFS-CONFIGMAP:spec.volumes[?(@.name=='config-dir')].configMap.name"
+joe-mac-0:Desktop joe$ kubectl get pod -n beegfs-csi csi-beegfs-controller-0 -o=custom-columns="CURRENT-BEEGFS-CONFIGMAP:spec.volumes[?(@.name=='config-dir')].configMap.name"
 CURRENT-BEEGFS-CONFIGMAP
 csi-beegfs-config-9bk9mkb5k7
 ```
 2. Use the resulting ConfigMap name to describe the contents as follows:
 ```
-joe-mac-0:Desktop joe$ kubectl describe ConfigMap -n kube-system csi-beegfs-config-9bk9mkb5k7
+joe-mac-0:Desktop joe$ kubectl describe ConfigMap -n beegfs-csi csi-beegfs-config-9bk9mkb5k7
 Name:         csi-beegfs-config-9bk9mkb5k7
-Namespace:    kube-system
+Namespace:    beegfs-csi
 Labels:       <none>
 ```
 

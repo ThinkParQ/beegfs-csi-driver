@@ -39,7 +39,7 @@ type baseBeegfsDriver struct {
 // BeegfsDriver is an exported driver that implements the storageframework.TestDriver,
 // storageframework.DynamicPVTestDriver, storageframework.PreprovisionedVolumeTestDriver, and
 // storageframework.PreprovisionedPVTestDriver interfaces. It is intended to be used in all beegfs-csi-driver specific
-//tests.
+// tests.
 type BeegfsDriver struct {
 	*baseBeegfsDriver
 }

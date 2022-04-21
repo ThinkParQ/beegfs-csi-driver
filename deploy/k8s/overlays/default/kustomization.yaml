@@ -1,11 +1,13 @@
-# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Copyright 2022 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: kube-system
+namespace: beegfs-csi  # Modify this to deploy to a different namespace.
 bases:
   - ../../versions/latest  # Modify this to select a specific Kubernetes version.
+resources:
+  - namespace.yaml
 patchesStrategicMerge:
   # See ../examples/patches for additional patch ideas.
   - patches/node-affinity.yaml
