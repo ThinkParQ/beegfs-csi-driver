@@ -255,8 +255,7 @@ Apache License 2.0
 <a name="maintainers"></a>
 ## Maintainers 
 
-* Eric Weber (@ejweber).
-* Jason Eastburn
 * Joe McCormick (@iamjoemccormick).
-* Joey Parnell (@unwieldy0). 
-* Justin Bostian (@jb5n).
+* Eric Weber (@ejweber).
+* Garrett Marks (@gmarks-ntap).
+* Cole Krizek (@ckrizek).

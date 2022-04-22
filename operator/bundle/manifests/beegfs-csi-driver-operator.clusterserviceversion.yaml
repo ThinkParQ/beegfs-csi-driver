@@ -650,8 +650,10 @@ spec:
     name: Joe McCormick
   - email: eric.weber2@netapp.com
     name: Eric Weber
-  - email: justin.bostian@netapp.com
-    name: Justin Bostian
+  - email: garrett.marks@netapp.com
+    name: Garrett Marks
+  - email: cole.krizek@netapp.com
+    name: Cole Krizek
   maturity: stable
   minKubeVersion: 1.19.0
   provider:
