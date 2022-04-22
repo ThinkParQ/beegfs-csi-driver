@@ -82,7 +82,7 @@ Steps:
     *deploy/k8s/overlays/my-overlay* as necessary before deployment 
     (e.g. `../../versions/v1.18`).
 * Verify all components are installed and operational: `kubectl get pods -n
-  kube-system | grep csi-beegfs`.
+  beegfs-csi`.
 
 Example command outputs: 
 
@@ -100,7 +100,7 @@ statefulset.apps/csi-beegfs-controller created
 daemonset.apps/csi-beegfs-node created
 csidriver.storage.k8s.io/beegfs.csi.netapp.com created
 
--> kubectl get pods -n kube-system | grep csi-beegfs
+-> kubectl get pods -n beegfs-csi
 csi-beegfs-controller-0                   2/2     Running   0          2m27s
 csi-beegfs-node-2h6ff                     3/3     Running   0          2m27s
 csi-beegfs-node-dkcr5                     3/3     Running   0          2m27s

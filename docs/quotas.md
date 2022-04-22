@@ -215,13 +215,13 @@ spec:
   * Use `ls -l <PATH_TO_PVC>` to verify the file was created with the
     appropriate group:
     ```bash
-    [user@client01 ~]# ls -l /mnt/beegfs/k8s/pvc-db7a3ec0/
+    -> ls -l /mnt/beegfs/k8s/pvc-db7a3ec0/
     total 0
     -rw-r--r-- 1 root k8s-sc 0 May  5 20:06 touched-by-33342327-1734-4bba-8b95-974aa8eccb3f
     ```
     * Run `beegfs-ctl --getquota --gid 1000` to verify BeeGFS sees the group: 
     ```bash
-    [user@client01 ~]# beegfs-ctl --getquota --gid 1000 
+    -> beegfs-ctl --getquota --gid 1000 
 
     Quota information for storage pool Default (ID: 1):
 
