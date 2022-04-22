@@ -252,7 +252,7 @@ pipeline {
                             new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8", "1.22", "", "root", true)
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "", "root", true)
                         ]
                     } else {
                         testEnvironments = [
@@ -261,7 +261,7 @@ pipeline {
                             new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8", "1.22", "", "root", true)
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "", "root", true)
                         ]
                     }
 
