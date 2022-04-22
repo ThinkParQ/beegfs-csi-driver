@@ -66,6 +66,7 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 	connInterfacesFilePath := path.Join(vol.mountDirPath, "connInterfacesFile")
 	connNetFilterFilePath := path.Join(vol.mountDirPath, "connNetFilterFile")
 	connTcpOnlyFilterFilePath := path.Join(vol.mountDirPath, "connTcpOnlyFilterFile")
+	connRDMAInterfacesFilePath := path.Join(vol.mountDirPath, "connRDMAInterfacesFile")
 
 	// setConfigValueIfKeyExists is a helper function used to get around the fact that the go-ini library will allows
 	// setting the value of an arbitrary key, even if the key did not exist in the original .ini file.
@@ -146,6 +147,16 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		}
 		if err = fsutil.WriteFile(connTcpOnlyFilterFilePath, []byte(connTcpOnlyFilterFileContents), 0644); err != nil {
 			return errors.Wrap(err, "error writing connTcpOnlyFilter file")
+		}
+	}
+
+	if len(vol.config.ConnRDMAInterfaces) != 0 {
+		connRDMAInterfacesContents := strings.Join(vol.config.ConnRDMAInterfaces, "\n") + "\n"
+		if err := setConfigValueIfKeyExists(clientConfINI, "connRDMAInterfacesFile", connRDMAInterfacesFilePath); err != nil {
+			return err
+		}
+		if err = fsutil.WriteFile(connRDMAInterfacesFilePath, []byte(connRDMAInterfacesContents), 0644); err != nil {
+			return errors.Wrap(err, "error writing connRDMAInterfaces file")
 		}
 	}
 

@@ -435,6 +435,9 @@ config:  # OPTIONAL
   connTcpOnlyFilter:
     - <ip_subnet>  # e.g. 10.0.0.1/24
     - <ip_subnet>
+  connRDMAInterfaces:
+    - <interface_name>  # e.g. ib0
+    - <interface_name>
   beegfsClientConf:
     <beegfs-client.conf_key>: <beegfs-client.conf_value>
     # All beegfs-client.conf values must be strings. Quotes are required on 
@@ -566,9 +569,10 @@ if specified here.
 * `connNetFilterFile` - Overridden by lists in the driver configuration file.
 * `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
   file.
+* `connRDMAInterfaces` - Overriden by lists in the driver configuration file.
 
 <a name="tested"></a>
-### Tested
+#### Tested
 
 These parameters have been tested and verified to have the desired effect.
 
@@ -587,6 +591,7 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `connFallbackExpirationSecs`
 * `connMaxInternodeNum`
 * `connMaxConcurrentAttempts`
+* `connTCPFallbackEnabled`
 * `connUseRDMA`
 * `connRDMABufNum`
 * `connRDMABufSize`
@@ -609,6 +614,15 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `tuneUseGlobalAppendLocks`
 * `tuneUseGlobalFileLocks`
 * `sysACLsEnabled`
+
+#### BeeGFS Client Parameter Compatibility
+
+##### BeeGFS 7.3 Client
+
+The following parameters are new for the BeeGFS 7.3 client. These parameters will not work with older client versions.
+
+* `connRDMAInterfaces`
+* `connTCPFallbackEnabled`
 
 <a name="kubernetes-administrator-notes"></a>
 ## Notes for Kubernetes Administrators

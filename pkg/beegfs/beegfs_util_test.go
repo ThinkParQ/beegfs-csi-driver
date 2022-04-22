@@ -28,20 +28,22 @@ connInterfacesFile    =
 connNetFilterFile     =
 connTcpOnlyFilterFile =
 connAuthFile          =
+connRDMAInterfacesFile =
 `
 
 // Do not remove extra newline at end of file. go-ini writes one that we must match.
 // We cannot predict what connClientUDPPort will be chosen, so tests shouldn't actually check that line.
 const TestWriteClientFilesBeegfsClientConf = `# A minimal configuration file that allows connInterfaces, connNetFilter,
 # connTcpOnlyFilter, and one arbitrary override.
-sysMgmtdHost          = 127.0.0.1
-connClientPortUDP     = 49152
+sysMgmtdHost           = 127.0.0.1
+connClientPortUDP      = 49152
 # One arbitrary key that can be overridden.
-connMgmtdPortTCP      = 8000
-connInterfacesFile    = /testvol/connInterfacesFile
-connNetFilterFile     = /testvol/connNetFilterFile
-connTcpOnlyFilterFile = /testvol/connTcpOnlyFilterFile
-connAuthFile          = /testvol/connAuthFile
+connMgmtdPortTCP       = 8000
+connInterfacesFile     = /testvol/connInterfacesFile
+connNetFilterFile      = /testvol/connNetFilterFile
+connTcpOnlyFilterFile  = /testvol/connTcpOnlyFilterFile
+connAuthFile           = /testvol/connAuthFile
+connRDMAInterfacesFile = /testvol/connRDMAInterfacesFile
 
 `
 
@@ -141,9 +143,10 @@ func TestWriteClientFiles(t *testing.T) {
 	sysMgmtdHost := "127.0.0.1"
 	testConfig := beegfsv1.PluginConfig{
 		DefaultConfig: beegfsv1.BeegfsConfig{
-			ConnInterfaces:    []string{"ib0"},
-			ConnNetFilter:     []string{"127.0.0.0/24"},
-			ConnTcpOnlyFilter: []string{"127.0.0.0"},
+			ConnInterfaces:     []string{"ib0"},
+			ConnNetFilter:      []string{"127.0.0.0/24"},
+			ConnTcpOnlyFilter:  []string{"127.0.0.0"},
+			ConnRDMAInterfaces: []string{"ib0"},
 			BeegfsClientConf: map[string]string{
 				"connMgmtdPortTCP": "8000",
 			},
@@ -161,6 +164,7 @@ func TestWriteClientFiles(t *testing.T) {
 	wantConnInterfacesFile := "ib0\n"          // desired connInterfacesFile contents
 	wantConnNetFilterFile := "127.0.0.0/24\n"  // desired connNetFilterFile contents
 	wantConnTcpOnlyFilterFile := "127.0.0.0\n" // desired connTcpOnlyFilterFile contents
+	wantConnRDMAInterfacesFile := "ib0\n"      // desired connRDMAInterfacesFile contents
 
 	// set up template directory in memory-mapped filesystem
 	if err := fs.MkdirAll(confTemplateDirPath, 0755); err != nil {
@@ -222,6 +226,16 @@ func TestWriteClientFiles(t *testing.T) {
 	if wantConnNetFilterFile != string(got) {
 		t.Errorf("connNetFilterFile does not match; expected:\n%vgot:\n%v",
 			wantConnNetFilterFile, string(got))
+	}
+
+	// check written connRDMAInterfacesFile
+	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connRDMAInterfacesFile"))
+	if err != nil {
+		t.Errorf("could not read output connRDMAInterfacesFile")
+	}
+	if wantConnRDMAInterfacesFile != string(got) {
+		t.Errorf("connRDMAInterfacesFile does not match; exected\n%vgot:\n%v",
+			wantConnRDMAInterfacesFile, string(got))
 	}
 
 	// check written connTcpOnlyFilterFile

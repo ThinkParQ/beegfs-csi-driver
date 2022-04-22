@@ -152,6 +152,11 @@ type BeegfsConfig struct {
 	BeegfsClientConf map[string]string `json:"beegfsClientConf,omitempty"`
 	// This field is explicitly NOT tagged for inclusion in the CSV, as it cannot be set externally.
 	ConnAuth string `json:"-"` // Do not support unmarshalling from a configuration file.
+	// A list of interfaces the BeeGFS client will use for outbound RDMA connections. This is used in support
+	// of the BeeGFS multi-rail feature. This feature does not depend on or use the connInterfaces parameter.
+	// This feature requires the BeeGFS client version 7.3.0 or later.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Conn RDMA Interfaces"
+	ConnRDMAInterfaces []string `json:"connRDMAInterfaces,omitempty"`
 }
 
 // NewBeegfsConfig returns an initialized BeegfsConfig.

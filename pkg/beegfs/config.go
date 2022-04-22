@@ -32,6 +32,7 @@ var unsupportedBeegfsConfOptions = []string{
 	"connNetFilterFile",
 	"connTcpOnlyFilterFile",
 	"connAuthFile",
+	"connRDMAInterfacesFile",
 }
 
 // parseConfigFromFile reads the file at the specified path, unmarshalls it into a PluginConfigFromFile, and constructs
@@ -149,6 +150,8 @@ func validateConfig(plConfig *beegfsv1.PluginConfig) error {
 		beegfsConfigs = append(beegfsConfigs, config.Config)
 	}
 
+	// TODO: Should we validate beegfs client version specific options here?
+
 	for _, config := range beegfsConfigs {
 		for _, filter := range config.ConnNetFilter {
 			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
@@ -223,6 +226,10 @@ func overWriteBeegfsConfig(writeTo *beegfsv1.BeegfsConfig, writeFrom beegfsv1.Be
 	if len(writeFrom.ConnTcpOnlyFilter) != 0 {
 		writeTo.ConnTcpOnlyFilter = make([]string, len(writeFrom.ConnTcpOnlyFilter))
 		copy(writeTo.ConnTcpOnlyFilter, writeFrom.ConnTcpOnlyFilter)
+	}
+	if len(writeFrom.ConnRDMAInterfaces) != 0 {
+		writeTo.ConnRDMAInterfaces = make([]string, len(writeFrom.ConnRDMAInterfaces))
+		copy(writeTo.ConnRDMAInterfaces, writeFrom.ConnRDMAInterfaces)
 	}
 	if writeFrom.ConnAuth != "" {
 		writeTo.ConnAuth = writeFrom.ConnAuth
