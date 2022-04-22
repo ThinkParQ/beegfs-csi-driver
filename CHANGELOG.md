@@ -22,7 +22,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   `/etc/beegfs/beegfs-client.conf` first. 
   
 ### Deprecated
-- Testing for BeeGFS v7.1.5 (to be removed in the next release).
+- Support (testing) for BeeGFS v7.1.5 (to be removed in the next release).
 
 ### Fixed
 - Slow but successful CreateVolume operations may never return an OK status
@@ -36,11 +36,13 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 - Minor issues related to end-to-end testing.
 
 ### Removed
-- Testing for BeeGFS v7.2.5, Kubernetes v1.19, and RedHat OpenShift v4.9
+- Support (testing) for BeeGFS v7.2.5, Kubernetes v1.19, and RedHat OpenShift
+  v4.9.
 
 ### Security
-- Updated multiple vulnerable dependencies to versions not known to be
-  vulnerable.
+- Mitigated
+  [CVE-2022-23772](https://security.netapp.com/advisory/ntap-20220225-0006/) by
+  upgrading to Go v1.17.9.
 - Completed a threat model of the controller service and made minor
   documentation improvements in response.
 
