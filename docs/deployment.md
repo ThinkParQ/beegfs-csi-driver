@@ -648,7 +648,45 @@ Inbound UDP traffic from nodes serving up BeeGFS file systems to arbitrary
 ports on all BeeGFS clients must be allowed. Each volume requires its own port
 and it is not currently possible to configure an allowed port range.
 
-<a name="security-considerations-selinux"></a>
+**Appropriate roles should be enforced.**
+
+It is important to consider the roles different users can assume when
+interacting with the BeeGFs CSI driver. The driver (like all CSI drivers) does
+not, itself, authenticate or authorize users. However, different Kubernetes
+users naturally have a greater or lesser ability to interact with it. The
+driver's security model generally assumes two types of users:
+1. Administrators:
+   - Have the ability to interact with the driver's namespace
+     (`beegfs-csi` by default). 
+   - Can modify the driver's deployment manifests and configuration files
+     (`csi-beegfs-config.yaml` and `csi-beegfs-connauth.yaml`).
+   - Can create/modify Storage Classes and Persistent Volumes.
+   - Can optionally create/modify Persistent Volume Claims referencing a 
+     Storage Class or Persistent Volume.
+1. Users:
+   - Cannot interact with the driver's namespace.
+   - Can create and modify objects in a limited number of other namespaces.
+   - Can create/modify Persistent Volume Claims referencing a Storage Class or 
+     Persistent Volume.
+
+A Kubernetes user's ability to assume one of these two roles is entirely
+dependent on the configuration of the underlying Kubernetes cluster. A user with
+an inappropriate level of permissions can cause any number of problems in a
+cluster. The following issues are specific to the BeeGFS CSI driver.
+
+With the ability to create or modify objects in the driver namespace (e.g. the 
+driver's Stateful Set / Daemon Set, csi-beegfs-config.yaml, etc.), a user can:
+- Misconfigure the driver (potentially resulting in poor performance and/or 
+  limited denial of service).
+
+With the ability to create or modify Storage Classes or Persistent Volumes, a 
+user can: 
+- Cause a BeeGFS file system to mount or a BeeGFS directory to bind mount with 
+  arbitrary mount options (potentially resulting in poor performance and/or 
+  limited denial of service). 
+- Provide access to arbitrary files and directories within a BeeGFS file system 
+  (although [permissions based protections](usage.md/permissions) still apply).
+
 **SELinux**
 
 [SELinux](https://selinuxproject.org/page/Main_Page) is a security enhancement to Linux which allows users and
