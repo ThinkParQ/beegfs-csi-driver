@@ -648,6 +648,7 @@ Inbound UDP traffic from nodes serving up BeeGFS file systems to arbitrary
 ports on all BeeGFS clients must be allowed. Each volume requires its own port
 and it is not currently possible to configure an allowed port range.
 
+<a name="security-considerations-selinux"></a>
 **SELinux**
 
 [SELinux](https://selinuxproject.org/page/Main_Page) is a security enhancement to Linux which allows users and

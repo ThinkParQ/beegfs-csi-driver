@@ -1,6 +1,51 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.2.2] - 2022-05-09
+--------------------
+### Added
+- Support for BeeGFS v7.2.6, BeeGFS v7.3.0, Kubernetes v1.23, and RedHat
+  OpenShift v4.10.
+- [Basic support](docs/deployment.md#security-considerations-selinux) for
+  SELinux-enabled nodes.
+- [Experimental support](deploy/openshift-beegfs-client/README.md) for deploying
+  the BeeGFS client to OpenShift RHCOS nodes. The driver is still only
+  officially supported in OpenShift on RHEL nodes.
+
+### Changed
+- The driver now fails in initialization if it does not detect a running BeeGFS
+  client kernel module. Previously it would not fail until it served the first
+  request.
+- If the `client-conf-template-path` command line parameter is not specified,
+  the driver now looks for a beegfs-client.conf file in multiple expected
+  locations. It still looks in the previous default location
+  `/etc/beegfs/beegfs-client.conf` first. 
+  
+### Deprecated
+- Support (testing) for BeeGFS v7.1.5 (to be removed in the next release).
+
+### Fixed
+- Slow but successful CreateVolume operations may never return an OK status
+  within the time frame that the client is listening. This typically only occurs
+  in environments with misconfigured BeeGFS networking.
+- ValidateVolumeCapabilities returns an INTERNAL error code when an invalid
+  volume ID is included in a request instead of a NOT_FOUND error code (as
+  required by the CSI spec).
+- DeleteVolume returns an INTERNAL error code when an invalid volume ID is
+  included in a request instead of OK (as required by the CSI spec).
+- Minor issues related to end-to-end testing.
+
+### Removed
+- Support (testing) for BeeGFS v7.2.5, Kubernetes v1.19, and RedHat OpenShift
+  v4.9.
+
+### Security
+- Mitigated
+  [CVE-2022-23772](https://security.netapp.com/advisory/ntap-20220225-0006/) by
+  upgrading to Go v1.17.9.
+- Completed a threat model of the controller service and made minor
+  documentation improvements in response.
+
 [1.2.1] - 2021-12-20
 --------------------
 ### Added
