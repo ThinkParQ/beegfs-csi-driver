@@ -63,7 +63,7 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Storage
-    containerImage: netapp/beegfs-csi-driver-operator:v1.2.1
+    containerImage: netapp/beegfs-csi-driver-operator:v1.2.2
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
@@ -71,7 +71,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/netapp/beegfs-csi-driver
     support: NetApp
-  name: beegfs-csi-driver-operator.v1.2.1
+  name: beegfs-csi-driver-operator.v1.2.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -559,7 +559,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: netapp/beegfs-csi-driver-operator:v1.2.1
+                image: netapp/beegfs-csi-driver-operator:v1.2.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -659,4 +659,4 @@ spec:
   provider:
     name: NetApp
     url: https://www.netapp.com
-  version: 1.2.1
+  version: 1.2.2

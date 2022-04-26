@@ -38,7 +38,7 @@ spec:
           - mountPath: /registration
             name: registration-dir
         - name: beegfs
-          image: netapp/beegfs-csi-driver:v1.2.1
+          image: netapp/beegfs-csi-driver:v1.2.2
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
