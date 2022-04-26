@@ -261,6 +261,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteMany
+  capaciy:
+    storage: 100Gi
   persistentVolumeReclaimPolicy: Retain
   csi:
     driver: beegfs.csi.netapp.com
@@ -276,13 +278,16 @@ Volume. Create a Persistent Volume Claim and set the `volumeName` field to
 ensure it maps to the correct Persistent Volume.
 
 ```yaml
-piVersion: v1
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: my-pvc
 spec:
   accessModes:
     - ReadWriteMany
+  resources:
+    requests: 
+      storage: 100Gi
   storageClassName: ""
   volumeName: my-pv
 ```
