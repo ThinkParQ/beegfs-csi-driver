@@ -17,10 +17,16 @@ config:
     - 10.0.0.2/24
   connTcpOnlyFilter:
     - 10.0.0.1/24
+  # The connRDMAInterfaces parameter requires BeeGFS client 7.3.0 or later.
+  connRDMAInterfaces:
+    - ib0
+    - ib1
   beegfsClientConf:
     # All beegfs-client.conf values must be strings. Quotes are required on integers and booleans.
     connMgmtdPortTCP: "9008"
     connUseRDMA: "true"
+    # The connTCPFallbackEnabled parameter requires BeeGFS client 7.3.0 or later.
+    connTCPFallbackEnabled: "false"
 
 fileSystemSpecificConfigs:
   - sysMgmtdHost: some.specific.file.system

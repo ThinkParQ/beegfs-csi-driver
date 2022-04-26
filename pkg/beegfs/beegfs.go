@@ -71,6 +71,7 @@ type beegfs struct {
 //            |-- "beegfs-client.conf" (clientConfPath)
 //            |-- "connInterfacesFile"
 //            |-- "connNetFilterFile"
+//            |-- "connRDMAInterfacesFile"
 //            |-- "connTcpOnlyFilterFile"
 //            |-- "mount" (mountPath)
 //                |-- ...
