@@ -204,7 +204,7 @@ var wantBeegfsVolume = beegfsVolume{
 	volDirBasePath:           path.Join("/", "...", "/", "mountDirPath", "mount", "...", "parent"),
 	volDirPath:               path.Join("/", "...", "mountDirPath", "mount", "...", "parent", "volume"),
 	volDirPathBeegfsRoot:     path.Join("/", "...", "parent", "volume"),
-	volumeID:                 NewBeegfsUrl("sysMgmtdHost", path.Join("/", "...", "parent", "volume")),
+	volumeID:                 NewBeegfsURL("sysMgmtdHost", path.Join("/", "...", "parent", "volume")),
 }
 
 func TestNewBeegfsVolume(t *testing.T) {

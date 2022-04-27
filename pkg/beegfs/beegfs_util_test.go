@@ -66,7 +66,7 @@ func TestNewBeegfsUrl(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := NewBeegfsUrl(tc.host, tc.path)
+			got := NewBeegfsURL(tc.host, tc.path)
 			if tc.want != got {
 				t.Fatalf("expected: %s, got: %s", tc.want, got)
 			}
@@ -76,36 +76,36 @@ func TestNewBeegfsUrl(t *testing.T) {
 
 func TestParseBeegfsUrl(t *testing.T) {
 	tests := map[string]struct {
-		rawUrl             string
+		rawURL             string
 		wantHost, wantPath string
 		wantErr            bool
 	}{
 		"basic ip example": {
-			rawUrl:   "beegfs://127.0.0.1/path/to/volume",
+			rawURL:   "beegfs://127.0.0.1/path/to/volume",
 			wantHost: "127.0.0.1",
 			wantPath: "/path/to/volume",
 			wantErr:  false,
 		},
 		"basic FQDN example": {
-			rawUrl:   "beegfs://some.domain.com/path/to/volume",
+			rawURL:   "beegfs://some.domain.com/path/to/volume",
 			wantHost: "some.domain.com",
 			wantPath: "/path/to/volume",
 			wantErr:  false,
 		},
 		"invalid URL example": {
-			rawUrl:   "beegfs:// some.domain.com/ path/to/volume",
+			rawURL:   "beegfs:// some.domain.com/ path/to/volume",
 			wantHost: "",
 			wantPath: "",
 			wantErr:  true,
 		},
 		"invalid https example": {
-			rawUrl:   "https://some.domain.com/path/to/volume",
+			rawURL:   "https://some.domain.com/path/to/volume",
 			wantHost: "",
 			wantPath: "",
 			wantErr:  true,
 		},
 		"invalid empty string example": {
-			rawUrl:   "",
+			rawURL:   "",
 			wantHost: "",
 			wantPath: "",
 			wantErr:  true,
@@ -114,7 +114,7 @@ func TestParseBeegfsUrl(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			gotHost, gotPath, err := parseBeegfsUrl(tc.rawUrl)
+			gotHost, gotPath, err := parseBeegfsURL(tc.rawURL)
 			if tc.wantHost != gotHost {
 				t.Fatalf("expected host: %s, got host: %s", tc.wantHost, gotHost)
 			}
@@ -124,7 +124,7 @@ func TestParseBeegfsUrl(t *testing.T) {
 			}
 
 			if tc.wantErr == true && err == nil {
-				t.Fatalf("expected an error to occur for invalid URL: %s", tc.rawUrl)
+				t.Fatalf("expected an error to occur for invalid URL: %s", tc.rawURL)
 			}
 
 			if tc.wantErr == false && err != nil {

@@ -39,16 +39,16 @@ import (
 
 // VerifyDirectoryModeUidGidInPod verifies expected mode, UID, and GID of the target directory
 // This implementation is similar to [`VerifyFilePathGidInPod`](https://github.com/kubernetes/kubernetes/blob/v1.21.0/test/e2e/storage/utils/utils.go#L709).
-func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expectedMode, expectedUid, expectedGid string, pod *corev1.Pod) {
+func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expectedMode, expectedUID, expectedGID string, pod *corev1.Pod) {
 	cmd := fmt.Sprintf("ls -ld %s", directory)
 	stdout, stderr, err := e2evolume.PodExec(f, pod, cmd)
 	e2eframework.ExpectNoError(err)
 	e2eframework.Logf("pod %s/%s exec for cmd %s, stdout: %s, stderr: %s", pod.Namespace, pod.Name, cmd, stdout, stderr)
 	ll := strings.Fields(stdout)
-	e2eframework.Logf("stdout split: %v, expected mode: %v, expected uid: %v, expected gid: %v ", ll, expectedMode, expectedUid, expectedGid)
+	e2eframework.Logf("stdout split: %v, expected mode: %v, expected uid: %v, expected gid: %v ", ll, expectedMode, expectedUID, expectedGID)
 	e2eframework.ExpectEqual(ll[0], expectedMode)
-	e2eframework.ExpectEqual(ll[2], expectedUid)
-	e2eframework.ExpectEqual(ll[3], expectedGid)
+	e2eframework.ExpectEqual(ll[2], expectedUID)
+	e2eframework.ExpectEqual(ll[3], expectedGID)
 }
 
 // VerifyNoOrphanedMounts uses SSH to access all cluster nodes and verify that none of them have a BeeGFS file system
