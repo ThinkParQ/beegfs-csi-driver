@@ -160,7 +160,7 @@ func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframew
 func (d *BeegfsDriver) CreateVolume(config *storageframework.PerTestConfig, volumeType storageframework.TestVolType) storageframework.TestVolume {
 	fsConfig := d.perFSConfigs[d.fsIndex]
 	return beegfsVolume{
-		volumeID: beegfs.NewBeegfsUrl(fsConfig.SysMgmtdHost, d.staticVolDirPathBeegfsRoot),
+		volumeID: beegfs.NewBeegfsURL(fsConfig.SysMgmtdHost, d.staticVolDirPathBeegfsRoot),
 	}
 }
 

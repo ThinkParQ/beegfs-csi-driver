@@ -36,9 +36,8 @@ func GetBeegfsDriverInUse(dc dynamic.Interface) *beegfsv1.BeegfsDriver {
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil // The BeegfsDriver API resource doesn't exist. Hopefully we're in a non-operator cluster.
-		} else {
-			e2eframework.ExpectNoError(err)
 		}
+		e2eframework.ExpectNoError(err)
 	}
 	e2eframework.ExpectEqual(len(beegfsDriverList.Items), 1, "expected exactly one BeegfsDriver on an operator-enabled cluster")
 

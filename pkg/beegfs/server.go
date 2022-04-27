@@ -44,7 +44,7 @@ import (
 // Use a package scoped type to avoid clashing with other packages that might use "reqID" as a context key.
 type contextKey string
 
-const ctxRequestID contextKey = "reqID"
+const ctxRequestIDKey contextKey = "reqID"
 
 var requestIDCounter uint32
 
@@ -209,16 +209,16 @@ func logGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 
 // Generates a new context with a unique hexadecimal requestID to easily keep track of related logs
 func generateRequestContext(parent context.Context) context.Context {
-	return context.WithValue(parent, ctxRequestID, fmt.Sprintf("%04x", atomic.AddUint32(&requestIDCounter, 1)%0x10000))
+	return context.WithValue(parent, ctxRequestIDKey, fmt.Sprintf("%04x", atomic.AddUint32(&requestIDCounter, 1)%0x10000))
 }
 
 // logger returns a klogr logger with as much context as possible
 func logger(ctx context.Context) logr.Logger {
 	newLogger := klogr.New()
 	if ctx != nil {
-		if ctxRqId, ok := ctx.Value(ctxRequestID).(string); ok {
+		if ctxRequestID, ok := ctx.Value(ctxRequestIDKey).(string); ok {
 			// klogr requires a string type (not a contextKey type) key.
-			newLogger = newLogger.WithValues(string(ctxRequestID), ctxRqId)
+			newLogger = newLogger.WithValues(string(ctxRequestIDKey), ctxRequestID)
 		}
 	} else {
 		newLogger = newLogger.WithValues("goroutine", "main")

@@ -33,9 +33,9 @@ import (
 var fs = afero.NewOsFs()
 var fsutil = afero.Afero{Fs: fs}
 
-// NewBeegfsUrl converts the sysMgmtdHost and path into a URL with the format beegfs://host/path. NewBeegfsUrl is
+// NewBeegfsURL converts the sysMgmtdHost and path into a URL with the format beegfs://host/path. NewBeegfsURL is
 // exported for use by in test/e2e/driver.
-func NewBeegfsUrl(host string, path string) string {
+func NewBeegfsURL(host string, path string) string {
 	structURL := url.URL{
 		Scheme: "beegfs",
 		Host:   host,
@@ -44,16 +44,16 @@ func NewBeegfsUrl(host string, path string) string {
 	return structURL.String()
 }
 
-// parseBeegfsUrl parses a URL with the format beegfs://host/path and returns the sysMgmtdHost and path.
-func parseBeegfsUrl(rawUrl string) (sysMgmtdHost string, path string, err error) {
-	var structUrl *url.URL
-	if structUrl, err = url.Parse(rawUrl); err != nil {
+// parseBeegfsURL parses a URL with the format beegfs://host/path and returns the sysMgmtdHost and path.
+func parseBeegfsURL(rawURL string) (sysMgmtdHost string, path string, err error) {
+	var structURL *url.URL
+	if structURL, err = url.Parse(rawURL); err != nil {
 		return "", "", errors.WithStack(err)
 	}
-	if structUrl.Scheme != "beegfs" {
+	if structURL.Scheme != "beegfs" {
 		return "", "", errors.New("URL has incorrect scheme")
 	}
-	return structUrl.Host, structUrl.Path, nil
+	return structURL.Host, structURL.Path, nil
 }
 
 // writeClientFiles writes a beegfs-client.conf file and optionally a connInterfacesFile, a connNetFilterFile, and a

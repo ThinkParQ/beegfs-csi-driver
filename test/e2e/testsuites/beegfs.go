@@ -299,8 +299,8 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Create volume resource including a StorageClass without permissions params.
 		const (
 			expectedMode = "drwxrwxrwx" // `ls` representation of the expected octal mode for a directory
-			expectedUid  = "root"
-			expectedGid  = "root"
+			expectedUID  = "root"
+			expectedGID  = "root"
 		)
 		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
@@ -319,7 +319,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		e2eframework.ExpectNoError(err)
 
 		// Verify permissions.
-		utils.VerifyDirectoryModeUidGidInPod(f, "/mnt/volume1", expectedMode, expectedUid, expectedGid, pod)
+		utils.VerifyDirectoryModeUidGidInPod(f, "/mnt/volume1", expectedMode, expectedUID, expectedGID, pod)
 	})
 
 	ginkgo.It("should delete only the anticipated directory", func() {

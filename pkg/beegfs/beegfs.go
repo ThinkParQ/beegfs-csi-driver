@@ -289,13 +289,13 @@ func newBeegfsVolume(mountDirPath, sysMgmtdHost, volDirPathBeegfsRoot string, pl
 		volDirBasePath:           volDirBasePath,
 		volDirPathBeegfsRoot:     volDirPathBeegfsRoot,
 		volDirPath:               volDirPath,
-		volumeID:                 NewBeegfsUrl(sysMgmtdHost, volDirPathBeegfsRoot),
+		volumeID:                 NewBeegfsURL(sysMgmtdHost, volDirPathBeegfsRoot),
 	}
 }
 
 // newBeeGFSVolume creates a beegfsVolume from a volumeID.
 func newBeegfsVolumeFromID(mountDirPath, volumeID string, pluginConfig beegfsv1.PluginConfig) (beegfsVolume, error) {
-	sysMgmtdHost, volDirPathBeegfsRoot, err := parseBeegfsUrl(volumeID)
+	sysMgmtdHost, volDirPathBeegfsRoot, err := parseBeegfsURL(volumeID)
 	if err != nil {
 		return beegfsVolume{}, err
 	}
