@@ -487,17 +487,16 @@ unless overridden in the CSI spec:
 > | 128 bytes  | string              |
 > | 4 KiB      | map<string, string> |
 
-Source: [CSI Specification v1.3.0 Size
-Limits](https://github.com/container-storage-interface/spec/blob/release-1.3/spec.md#size-limits)
+Source: [CSI Specification v1.5.0 Size
+Limits](https://github.com/container-storage-interface/spec/blob/v1.5.0/spec.md#size-limits)
 
-As of Jan. 6, 2021 there is an open pull request ([PR
-464](https://github.com/container-storage-interface/spec/pull/464)) to the
-master branch of the CSI spec that addresses the size limit for some file paths
-and the `node_id`.  However, the `volume_id` size limit is unchanged.  PR 464
-was discussed during the 11/11/2020 CSI Community Meeting.  The [agenda,
-notes](https://docs.google.com/document/d/1-oiNg5V_GtS_JBAEViVBhZ3BYVFlbSz70hreyaD7c5Y/edit#heading=h.9pryrcuoevnn),
-and [recording](https://youtu.be/Nkgw6aCOQqk) are available online.  Relevant
-discussion is recorded between timestamps 0:00 and 20:25.
+[CSI specification
+v1.4.0](https://github.com/container-storage-interface/spec/releases/tag/v1.4.0)
+relaxed the size limit for some file paths and increased the limit for the
+`node_id` field specifically to 192 bytes. [CSI specification
+v1.5.0](https://github.com/container-storage-interface/spec/releases/tag/v1.5.0)
+further increased the size limit for the `node_id` field to 256 bytes. However,
+the `volume_id` size limit is unchanged.
 
 Some cursory testing of a few CO and CSI deployments suggest that the limits are
 not strictly enforced.  So, rather than impose strict failures or warnings in
