@@ -7,6 +7,7 @@
 * [Requirements](#requirements)
 * [Steps](#steps)
 * [How Does It Work?](#how-does-it-work)
+* [Is It Tested?](#is-it-tested)
 * [What Is Next?](#what-is-next)
 
 <a name="what-is-this-for"></a>
@@ -112,6 +113,17 @@ On cluster upgrade:
    container image and again outputs it to the beegfs-client ImageStreamTag.
 1. Each node restarts as part of the cluster upgrade process. When a node comes back online and starts its beegfs-client
    pod, it uses the updated beegfs-client image (with a kernel module built against updated kernel-headers).
+
+<a name="is-it-tested"></a>
+## Is It Tested?
+
+These manifests are used to deploy the BeeGFS client to OpenShift clusters in the BeeGFS CSI driver CI infrastructure
+today. The driver runs effectively in that environment, including RDMA over Converged Ethernet (RoCE) functionality
+(thanks to IB and RDMA packages included inbox in RHCOS).
+
+Limited testing shows that the BeeGFS client deployed by these manifests rebuilds correctly when RHCOS updates or when
+a new BeeGFS version is selected, but this testing is not rigorous. Unusual environments and/or upgrade paths or
+upgrades to unreleased versions of OpenShift may break these manifests in unexpected ways.
 
 <a name="what-is-next"></a>
 ## What Is Next?
