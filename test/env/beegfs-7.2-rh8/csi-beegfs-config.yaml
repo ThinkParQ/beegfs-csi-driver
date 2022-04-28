@@ -10,11 +10,13 @@ config:
   # Test file systems are intentionally misconfigured to first advertise an interface/address that is unreachable. This 
   # connNetFilter configuration overcomes that misconfiguration and speeds up mounting for test cases that don't make 
   # use of it.
+  beegfsClientConf:
+    connUseRDMA: "false"
   connNetFilter:
     - 10.113.4.0/24
 fileSystemSpecificConfigs:
-  - sysMgmtdHost: 10.113.4.46
-  - sysMgmtdHost: 10.113.4.47
+  - sysMgmtdHost: 10.113.4.65
+  - sysMgmtdHost: 10.113.4.66
     config:
       beegfsClientConf:
         connMgmtdPortTCP: "9009"
