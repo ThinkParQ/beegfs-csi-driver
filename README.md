@@ -8,12 +8,17 @@
 ## Contents
 
 * [Overview](#overview)
+* [Compatibility](#compatibility)
+* [Support](#support)
 * [Getting Started](#getting-started)
 * [Basic Use and Examples](#basic-use)
-* [Requesting Enhancements and Reporting
-  Issues](#requesting-enhancements-and-reporting-issues)
+* [Contributing](#contributing-to-the-project)
+* [Releases](#releases)
+* [Versioning](#versioning)
 * [License](#license)
 * [Maintainers](#maintainers)
+
+***
 
 <a name="overview"></a>
 ## Overview 
@@ -24,11 +29,11 @@ Kubernetes. This driver allows containers to access existing datasets or request
 on-demand ephemeral or persistent high speed storage backed by [BeeGFS parallel
 file systems](https://blog.netapp.com/beegfs-for-beginners/). 
 
-The driver can be easily deployed using the provided Kubernetes manifests. Optionally the 
-[BeeGFS CSI Driver Operator](operator/README.md) can be used to automate day-1 (install/
-configure) and day-2 (reconfigure/update) tasks for the driver. This especially simplifies 
-discovery and installation from Operator Lifecycle Manger (OLM) enabled clusters like Red Hat 
-OpenShift. 
+The driver can be easily deployed using the provided Kubernetes manifests.
+Optionally the [BeeGFS CSI Driver Operator](operator/README.md) can be used to
+automate day-1 (install/ configure) and day-2 (reconfigure/update) tasks for the
+driver. This especially simplifies discovery and installation from Operator
+Lifecycle Manger (OLM) enabled clusters like Red Hat OpenShift. 
 
 <a name="notable-features"></a>
 ### Notable Features
@@ -53,101 +58,57 @@ OpenShift.
   share access to the same working directories and enable multi-user/application
   access to common datasets.
 
-<a name="interoperability-and-csi-feature-matrix"></a>
-### Interoperability and CSI Feature Matrix
+***
 
-| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Versions | CSI Version  |
-| ---------------------- | -------------------------------- | ------------------------------------ | --------------- | ------------ |
-| v1.0.0                 | 1.19                             |                                      | 7.2, 7.1.5      | v1.3.0       |
-| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1, 7.1.5    | v1.3.0       |
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4, 7.1.5    | v1.5.0       |
-| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5, 7.1.5    | v1.5.0       |
-| v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.2.6, 7.1.5    | v1.5.0       |
+<a name="compatibility"></a>
+## Compatibility
 
-The following CSI features are supported by all versions of the driver:
-* Access Modes: Read/Write Multiple Pods
-* Dynamic Provisioning: Yes 
-* Persistence: Yes
+The BeeGFS CSI driver must interact with both Kubernetes and a BeeGFS
+filesystem. To ensure compatibility with relevant versions of these key software
+components regular testing is done throughout each release cycle. The following
+table describes the versions of each component used in testing each release of
+the BeeGFS CSI driver. These configurations should be considered compatible and
+supported.
 
-Additional Notes:
-* The BeeGFS CSI driver is released according to the semantic versioning scheme 
-  outlined at [semver.org](https://semver.org/). According to this scheme, 
-  given a version number MAJOR.MINOR.PATCH, we increment the:
-  * MAJOR version when we make incompatible API changes,
-  * MINOR version when we add functionality in a backwards compatible manner, 
-    and
-  * PATCH version when we make backwards compatible bug fixes.
-* This matrix indicates tested BeeGFS and Kubernetes versions. The driver
-  may work with other versions of Kubernetes, but they have not been tested. 
-  Changes to the deployment manifests are likely required, especially for 
-  earlier versions of Kubernetes.
-* It is generally recommended to run the driver on the latest version of 
-  Kubernetes supported by a given version of the driver. While an older version 
-  of Kubernetes may appear to work, it may not include critical fixes that 
-  ensure driver stability.
-* For environments where the driver is used with both BeeGFS 7.1.x and 
-  7.2.x, Kubernetes nodes should have the 7.2 BeeGFS DKMS client installed.
+| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Client Versions | CSI Version  |
+| ---------------------- | -------------------------------- | ------------------------------------ | ---------------------- | ------------ |
+| v1.0.0                 | 1.19                             |                                      | 7.2 [^1]               | v1.3.0       |
+| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1 [^1]             | v1.3.0       |
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4 [^1]             | v1.5.0       |
+| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |
+| v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6 [^1]      | v1.5.0       |
 
-### Support Policy
+See the [compatibility guide](docs/compatibility.md) for more details on
+expectations of compatibility for the BeeGFS CSI driver.
 
-Support for the BeeGFS CSI driver is "best effort". The maintainers will make
-every attempt to fix all known bugs, release new features, and maintain 
-compatibility with new container orchestrators, but the following policy is in 
-no way binding and may change over time.
+[^1]: Support for the BeeGFS 7.1.5 filesystem is provided when the BeeGFS 7.2.x
+    client is used. These configurations were tested in that manner.
 
-Only the latest version of the BeeGFS CSI driver is supported. Bugs or 
-vulnerabilities found in this version may be fixed in a patch release or may be 
-fixed in a new minor version. If they are fixed in a new minor version, 
+***
+<a name="support"></a>
+## Support
+
+Support for the BeeGFS CSI driver is "best effort". The following policy is in
+no way binding and may change without notice.
+
+Only the latest version of the BeeGFS CSI driver is supported. Bugs or
+vulnerabilities found in this version may be fixed in a patch release or may be
+fixed in a new minor version. If they are fixed in a new minor version,
 upgrading to this version may be required to obtain the fix. 
 
-Note: The BeeGFS CSI driver maintainers may choose to release a patch for a 
-previous minor version with a backported fix, but this is not the norm.
+Fixes for old minor versions of the driver or backporting fixes to an older
+minor release of the driver should not be expected. The maintainers may choose
+to release a fix in a patch for an older release at their discretion.
 
-The latest version of the driver is only supported on certain versions of 
-Kubernetes and OpenShift. It may be necessary to upgrade Kubernetes or 
-OpenShift to maintain driver support.
+Support for the BeeGFS driver can be expected when the driver is used with
+components listed in the compatibility table. The ability to provide support for
+issues with components outside of the compatibility matrix will depend on the
+details of the issue.
 
-The goal is to release a new driver version three to four times per year 
-(roughly quarterly). Releases may be major, minor, or patch at the discretion 
-of the maintainers in accordance with needs of the community (i.e. large 
-features, small features, or miscellaneous bug fixes).
+If you have any questions, feature requests, or would like to report an issue
+please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
 
-#### Kubernetes
-
-A new minor version of the driver will be tested on, and will include deployment 
-manifests for, any Kubernetes version that meets the following criteria:
-* It is able to be set up via a released version of
-  [Kubespray](https://github.com/kubernetes-sigs/kubespray) (used to maintain
-  BeeGFS CSI driver test environments).
-* It is still supported by the Kubernetes community (see the [currently 
-  supported Kubernetes releases](https://kubernetes.io/releases/) and 
-  [Kubernetes support 
-  policy](https://kubernetes.io/releases/version-skew-policy/)) OR it is one 
-  version out of support but provides no major obstacles to driver deployment 
-  and operation.
-
-Note: We make a "best effort" to maintain compatibility with one out-of-support 
-version as an acknowledgement that Kubernetes has a fast moving release cycle 
-and upgrading environments can take time. However, if any issues arise when 
-using the driver on a Kubernetes version that is out of support, the first 
-recommendation is to upgrade Kubernetes.
-
-Occasionally, a particular Kubernetes patch version may be required to 
-guarantee smooth driver operation. See the [Troubleshooting 
-Guide](docs/troubleshooting.md) for known issues.
-
-#### OpenShift
-
-A new minor version of the driver and the operator that can be used to deploy 
-and/or upgrade the driver will be tested on the latest supported version of 
-OpenShift.
-
-#### Nomad
-
-While we have made [initial investments](deploy/nomad/README.md) into enabling 
-the use of the BeeGFS CSI driver with HashiCorp Nomad, we may not test with 
-Nomad for every driver release and do not currently consider Nomad to be a 
-supported container orchestrator.
+***
 
 <a name="getting-started"></a>
 ## Getting Started
@@ -199,6 +160,8 @@ pods -n beegfs-csi`
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.
 
+***
+
 <a name="basic-use"></a>
 ## Basic Use
 
@@ -236,21 +199,48 @@ provided. These are meant to be repurposed to simplify creating objects related
 to the driver including Storage Classes, Persistent Volumes, and Persistent
 Volume Claims in your environment.
 
-<a name="requesting-enhancements-and-reporting-issues"></a>
-## Requesting Enhancements and Reporting Issues 
+***
 
-If you have any questions, feature requests, or would like to report an issue
-please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
-
+<a name="contributing"></a>
 ## Contributing to the Project
 The BeeGFS CSI Driver maintainers welcome improvements from the BeeGFS and 
 open source community! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for how 
 to get started.
 
+***
+
+<a name="releases"></a>
+## Releases
+The goal is to release a new driver version three to four times per year 
+(roughly quarterly). Releases may be major, minor, or patch at the discretion 
+of the maintainers in accordance with needs of the community (i.e. large 
+features, small features, or miscellaneous bug fixes).
+
+***
+
+<a name="versioning"></a>
+## Versioning
+
+The BeeGFS CSI driver versioning is based on the semantic versioning scheme 
+outlined at [semver.org](https://semver.org/). According to this scheme, 
+given a version number MAJOR.MINOR.PATCH, we increment the:
+  * MAJOR version when:
+    * We make significant code changes beyond just a new feature.
+    * Backwards incompatible changes are made.
+  * MINOR version when:
+    * New driver features are added.
+    * New versions of Kubernetes or BeeGFS are supported.
+  * PATCH version when: small bug or security fixes are needed in a more timely
+    manner.
+
+***
+
 <a name="license"></a>
 ## License 
 
 Apache License 2.0
+
+***
 
 <a name="maintainers"></a>
 ## Maintainers 

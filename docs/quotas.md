@@ -8,6 +8,8 @@
 * [Enabling Quotas](#enabling-quotas)
 * [Tracking BeeGFS Consumption by Storage Class](#tracking-beegfs-consumption-by-sc)
 
+***
+
 <a name="overview"></a>
 ## Overview 
 
@@ -25,6 +27,8 @@ configuration for the BeeGFS clients (i.e., Kubernetes nodes). This document
 will also demonstrate how to leverage quotas to track BeeGFS consumption with an
 example that can be extended to any number of use cases.
 
+***
+
 <a name="prerequisites"></a>
 ## Prerequisites
 
@@ -37,6 +41,8 @@ example that can be extended to any number of use cases.
   a professional support subscription with a [partner like
   NetApp](https://blog.netapp.com/solution-support-for-beegfs-and-e-series/) for 
   use in production.
+
+***
 
 <a name="enabling-quotas"></a>
 ## Enabling Quotas
@@ -76,6 +82,8 @@ deployment. Note the changes will only take effect for new BeeGFS volumes, or
 when existing volumes are remounted, for example if a pod moves between nodes. 
 For any volumes that don't have this setting enabled, all I/O will continue to 
 affect the quota consumption of the root user, instead of the actual caller.
+
+***
 
 <a name="tracking-beegfs-consumption-by-sc"></a>
 ## Tracking BeeGFS Consumption by Storage Class
