@@ -19,6 +19,8 @@
   * [Resource and Performance Considerations](#resource-and-performance-considerations)
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
+***
+
 <a name="deploying-to-kubernetes"></a>
 ## Deploying to Kubernetes
 
@@ -198,6 +200,8 @@ operator to install the driver directly from this repository.
 See the [BeeGFS CSI Driver Operator](../operator/README.md) documentation for 
 details.
 
+***
+
 <a name="example-application-deployment"></a>
 ## Example Application Deployment
 
@@ -355,6 +359,8 @@ Next Steps:
 * For a comprehensive introduction see the [BeeGFS CSI Driver Usage](usage.md)
   documentation.
 * For additional examples see *examples/k8s/README.md*. 
+
+***
 
 <a name="managing-beegfs-client-configuration"></a>
 ## Managing BeeGFS Client Configuration
@@ -624,6 +630,8 @@ The following parameters are new for the BeeGFS 7.3 client. These parameters wil
 * `connRDMAInterfaces`
 * `connTCPFallbackEnabled`
 
+***
+
 <a name="kubernetes-administrator-notes"></a>
 ## Notes for Kubernetes Administrators
 
@@ -740,6 +748,8 @@ Limited stress testing has found that no issues occur with 200 simultaneous Pers
 200 simultaneous Persistent Volume Claim deletions, so the --worker-threads argument does not appear in the default
 manifests. Add it as an argument to the `csi-provisioner` Container in the `csi-beegfs-controller` Stateful Set
 definition if an issue is observed. See the [Kubernetes deployment README.md](../deploy/k8s/README.md) for instructions.
+
+***
 
 <a name="removing-the-driver-from-kubernetes"></a>
 ## Removing the Driver from Kubernetes

@@ -9,10 +9,14 @@
   * [YAML Files](#style-guidelines-yaml)
 * [Frequently Asked Questions](#frequently-asked-questions)
 
+***
+
 ## Overview 
 
 This repository hosts the BeeGFS CSI Driver and all of its build and dependent
 configuration files to deploy the driver.
+
+***
 
 ## Building the Project 
 
@@ -48,6 +52,8 @@ Optionally set `REGISTRY_NAME` or `IMAGE_TAGS`:
 # REGISTRY_NAME and IMAGE_TAGS cannot be pulled from the environment.
 make REGISTRY_NAME="docker.repo.eng.netapp.com/${USER}" IMAGE_TAGS=devBranchName-canary push
 ```
+
+***
 
 ## Developer Kubernetes Deployment
 
@@ -93,6 +99,8 @@ csi-beegfs-node-ntcpc                     3/3     Running   0          2m27s
 csi-beegfs-socat-0                        0/1     Pending   0          17h
 ```
 
+***
+
 <a name="style-guidelines"></a>
 ## Style Guidelines
 
@@ -112,6 +120,8 @@ rules/restrictions:
   * `true` SHOULD be quoted where a string is expected and should NOT be quoted 
     where a boolean is expected.
 * If it is necessary to quote a string, double quotes `"` are preferred.
+
+***
 
 <a name="style-guidelines"></a>
 ## Frequently Asked Questions

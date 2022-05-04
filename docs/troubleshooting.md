@@ -12,6 +12,8 @@
    * [SELinux](#selinux)
 * [Frequent Slow Operations and/or gRPC ABORTED Response Codes](#frequent-slow-operations--grpc-aborted-response-codes)
 
+***
+
 <a name="overview"></a>
 ## Overview
 
@@ -19,6 +21,8 @@ This section provides guidance and tips around troubleshooting issues that
 come up using the driver. For anything not covered here, please [submit an
 issue](https://github.com/NetApp/beegfs-csi-driver/issues) using the label
 "question". Suspected bugs should be submitted with the label "bug". 
+
+***
 
 <a name="kubernetes"></a>
 ## Kubernetes
@@ -258,6 +262,8 @@ rm -rf /var/lib/kubelet/pods/<orphaned pod>
 To prevent a reoccurrence, identify the root cause (if it is listed above) and 
 take the required steps.
 
+***
+
 <a name="access-denied-issues"></a>
 ## Access Denied Issues
 
@@ -293,6 +299,8 @@ Administrators with SELinux experience can:
 
 If these options do not work, or if you are running a non-production system, putting SELinux into permissive mode will
 also alleviate this issue. It is not recommended to take this action on a production system.
+
+***
 
 <a name="#frequent-slow-operations-grpc-aborted-response-codes"></a>
 ## Freqeunt Slow Operations and/or gRPC ABORTED Response Codes

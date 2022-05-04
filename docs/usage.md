@@ -10,6 +10,8 @@
 * [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
 * [Limitations and Known Issues](#limitations-and-known-issues)
 
+***
+
 <a name="important-concepts"></a>
 ## Important Concepts
 
@@ -95,6 +97,8 @@ configuration parameters. This configuration is NOT handled at the volume level
 Managing BeeGFS Client Configuration in the [deployment guide](deployment.md)
 for detailed instructions on how to prepare your cluster to mount various BeeGFS
 file systems.
+
+***
 
 <a name="dynamic-provisioning-workflow"></a>
 ## Dynamic Provisioning Workflow
@@ -219,6 +223,8 @@ Who: A Kubernetes user
 Follow standard Kubernetes practices to deploy a Pod that consumes the newly
 created Kubernetes Persistent Volume Claim.
 
+***
+
 <a name="static-provisioning-workflow"></a>
 ## Static Provisioning Workflow
 
@@ -299,6 +305,8 @@ Who: A Kubernetes user
 Follow standard Kubernetes practices to deploy a Pod that consumes the newly
 created Kubernetes Persistent Volume Claim.
 
+***
+
 <a name="best-practices"></a>
 ## Best Practices
 
@@ -310,6 +318,8 @@ created Kubernetes Persistent Volume Claim.
   to prevent directory contents from being overwritten. Instead set sensible
   permissions, especially on static directories containing shared datasets (more
   details [below](#read-only-and-access-modes-in-kubernetes)). 
+
+***
 
 <a name="notes-for-beegfs-administrators"></a>
 ## Notes for BeeGFS Administrators
@@ -427,6 +437,8 @@ feature gate (in an eventual future version the feature gate will not be
 required), the `csiDriver.spec.fsGroupPolicy` parameter can be used to disable 
 this behavior for all volumes. The beegfs-csi-driver deploys with this parameter 
 set to "None" in case it is deployed to a cluster that supports it.
+
+***
 
 <a name="limitations-and-known-issues"></a>
 ## Limitations and Known Issues
