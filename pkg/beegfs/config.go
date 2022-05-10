@@ -150,8 +150,6 @@ func validateConfig(plConfig *beegfsv1.PluginConfig) error {
 		beegfsConfigs = append(beegfsConfigs, config.Config)
 	}
 
-	// TODO: Should we validate beegfs client version specific options here?
-
 	for _, config := range beegfsConfigs {
 		for _, filter := range config.ConnNetFilter {
 			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
