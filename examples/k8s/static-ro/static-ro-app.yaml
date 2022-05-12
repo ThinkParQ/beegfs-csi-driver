@@ -23,3 +23,7 @@ spec:
         claimName: csi-beegfs-static-ro-pvc # defined in static-ro-pvc.yaml
         # Note: The PV and PVC "spec.accessModes" do not enforce read-only access.
         readOnly: true
+  # If deploying this example to OpenShift this nodeSelector may be needed if
+  # the driver is only installed on RHEL nodes and not RHCOS nodes.
+  # nodeSelector:
+  #   node.openshift.io/os_id: rhel

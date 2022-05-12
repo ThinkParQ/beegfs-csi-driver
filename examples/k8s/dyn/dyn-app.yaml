@@ -26,3 +26,7 @@ spec:
     - name: csi-beegfs-dyn-volume
       persistentVolumeClaim:
         claimName: csi-beegfs-dyn-pvc # defined in dyn-pvc.yaml
+  # If deploying this example to OpenShift this nodeSelector may be needed if
+  # the driver is only installed on RHEL nodes and not RHCOS nodes.
+  # nodeSelector:
+  #   node.openshift.io/os_id: rhel
