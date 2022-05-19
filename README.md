@@ -72,11 +72,12 @@ supported.
 
 | beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Client Versions | CSI Version  |
 | ---------------------- | -------------------------------- | ------------------------------------ | ---------------------- | ------------ |
-| v1.0.0                 | 1.19                             |                                      | 7.2 [^1]               | v1.3.0       |
-| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1 [^1]             | v1.3.0       |
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4 [^1]             | v1.5.0       |
-| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |
+| v1.3.0                 | 1.21.4, 1.22.3, 1.23.1           | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6           | v1.5.0       |
 | v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6 [^1]      | v1.5.0       |
+| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |
+| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4 [^1]             | v1.5.0       |
+| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1 [^1]             | v1.3.0       |
+| v1.0.0                 | 1.19                             |                                      | 7.2 [^1]               | v1.3.0       |
 
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.

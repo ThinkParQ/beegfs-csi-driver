@@ -248,7 +248,6 @@ pipeline {
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static1", "root", false),
                             new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),
@@ -257,7 +256,6 @@ pipeline {
                     } else {
                         testEnvironments = [
                             // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.20", "beegfs-7.1.5", "1.20", "static1", "root", false),
                             new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),

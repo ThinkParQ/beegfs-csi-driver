@@ -71,22 +71,6 @@ creates a PV and PVC representing an existing BeeGFS file system directory.
 Multiple users and/or workloads can mount that PVC and consume the data the
 directory contains.
 
-<a name="beegfs-version-compatibility"></a>
-### BeeGFS Version Compatibility
-
-This version of the driver is ONLY tested for compatibility with BeeGFS v7.1.5
-and v7.2. The BeeGFS filesystem services and the BeeGFS clients running on the
-Kubernetes nodes MUST be the same major.minor version, and [beegfsClientConf
-parameters](deployment.md) passed in the configuration file MUST apply to the
-version in use. The driver will log an error and refuse to start if incompatible
-configuration is specified.
-
-Future versions of the driver will support future versions of BeeGFS, but no
-backwards compatibility with previous versions of BeeGFS is planned. BeeGFS
-versions before v7.1.4 do not include the beegfs-client-dkms package, which the
-driver uses to build the BeeGFS client kernel module and mount BeeGFS file
-systems. 
-
 <a name="client-configuration-and-tuning"></a>
 ### Client Configuration and Tuning
 
