@@ -247,19 +247,17 @@ pipeline {
                     // TODO(webere, A289): Figure out a low-touch way to enable these tests in OpenShift.
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
-                            // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
-                            new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
-                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "", "root", true)
+                            new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "root", false),
+                            new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
+                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
                         ]
                     } else {
                         testEnvironments = [
-                            // Each cluster must use a different staticVolDirName to avoid collisions.
-                            new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "static2", "root", false),
-                            new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "static3", "root", false),
-                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "static4", "user", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "", "root", true)
+                            new TestEnvironment("1.21", "beegfs-7.2-rh8", "1.21", "root", false),
+                            new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
+                            new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
                         ]
                     }
 
@@ -300,9 +298,9 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     sh "mkdir -p ${resultsDir}"
     def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel"
     def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial"
-    if (testEnv.staticVolDirName) {
-        testCommand += " -static-vol-dir-name ${testEnv.staticVolDirName}"
-        testCommandDisruptive += " -static-vol-dir-name ${testEnv.staticVolDirName}"
+    if (!testEnv.useOperator) {
+        testCommand += " -static-vol-dir-name ${testEnv.k8sCluster}"
+        testCommandDisruptive += " -static-vol-dir-name ${testEnv.k8sCluster}"
     }
     // Redirect output for easier reading.
     testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
@@ -409,7 +407,6 @@ class TestEnvironment {
     String k8sCluster
     String beegfsHost
     String k8sVersion
-    String staticVolDirName
     String sshUser
     // useOperator could somewhat equivalently be called inOpenShift. When this is true, we assume testing occurs in an
     // OpenShift cluster (which carries certain extra burdens) AND the driver should be deployed using the operator and
@@ -417,11 +414,10 @@ class TestEnvironment {
     // without OLM, we may need to decouple this field into useOperator and inOpenShift.
     boolean useOperator
 
-    TestEnvironment(String k8sCluster, String beegfsHost, String k8sVersion, String staticVolDirName, String sshUser, boolean useOperator) {
+    TestEnvironment(String k8sCluster, String beegfsHost, String k8sVersion, String sshUser, boolean useOperator) {
         this.k8sCluster = k8sCluster
         this.beegfsHost = beegfsHost
         this.k8sVersion = k8sVersion
-        this.staticVolDirName = staticVolDirName
         this.sshUser = sshUser
         this.useOperator = useOperator
     }
