@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/afero"
 	"golang.org/x/net/context"
 	"gopkg.in/ini.v1"
-	"k8s.io/utils/mount"
+	"k8s.io/mount-utils"
 )
 
 // We use afero to abstract the file system. During unit tests, we use an in-memory file system (afero.NewMemFs). In an
