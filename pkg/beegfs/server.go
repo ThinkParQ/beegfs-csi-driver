@@ -72,7 +72,7 @@ func newGrpcErrorf(code codes.Code, format string, a ...interface{}) grpcError {
 	return newGrpcError(code, fmt.Sprintf(format, a...))
 }
 func (e grpcError) Error() string {
-	return e.statusErr.Error() + ": " + e.cause.Error()
+	return e.statusErr.Error()
 }
 func (e grpcError) Cause() error  { return e.cause }
 func (e grpcError) Unwrap() error { return e.cause }
