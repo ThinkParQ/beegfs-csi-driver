@@ -13,9 +13,9 @@ documented here.
 
 * The Container Storage Client (csc) tool is installed.
        
-        go get github.com/rexray/gocsi
+        go get github.com/rexray/gocsi/csc
         
-* The CSI is running.
+* The CSI is running from another terminal window.
 
         # the particular node id chosen does not matter
         bin/beegfs-csi-driver --node-id node1 -v 4 --cs-data-dir /tmp/csdatadir
