@@ -344,7 +344,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 } finally {
                     sh """
                         export KUBECONFIG="${env.WORKSPACE}/kubeconfig-${jobID}"
-                        oc get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- |
+                        oc get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- -e disruptive- |
                             grep -v beegfs-csi | xargs kubectl delete ns --cascade=foreground || true
                         oc delete -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
@@ -388,7 +388,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                 } finally {
                     sh """
-                        kubectl get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- |
+                        kubectl get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- -e disruptive- |
                             grep -v beegfs-csi | xargs kubectl delete ns --cascade=foreground || true
                         kubectl delete --cascade=foreground -k ${overlay} || true
                     """
