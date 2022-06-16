@@ -161,6 +161,8 @@ pods -n beegfs-csi`
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.
 
+See [NetApp TV](https://www.youtube.com/watch?v=lHkwaj8Ydqk&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=2) for demo videos on the deployment and workflows of the BeeGFS CSI driver.
+
 ***
 
 <a name="basic-use"></a>
