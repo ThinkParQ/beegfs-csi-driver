@@ -157,6 +157,11 @@ var (
 // NewBeegfsDriver initializes a working BeegfsDriver.
 func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
+
+	if err := verifyBeegfsClientModuleIsAvailable(); err != nil {
+		return nil, err
+	}
+
 	driver, err := newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID,
 		clientConfTemplatePath, version, nodeUnstageTimeout)
 	if err != nil {
@@ -169,10 +174,6 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 	}
 	if driver.cs, err = newControllerServer(driver.nodeID, driver.pluginConfig, driver.clientConfTemplatePath,
 		driver.csDataDir, nodeUnstageTimeout); err != nil {
-		return nil, err
-	}
-
-	if err = verifyBeegfsModuleIsAvailable(); err != nil {
 		return nil, err
 	}
 
