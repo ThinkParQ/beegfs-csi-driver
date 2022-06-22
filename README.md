@@ -139,9 +139,10 @@ please submit them at https://github.com/NetApp/beegfs-csi-driver/issues.
 <a name="quick-start"></a>
 ### Quick Start
 
-The steps in this section allow you to get the driver up and running quickly.
+The steps in this section allow you to get the driver up and running quickly. See them in action on 
+[NetApp TV](https://www.youtube.com/watch?v=lHkwaj8Ydqk&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=2).
 For production use cases or air-gapped environments it is recommended to read
-through the full [kubectl deployment guide](docs/deployment.md) or [operator 
+through the full [kubectl deployment guide](docs/deployment.md) or [operator
 deployment guide](operator/README.md).
 
 1. On a machine with kubectl and access to the Kubernetes cluster where you want
@@ -183,14 +184,16 @@ sections for how to get started using the driver.
 Administrators create a Storage Class in Kubernetes referencing at minimum a
 specific BeeGFS file system and parent directory within that file system. Users
 can then submit PVCs against the Storage Class, and are provided isolated access
-to new directories under the parent specified in the Storage Class. 
+to new directories under the parent specified in the Storage Class. See the process
+in action on [NetApp TV](https://www.youtube.com/watch?v=XHd3CO63CHw&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=1).
 
 <a name="static-provisioning"></a>
 ### Static Provisioning:
 
 Administrators create a PV and PVC representing an existing directory in a
 BeeGFS file system. This is useful for exposing some existing dataset or shared
-directory to Kubernetes users and applications.
+directory to Kubernetes users and applications. See the process in action on 
+[NetApp TV](https://www.youtube.com/watch?v=iRMEj9bpZHM&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=3).
 
 <a name="examples"></a>
 ### Examples
