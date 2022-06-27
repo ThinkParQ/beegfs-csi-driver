@@ -410,9 +410,10 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) (valid bool, rea
 	return true, ""
 }
 
-// verifyBeeGFSModuleIsAvailable attempts to confirm that the BeeGFS client module either is running or can run. It
-// returns nil if this requirement is met and a descriptive error from a failed check if it is not.
-func verifyBeegfsModuleIsAvailable() error {
+// isBeegfsClientModuleLoaded determines if the BeeGFS client kernel module is loaded
+// for the current running kernel. An error is returned if the beegfs module is not found
+// or if the lsmod command fails to execute.
+func isBeegfsClientModuleLoaded() (status bool, err error) {
 	var stdoutBuffer bytes.Buffer
 	var stderrBuffer bytes.Buffer
 
@@ -421,33 +422,66 @@ func verifyBeegfsModuleIsAvailable() error {
 	cmd.Stdout = &stdoutBuffer
 	cmd.Stderr = &stderrBuffer
 	LogDebug(context.TODO(), "Executing command", "command", cmd.Args)
-	err := cmd.Run()
+	err = cmd.Run()
 	stdOutString := stdoutBuffer.String()
 	stdErrString := stderrBuffer.String()
 	if err != nil {
-		err = errors.Wrapf(err, "lsmod failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
-		// Log an error instead of returning because we have another method of checking.
-		LogError(context.TODO(), err, "failed to check the status of the BeeGFS module with lsmod")
-	} else if strings.Contains(stdOutString, "beegfs") {
-		LogDebug(context.TODO(), "Found the BeeGFS client module with lsmod")
-		return nil
+		return false, errors.Wrapf(err, "lsmod failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
 	}
+	if strings.Contains(stdOutString, "beegfs") {
+		LogDebug(context.TODO(), "Found the BeeGFS client module with lsmod")
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
 
-	// Even if the BeeGFS module is not currently running, it may automatically be inserted by the DKMS infrastructure
-	// when needed. Use "modprobe -R" (which does not actually insert the module) to check.
-	stdoutBuffer.Reset()
-	stderrBuffer.Reset()
-	cmd = exec.Command("modprobe", "-R", "beegfs")
+// isBeegfsClientModuleInstalled determines if the BeeGFS client kernel module is installed
+// for the currently running kernel. An error is returned if the kernel module is not found.
+func isBeegfsClientModuleInstalled() (status bool, err error) {
+	var stdoutBuffer bytes.Buffer
+	var stderrBuffer bytes.Buffer
+
+	cmd := exec.Command("modprobe", "-R", "beegfs")
 	cmd.Stdout = &stdoutBuffer
 	cmd.Stderr = &stderrBuffer
 	LogDebug(context.TODO(), "Executing command", "command", cmd.Args)
 	err = cmd.Run()
-	stdOutString = stdoutBuffer.String()
-	stdErrString = stderrBuffer.String()
+	stdOutString := stdoutBuffer.String()
+	stdErrString := stderrBuffer.String()
+	moduleNotFound := "exit status 1"
 	if err != nil {
-		err = errors.Wrapf(err, "modprobe failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
-		return errors.Wrap(err, "the BeeGFS client module is likely not installed")
+		if err.Error() == moduleNotFound {
+			// The command completed and did not find the module
+			return false, nil
+		} else {
+			// There was some actual error with the command
+			err = errors.Wrapf(err, "modprobe execution failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
+			return false, err
+		}
 	}
 	LogDebug(context.TODO(), "Found the BeeGFS client module with modprobe")
-	return nil
+	return true, nil
+}
+
+// verifyBeegfsClientModuleIsAvailable attempts to confirm that the BeeGFS client module either is running or can run.
+// It returns nil if this requirement is met and a descriptive error from a failed check if it is not.
+func verifyBeegfsClientModuleIsAvailable() error {
+	isLoaded, loadedError := isBeegfsClientModuleLoaded()
+	if loadedError != nil {
+		LogError(context.TODO(), loadedError, "An error occurred checking the loaded modules for beegfs")
+	}
+	if isLoaded {
+		LogDebug(context.TODO(), "The BeeGFS client module is loaded")
+		return nil
+	}
+	isInstalled, installedError := isBeegfsClientModuleInstalled()
+	if installedError != nil {
+		return errors.WithMessage(installedError, "unable to determine if the beegfs module is installed")
+	}
+	if isInstalled {
+		LogDebug(context.TODO(), "The BeeGFS client module is installed but not loaded")
+		return nil
+	}
+	return errors.New("the BeeGFS client kernel module is not installed")
 }
