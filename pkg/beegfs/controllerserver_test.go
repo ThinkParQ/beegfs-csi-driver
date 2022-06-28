@@ -100,7 +100,7 @@ func TestGetStripePatternConfigFromParams(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := getStripePatternConfigFromParams(tc.reqParams)
+			got, _, err := getStripePatternConfigFromParams(tc.reqParams)
 			if !reflect.DeepEqual(tc.want, got) {
 				t.Fatalf("expected: %s, got: %s", tc.want, got)
 			}
@@ -198,7 +198,7 @@ func TestGetPermissionsConfigFromParams(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, err := getPermissionsConfigFromParams(tc.reqParams)
+			got, _, err := getPermissionsConfigFromParams(tc.reqParams)
 			if !tc.wantErr && err != nil {
 				t.Fatalf("unexpected error occurred: %s", err)
 			}
@@ -310,5 +310,113 @@ func TestDeleteVolumeUntilWaitNodesDirEmptiesEventually(t *testing.T) {
 	}
 	if time.Since(start) > 2*emptyTime || time.Since(start) > waitTime*time.Second {
 		t.Fatalf("expected delete to take ~%f seconds but it took %f", emptyTime.Seconds(), time.Since(start).Seconds())
+	}
+}
+
+// This test is to check sysMgmtdHost, VolDirBasePathBeefsRoot, and the number of parameters going into
+// the ValidateReqParams function. The stripePatternConfig and permissionsConfig parameters are not tested here
+// as they are already tested above.
+func TestValidateReqParams(t *testing.T) {
+	extraPairKey1 := "test"
+	extraPairKey2 := "test"
+	extraPairKey3 := "test"
+	extraPairKey4 := "test"
+
+	tests := map[string]struct {
+		reqParams map[string]string
+		want      reqParameters
+		wantErr   bool
+	}{
+		"nothing example": {
+			reqParams: map[string]string{},
+			want:      reqParameters{},
+			wantErr:   true,
+		},
+		"everything example": {
+			reqParams: map[string]string{
+				sysMgmtdHostKey:   "localhost",
+				volDirBasePathKey: "/testDir",
+			},
+			want: reqParameters{
+				sysMgmtdHost:             "localhost",
+				volDirBasePathBeegfsRoot: "/testDir",
+			},
+			wantErr: false,
+		},
+		"sysMgmtdHostkey example": {
+			reqParams: map[string]string{
+				sysMgmtdHostKey:   "localhost",
+				volDirBasePathKey: "/",
+			},
+			want: reqParameters{
+				sysMgmtdHost:             "localhost",
+				volDirBasePathBeegfsRoot: "/",
+			},
+			wantErr: false,
+		},
+		"volDirBasePath create / example": {
+			reqParams: map[string]string{
+				sysMgmtdHostKey:   "localhost",
+				volDirBasePathKey: "",
+			},
+			want: reqParameters{
+				sysMgmtdHost:             "localhost",
+				volDirBasePathBeegfsRoot: "/",
+			},
+			wantErr: false,
+		},
+		"volDirBasePathkey example": {
+			reqParams: map[string]string{
+				sysMgmtdHostKey:   "localhost",
+				volDirBasePathKey: "/testDir/testDir2",
+			},
+			want: reqParameters{
+				sysMgmtdHost:             "localhost",
+				volDirBasePathBeegfsRoot: "/testDir/testDir2",
+			},
+			wantErr: false,
+		},
+		"Extra pair in map example": {
+			reqParams: map[string]string{
+				sysMgmtdHostKey:               "localhost",
+				volDirBasePathKey:             "/",
+				stripePatternStoragePoolIDKey: "2",
+				stripePatternChunkSizeKey:     "2m",
+				stripePatternNumTargetsKey:    "4",
+				permissionsUIDKey:             "1500",
+				permissionsGIDKey:             "1500",
+				permissionsModeKey:            "511",
+				extraPairKey1:                 "test",
+				extraPairKey2:                 "test",
+				extraPairKey3:                 "test",
+				extraPairKey4:                 "test",
+			},
+			want:    reqParameters{},
+			wantErr: true,
+		},
+		"wrong example": {
+			reqParams: map[string]string{
+				"sysMgmtd/hostkey":   "localhost",
+				"volDir/basepathkey": "/",
+			},
+			want:    reqParameters{},
+			wantErr: true,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := validateReqParams(tc.reqParams)
+			if !reflect.DeepEqual(tc.want.sysMgmtdHost, got.sysMgmtdHost) ||
+				!reflect.DeepEqual(tc.want.volDirBasePathBeegfsRoot, got.volDirBasePathBeegfsRoot) {
+				t.Fatalf("expected: %v, got: %v", tc.want, got)
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if tc.wantErr && err == nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+		})
 	}
 }

@@ -104,6 +104,8 @@ type beegfsVolume struct {
 	volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
 }
 
+// stripePatternConfig contains our internal representation of all CreateVolume parameters (StorageClass parameters in
+// K8s) that should be prefaced with stripePattern/.
 type stripePatternConfig struct {
 	storagePoolID           string
 	stripePatternChunkSize  string
@@ -117,6 +119,16 @@ type permissionsConfig struct {
 	uid  uint32 // The majority of UNIX-like systems support 32-bit UIDs.
 	gid  uint32 // The majority of UNIX-like systems support 32-bit GIDs.
 	mode uint16 // A full access mode consists of four base-8 digits (12 bits).
+}
+
+// reqParameters contains all possible parameters from CreateVolumeRequest.parameters or ValidateVolumeCapabilitiesRequest.parameters.
+// We utilize the reqParameters struct with ValidateReqParameters to validate all parameters passed, ensuring correct parameters
+// when called by by CreateVolume and ValidateVolumeCapabilities.
+type reqParameters struct {
+	sysMgmtdHost             string
+	volDirBasePathBeegfsRoot string
+	volStripePatternConfig   stripePatternConfig
+	volPermissionsConfig     permissionsConfig
 }
 
 // hasNonDefaultOwnerOrGroup returns true if either uid or gid are not 0 and false otherwise.

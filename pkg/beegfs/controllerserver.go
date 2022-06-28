@@ -117,30 +117,17 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	if valid, reason := isValidVolumeCapabilities(volCaps); !valid {
 		return nil, status.Errorf(codes.InvalidArgument, "Volume capabilities not supported: %s", reason)
 	}
-	reqParams := req.GetParameters()
-	if len(reqParams) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request parameters not provided")
+
+	if len(req.GetParameters()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Parameters not provided")
 	}
-	sysMgmtdHost, ok := reqParams[sysMgmtdHostKey]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", sysMgmtdHostKey)
-	}
-	volDirBasePathBeegfsRoot, ok := reqParams[volDirBasePathKey]
-	if !ok {
-		return nil, status.Errorf(codes.InvalidArgument, "%s not provided", volDirBasePathKey)
-	}
-	volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
-	volPermissionsConfig, err := getPermissionsConfigFromParams(reqParams)
-	if err != nil {
-		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
-	}
-	stripePatternConfig, err := getStripePatternConfigFromParams(reqParams)
+	params, err := validateReqParams(req.GetParameters())
 	if err != nil {
 		return nil, newGrpcErrorFromCause(codes.InvalidArgument, err)
 	}
 
 	// Construct an internal representation of the volume.
-	vol := cs.newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName)
+	vol := cs.newBeegfsVolume(params.sysMgmtdHost, params.volDirBasePathBeegfsRoot, volName)
 
 	// Return success if we don't need to do anything.
 	if status, ok := cs.volumeStatusMap.readStatus(vol.volumeID); ok && status == statusCreated {
@@ -180,23 +167,23 @@ func (cs *controllerServer) CreateVolume(ctx context.Context, req *csi.CreateVol
 	}
 
 	// Use beegfs-ctl to create the directory and stripe it appropriately.
-	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot, volPermissionsConfig); err != nil {
+	if err := cs.ctlExec.createDirectoryForVolume(ctx, vol, vol.volDirPathBeegfsRoot, params.volPermissionsConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
-	if err := cs.ctlExec.setPatternForVolume(ctx, vol, stripePatternConfig); err != nil {
+	if err := cs.ctlExec.setPatternForVolume(ctx, vol, params.volStripePatternConfig); err != nil {
 		return nil, newGrpcErrorFromCause(codes.Internal, err)
 	}
 
 	// Mount BeeGFS and use OS tools to change the access mode only if beegfs-ctl could not handle the access mode
 	// on its own. beegfs-ctl cannot handle access modes with special permissions (e.g. the set gid bit). These are
 	// governed by the first three bits of a 12 bit access mode (i.e. the first digit in four digit octal notation).
-	if volPermissionsConfig.hasSpecialPermissions() {
+	if params.volPermissionsConfig.hasSpecialPermissions() {
 		if err := mountIfNecessary(ctx, vol, []string{}, cs.mounter); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
-		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", volPermissionsConfig.mode),
+		LogDebug(ctx, "Applying permissions", "permissions", fmt.Sprintf("%4o", params.volPermissionsConfig.mode),
 			"volDirPath", vol.volDirPath, "volumeID", vol.volumeID)
-		if err := os.Chmod(vol.volDirPath, volPermissionsConfig.goFileMode()); err != nil {
+		if err := os.Chmod(vol.volDirPath, params.volPermissionsConfig.goFileMode()); err != nil {
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
 	}
@@ -320,6 +307,15 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities not provided")
 	}
 
+	// Validate parameters if provided.
+	params := req.GetParameters()
+	if len(params) != 0 {
+		_, err := validateReqParams(params)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%s", err)
+		}
+	}
+
 	// Construct an internal representation of the volume and ensure no other request is currently referencing it.
 	vol, err := cs.newBeegfsVolumeFromID(volumeID)
 	if err != nil {
@@ -361,8 +357,9 @@ func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req 
 			Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
 				// VolumeContext: req.GetVolumeContext(),  // Our volumes do not include a context.
 				VolumeCapabilities: volCaps,
-				// TODO(webere, A142) Validate CreateVolumeRequest.parameters if provided.
-				// Parameters: req.GetParameters(),
+				// We rely on validateReqParams to ensure all parameters are valid. If we make it to this point
+				// parameters are valid.
+				Parameters: params,
 			},
 		}, nil
 	}
@@ -424,26 +421,37 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 	return csc
 }
 
-func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatternConfig, error) {
+// getStripePatternConfigFromParams parses a map of parameters and sets stripePatternConfig variables, if provided.
+// Once a parameters is found and set, it is deleted from the original map. This is to help validateReqParams narrow
+// down if extra parameters exist. getStripePatternConfigFromParams then returns a stripePatternConfig object and the
+// original map excluding stripePattern parameters.
+func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatternConfig, map[string]string, error) {
 	cfg := stripePatternConfig{}
 	for param := range reqParams {
 		if strings.Contains(param, "stripePattern/") {
 			switch param {
 			case stripePatternStoragePoolIDKey:
 				cfg.storagePoolID = reqParams[stripePatternStoragePoolIDKey]
+				delete(reqParams, stripePatternStoragePoolIDKey)
 			case stripePatternChunkSizeKey:
 				cfg.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
+				delete(reqParams, stripePatternChunkSizeKey)
 			case stripePatternNumTargetsKey:
 				cfg.stripePatternNumTargets = reqParams[stripePatternNumTargetsKey]
+				delete(reqParams, stripePatternNumTargetsKey)
 			default:
-				return cfg, errors.Errorf("CreateVolume parameter invalid: %s", param)
+				return cfg, nil, errors.Errorf("CreateVolume parameter invalid: %s", param)
 			}
 		}
 	}
-	return cfg, nil
+	return cfg, reqParams, nil
 }
 
-func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsConfig, error) {
+// getPermissionsConfigFromParams parses a map of parameters and sets permissionsConfig variables, if provided.
+// Once a parameters is found and set, it is deleted from the original map. This is to help validateReqParams narrow
+// down if extra parameters exist. getPermissionsConfigFromParams then returns a permissionsConfig object and the
+// original map excluding permissionsConfig parameters.
+func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsConfig, map[string]string, error) {
 	cfg := permissionsConfig{mode: defaultPermissionsMode}
 	for param := range reqParams {
 		if strings.HasPrefix(param, "permissions/") {
@@ -452,29 +460,32 @@ func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsCon
 				val := reqParams[permissionsUIDKey]
 				uid, err := strconv.ParseUint(val, 10, 32) // UIDs are <= 32 bits.
 				if err != nil {
-					return cfg, errors.Wrap(err, "could not parse provided UID")
+					return cfg, nil, errors.Wrap(err, "could not parse provided UID")
 				}
 				cfg.uid = uint32(uid)
+				delete(reqParams, permissionsUIDKey)
 			case permissionsGIDKey:
 				val := reqParams[permissionsGIDKey]
 				gid, err := strconv.ParseUint(val, 10, 32) // GIDs are <= 32 bits.
 				if err != nil {
-					return cfg, errors.Wrap(err, "could not parse provided GID")
+					return cfg, nil, errors.Wrap(err, "could not parse provided GID")
 				}
 				cfg.gid = uint32(gid)
+				delete(reqParams, permissionsGIDKey)
 			case permissionsModeKey:
 				val := reqParams[permissionsModeKey]
 				mode, err := strconv.ParseUint(val, 8, 12) // Full modes are 12 bits.
 				if err != nil {
-					return cfg, errors.Wrap(err, "could not parse provided mode")
+					return cfg, nil, errors.Wrap(err, "could not parse provided mode")
 				}
 				cfg.mode = uint16(mode)
+				delete(reqParams, permissionsModeKey)
 			default:
-				return cfg, errors.Errorf("CreateVolume parameter invalid: %s", param)
+				return cfg, nil, errors.Errorf("CreateVolume parameter invalid: %s", param)
 			}
 		}
 	}
-	return cfg, nil
+	return cfg, reqParams, nil
 }
 
 // (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context
@@ -549,4 +560,44 @@ func deleteVolumeUntilWait(ctx context.Context, vol beegfsVolume, waitTime uint6
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+// validateReqParams validates plugin specific parameters if provided. If we find an expected parameter, we initialize
+// the reqParameters struct with its corresponding value. We also verify that all parameters being passed
+// are valid, with no extra parameters. Each time we set a desired value to reqParameters we delete it from the
+// params map narrowing down any extra parameters.
+func validateReqParams(params map[string]string) (reqParams reqParameters, err error) {
+
+	sysMgmtdHost, ok := params[sysMgmtdHostKey]
+	if !ok || sysMgmtdHost == "" {
+		return reqParameters{}, errors.New("sysMgmtdHost not provided")
+	}
+	reqParams.sysMgmtdHost = sysMgmtdHost
+	delete(params, sysMgmtdHostKey)
+
+	volDirBasePathBeegfsRoot, ok := params[volDirBasePathKey]
+	if !ok {
+		return reqParameters{}, errors.New("volDirBasePath not provided")
+	}
+	reqParams.volDirBasePathBeegfsRoot = volDirBasePathBeegfsRoot
+	reqParams.volDirBasePathBeegfsRoot = path.Clean(path.Join("/", volDirBasePathBeegfsRoot))
+	delete(params, volDirBasePathKey)
+
+	stripePatternConfig, params, err := getStripePatternConfigFromParams(params)
+	if err != nil {
+		return reqParameters{}, err
+	}
+	reqParams.volStripePatternConfig = stripePatternConfig
+
+	volPermissionsConfig, params, err := getPermissionsConfigFromParams(params)
+	if err != nil {
+		return reqParameters{}, err
+	}
+	reqParams.volPermissionsConfig = volPermissionsConfig
+
+	// If extra parameters remain in params, return error and the parameters that remain.
+	if len(params) != 0 {
+		return reqParameters{}, errors.Errorf("CreateVolume parameter invalid: %s", params)
+	}
+	return reqParams, nil
 }
