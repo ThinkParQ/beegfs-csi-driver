@@ -49,6 +49,7 @@ import (
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
+	admissionapi "k8s.io/pod-security-admission/api"
 )
 
 // Verify interface is properly implemented at compile time.
@@ -87,6 +88,7 @@ func InitBeegfsTestSuite() storageframework.TestSuite {
 // beegfsTestSuite implements the storageframework.TestSuiteInfo interface.
 func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, pattern storageframework.TestPattern) {
 	f := e2eframework.NewDefaultFramework("beegfs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	// We can use a single BeegfsDriver for multiple tests because of the way Ginkgo performs parallelization
 	// See test/e2e/README.md for details
