@@ -70,6 +70,7 @@ func VerifyNoOrphanedMounts(cs clientset.Interface) {
 		nodeAddresses = append(nodeAddresses, address)
 	}
 	for _, nodeAddress := range nodeAddresses {
+		// TODO: A464 Update the command to handle new and old paths
 		result, err := e2essh.SSH("mount | grep -e beegfs_nodev | grep pvc", nodeAddress, e2eframework.TestContext.Provider)
 		e2eframework.ExpectNoError(err)
 		e2eframework.ExpectEmpty(result.Stdout, "node with address %s has orphaned mounts", nodeAddress)

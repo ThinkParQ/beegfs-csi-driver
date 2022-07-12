@@ -167,8 +167,9 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			e2eframework.ExpectNoError(fsExec.Cleanup())
 		}()
 
-		// Execute beegfs-ctl getentryinfo command.
 		volDirPathBeegfsRoot := path.Join(fsExec.Resource.Sc.Parameters["volDirBasePath"], fsExec.Resource.Pv.Name)
+
+		// Execute beegfs-ctl getentryinfo command to get the stripe pattern info.
 		result, err := fsExec.IssueCommandWithBeegfsPaths("beegfs-ctl --mount=%s --getentryinfo %s",
 			"", volDirPathBeegfsRoot)
 
@@ -196,7 +197,9 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		}()
 
 		// Query /proc for connection information associated with this storage resource.
-		cmd := fmt.Sprintf("cat $(dirname $(grep -l %s /proc/fs/beegfs/*/config))/storage_nodes", fsExec.Resource.Pv.Name)
+		pvSum := fsExec.GetVolumeSHA256Checksum()
+		// In K8s 1.24 the volume identifier switched to the sha256 checksum
+		cmd := fmt.Sprintf("cat $(dirname $(grep -l -e %s -e %s /proc/fs/beegfs/*/config))/storage_nodes", fsExec.Resource.Pv.Name, pvSum)
 		result, err := fsExec.IssueCommandWithResult(cmd)
 		e2eframework.ExpectNoError(err)
 
