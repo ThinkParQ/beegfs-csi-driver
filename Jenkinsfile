@@ -334,7 +334,9 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                             sleep 5
                         done
                         operator-sdk scorecard ./operator/bundle -w 180s > ${resultsDir}/scorecard.txt 2>&1 || (echo "SCORECARD FAILURE!" && exit 1)
-                        operator-sdk run bundle ${uniqueBundleImageTag}
+                        # TODO(webere, A460): Remove the --index-image argument when 
+                        # https://github.com/operator-framework/operator-registry/issues/984 is resolved.
+                        operator-sdk run bundle --index-image=quay.io/operator-framework/opm:v1.23.0 ${uniqueBundleImageTag}
                         sed 's/tag: replaced-by-jenkins/tag: ${uniqueImageTag.split(':')[1]}/g' test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml | kubectl apply -f -
                         export KUBE_SSH_USER=\${SSH_OPENSHIFT_USR}
                         export KUBE_SSH_KEY_PATH=\${SSH_OPENSHIFT}
