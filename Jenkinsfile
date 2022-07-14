@@ -294,6 +294,12 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     if (!env.BRANCH_NAME.matches('master')) {
         ginkgoSkipRegex += "|\\[Slow\\]"
     }
+    // TODO: A463 (remove after all versions are no longer supported)
+    if (testEnv.k8sCluster.matches('(1.21)|(1.22)|(1.23-ubuntu-rdma)|(openshift)')) {
+        ginkgoSkipRegex += "|provisioning should mount multiple PV pointing to the same storage on the same node"
+        // The following test covers a feature that is alpha in releases prior to 1.24
+        ginkgoSkipRegex += "|provisioning should provision storage with any volume data source"
+    }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
     def resultsDir = "results/${jobID}"
