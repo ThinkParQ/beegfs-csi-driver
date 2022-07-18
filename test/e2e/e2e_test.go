@@ -40,8 +40,10 @@ import (
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
+	"k8s.io/kubernetes/test/e2e/framework/testfiles"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
+	e2etestingmanifests "k8s.io/kubernetes/test/e2e/testing-manifests"
 	"sigs.k8s.io/yaml"
 )
 
@@ -156,6 +158,7 @@ func Test(t *testing.T) {
 
 	config.DefaultReporterConfig.NoColor = true
 	gomega.RegisterFailHandler(ginkgo.Fail)
+	testfiles.AddFileSource(e2etestingmanifests.GetE2ETestingManifestsFS())
 	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
 	var r []ginkgo.Reporter
 	if e2eframework.TestContext.ReportDir != "" {
