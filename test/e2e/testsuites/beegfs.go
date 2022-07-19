@@ -49,6 +49,7 @@ import (
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
 	storageframework "k8s.io/kubernetes/test/e2e/storage/framework"
 	storagesuites "k8s.io/kubernetes/test/e2e/storage/testsuites"
+	admissionapi "k8s.io/pod-security-admission/api"
 )
 
 // Verify interface is properly implemented at compile time.
@@ -87,6 +88,7 @@ func InitBeegfsTestSuite() storageframework.TestSuite {
 // beegfsTestSuite implements the storageframework.TestSuiteInfo interface.
 func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, pattern storageframework.TestPattern) {
 	f := e2eframework.NewDefaultFramework("beegfs")
+	f.NamespacePodSecurityEnforceLevel = admissionapi.LevelPrivileged
 
 	// We can use a single BeegfsDriver for multiple tests because of the way Ginkgo performs parallelization
 	// See test/e2e/README.md for details
@@ -165,8 +167,9 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			e2eframework.ExpectNoError(fsExec.Cleanup())
 		}()
 
-		// Execute beegfs-ctl getentryinfo command.
 		volDirPathBeegfsRoot := path.Join(fsExec.Resource.Sc.Parameters["volDirBasePath"], fsExec.Resource.Pv.Name)
+
+		// Execute beegfs-ctl getentryinfo command to get the stripe pattern info.
 		result, err := fsExec.IssueCommandWithBeegfsPaths("beegfs-ctl --mount=%s --getentryinfo %s",
 			"", volDirPathBeegfsRoot)
 
@@ -194,7 +197,9 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		}()
 
 		// Query /proc for connection information associated with this storage resource.
-		cmd := fmt.Sprintf("cat $(dirname $(grep -l %s /proc/fs/beegfs/*/config))/storage_nodes", fsExec.Resource.Pv.Name)
+		pvSum := fsExec.GetVolumeSHA256Checksum()
+		// In K8s 1.24 the volume identifier switched to the sha256 checksum
+		cmd := fmt.Sprintf("cat $(dirname $(grep -l -e %s -e %s /proc/fs/beegfs/*/config))/storage_nodes", fsExec.Resource.Pv.Name, pvSum)
 		result, err := fsExec.IssueCommandWithResult(cmd)
 		e2eframework.ExpectNoError(err)
 

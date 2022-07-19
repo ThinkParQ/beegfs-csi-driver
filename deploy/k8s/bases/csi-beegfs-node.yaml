@@ -82,7 +82,7 @@ spec:
               # We must know whether a directory is a mount point in order to decide how to handle it.
               mountPropagation: HostToContainer
               name: pods-mount-dir
-            - mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
+            - mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
               # We must know whether a directory is a mount point in order to decide how to handle it.
               mountPropagation: HostToContainer
               name: plugins-mount-dir
@@ -116,7 +116,7 @@ spec:
         # Kubernetes mounts global volumes at locations like
         # /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-########/globalmount.
         - hostPath:
-            path: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
+            path: /var/lib/kubelet/plugins/kubernetes.io/csi
             type: DirectoryOrCreate
           name: plugins-mount-dir
         - hostPath:
