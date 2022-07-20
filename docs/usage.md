@@ -328,10 +328,17 @@ created Kubernetes Persistent Volume Claim.
 Except for `cfgFile` (which has to be set by the driver) mount options supported
 by BeeGFS can be specified on a [persistent
 volume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options)
-or [storage class
-class](https://kubernetes.io/docs/concepts/storage/storage-classes/#mount-options).
+or [storage class](https://kubernetes.io/docs/concepts/storage/storage-classes/#mount-options).
 Please note the driver DOES NOT validate provided mount options and use of
 options not supported by BeeGFS may cause unpredictable behavior. 
+
+By default the driver mounts BeeGFS with the following mount options: 
+rw, relatime, and nosuid.
+
+* The cfgFile option is also used, but it is handled entirely by the driver and
+  ignored if specified.
+* The nosuid mount option is used to adhere to [BeeGFS security
+  recommendations](https://www.beegfs.io/c/the-importance-of-using-connauthfile-in-beegfs/).
 
 ### Memory Consumption with RDMA
 For performance (and other) reasons each Persistent Volume used on a given

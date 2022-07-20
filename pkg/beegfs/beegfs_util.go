@@ -227,7 +227,8 @@ func constructMountOptions(ctx context.Context, desiredMountOpts []string, vol b
 	var mountOpts []string
 	if len(desiredMountOpts) == 0 {
 		// If no mount options are specified, use these defaults.
-		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath}
+		// We set the nosuid mount option by default to adhere to BeeGFS security recommendations.
+		mountOpts = []string{"rw", "relatime", "cfgFile=" + vol.clientConfPath, "nosuid"}
 	} else {
 		// Use all specified mount options, ignoring duplicates.
 		mountOpts = append(removeInvalidMountOptions(ctx, desiredMountOpts), "cfgFile="+vol.clientConfPath)
