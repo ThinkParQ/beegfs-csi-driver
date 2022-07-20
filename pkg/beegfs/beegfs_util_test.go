@@ -31,7 +31,6 @@ connAuthFile          =
 connRDMAInterfacesFile =
 `
 
-// Do not remove extra newline at end of file. go-ini writes one that we must match.
 // We cannot predict what connClientUDPPort will be chosen, so tests shouldn't actually check that line.
 const TestWriteClientFilesBeegfsClientConf = `# A minimal configuration file that allows connInterfaces, connNetFilter,
 # connTcpOnlyFilter, and one arbitrary override.
@@ -44,7 +43,6 @@ connNetFilterFile      = /testvol/connNetFilterFile
 connTcpOnlyFilterFile  = /testvol/connTcpOnlyFilterFile
 connAuthFile           = /testvol/connAuthFile
 connRDMAInterfacesFile = /testvol/connRDMAInterfacesFile
-
 `
 
 func TestNewBeegfsUrl(t *testing.T) {
