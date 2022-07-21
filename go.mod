@@ -3,27 +3,27 @@ module github.com/netapp/beegfs-csi-driver
 go 1.17
 
 require (
-	github.com/container-storage-interface/spec v1.5.0
+	github.com/container-storage-interface/spec v1.6.0
 	github.com/go-logr/logr v1.2.3
 	github.com/kubernetes-csi/csi-lib-utils v0.11.0
-	github.com/kubernetes-csi/csi-test/v4 v4.3.0
+	github.com/kubernetes-csi/csi-test/v4 v4.4.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
-	github.com/opencontainers/selinux v1.10.0
+	github.com/opencontainers/selinux v1.10.1
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.8.2
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8
-	google.golang.org/grpc v1.45.0
-	gopkg.in/ini.v1 v1.66.4
+	github.com/spf13/afero v1.9.2
+	golang.org/x/net v0.0.0-20220708220712-1185a9018129
+	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
+	google.golang.org/grpc v1.48.0
+	gopkg.in/ini.v1 v1.66.6
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2
-	k8s.io/klog/v2 v2.60.1
+	k8s.io/klog/v2 v2.70.1
 	k8s.io/kubernetes v1.24.2
 	k8s.io/mount-utils v0.24.2
 	k8s.io/pod-security-admission v0.0.0
-	sigs.k8s.io/controller-runtime v0.11.2
+	sigs.k8s.io/controller-runtime v0.12.3
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -56,9 +56,9 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.5.5 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.1.2 // indirect
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -105,7 +105,7 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	k8s.io/apiextensions-apiserver v0.23.5 // indirect
+	k8s.io/apiextensions-apiserver v0.24.2 // indirect
 	k8s.io/apiserver v0.24.2 // indirect
 	k8s.io/cloud-provider v0.24.2 // indirect
 	k8s.io/component-base v0.24.2 // indirect
