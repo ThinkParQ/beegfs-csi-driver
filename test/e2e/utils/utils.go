@@ -52,7 +52,7 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 }
 
 // VerifyNoOrphanedMounts uses SSH to access all cluster nodes and verify that none of them have a BeeGFS file system
-// mounted as a PersistentVolume. VerifyNoOrphanedMounts could be used within a single test case, but mounts are orphaned
+// mounted by the CSI driver. VerifyNoOrphanedMounts could be used within a single test case, but mounts are orphaned
 // intermittently and it would be unlikely to catch an orphan mount without including an extremely long stress test
 // within the case. It is currently preferred to use VerifyNoOrphanedMounts before and after an entire suite of tests
 // runs to ensure none of the tests within the suite causes a mount to be orphaned.
@@ -70,8 +70,8 @@ func VerifyNoOrphanedMounts(cs clientset.Interface) {
 		nodeAddresses = append(nodeAddresses, address)
 	}
 	for _, nodeAddress := range nodeAddresses {
-		// TODO: A464 Update the command to handle new and old paths
-		result, err := e2essh.SSH("mount | grep -e beegfs_nodev | grep pvc", nodeAddress, e2eframework.TestContext.Provider)
+		cmd := "findmnt -l -n -t beegfs | grep '/var/lib/kubelet/'"
+		result, err := e2essh.SSH(cmd, nodeAddress, e2eframework.TestContext.Provider)
 		e2eframework.ExpectNoError(err)
 		e2eframework.ExpectEmpty(result.Stdout, "node with address %s has orphaned mounts", nodeAddress)
 	}
