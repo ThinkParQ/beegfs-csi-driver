@@ -140,7 +140,7 @@ please submit them at https://github.com/NetApp/beegfs-csi-driver/issues.
 ### Quick Start
 
 The steps in this section allow you to get the driver up and running quickly. See them in action on 
-[NetApp TV](https://www.youtube.com/watch?v=lHkwaj8Ydqk&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=2).
+[NetApp TV](https://www.youtube.com/watch?v=uu7q_PcHUXA&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_).
 For production use cases or air-gapped environments it is recommended to read
 through the full [kubectl deployment guide](docs/deployment.md) or [operator
 deployment guide](operator/README.md).
@@ -185,7 +185,7 @@ Administrators create a Storage Class in Kubernetes referencing at minimum a
 specific BeeGFS file system and parent directory within that file system. Users
 can then submit PVCs against the Storage Class, and are provided isolated access
 to new directories under the parent specified in the Storage Class. See the process
-in action on [NetApp TV](https://www.youtube.com/watch?v=XHd3CO63CHw&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=1).
+in action on [NetApp TV](https://www.youtube.com/watch?v=vJ9nrb_1aXY&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=2).
 
 <a name="static-provisioning"></a>
 ### Static Provisioning:
@@ -193,7 +193,7 @@ in action on [NetApp TV](https://www.youtube.com/watch?v=XHd3CO63CHw&list=PLdXI3
 Administrators create a PV and PVC representing an existing directory in a
 BeeGFS file system. This is useful for exposing some existing dataset or shared
 directory to Kubernetes users and applications. See the process in action on 
-[NetApp TV](https://www.youtube.com/watch?v=iRMEj9bpZHM&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=3).
+[NetApp TV](https://www.youtube.com/watch?v=-KTCFuA5-Cc&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_&index=3).
 
 <a name="examples"></a>
 ### Examples
