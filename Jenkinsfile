@@ -69,6 +69,7 @@ pipeline {
                     script {
                         def testCommand = 'ACK_GINKGO_DEPRECATIONS=1.16.5 TESTARGS="-v -ginkgo.v" make test > ' +
                             'results/unit-test.log'
+                        sh "make check-go-version"
                         if (env.BRANCH_NAME.matches('(master)|(release-.+)|(PR-.+)')) {
                             // When JOB_NAME is empty, the conditional logic in release-tools/verify-vendor.sh allows
                             // for vendor testing.

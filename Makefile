@@ -23,6 +23,9 @@ CMDS ?= beegfs-csi-driver
 TEST_GO_FILTER_CMD = -e '/test/e2e' -e '/operator'
 all: build
 
+check-go-version:
+	./hack/check-go-version.sh
+
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its
 # own container image and include it in a different image. This build-% recipe mirrors an analogous recipe in
 # release-tools/buildmake and allows us to explicitly build the binary specified by %.
