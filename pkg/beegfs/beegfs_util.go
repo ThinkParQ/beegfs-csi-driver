@@ -304,11 +304,20 @@ func unmountAndCleanUpIfNecessary(ctx context.Context, vol beegfsVolume, rmDir b
 	if err != nil {
 		return errors.Wrap(err, "error listing mounted filesystems")
 	}
+
+	// Get a relative path to exclude from the bind mount check like isolatedMountDirPath/mount. Do not exclude
+	// mountPath directly, as it is an absolute path and therefore too specific.
+	isolatedMountDirPath := path.Base(vol.mountDirPath)
+	exclude := path.Join(isolatedMountDirPath, "mount")
 	for _, entry := range allMounts {
 		// Our container mounts the host's root filesystem at /host (like /:/host), so a file system might appear to be
-		// mounted at both /path/to/file/system and /host/path/to/file/system. These duplicates are NOT bind mounts, so
-		// we use !strings.Contains() instead of entry.Path != mountPath below.
-		if entry.Device == "beegfs_nodev" && !strings.Contains(entry.Path, vol.mountPath) {
+		// mounted at both /mountPath and /host/mountPath. Nomad automatically mounts our data directory into our
+		// container at /csi/local (in addition to the location we intentionally mount it). We can not use /csi/local/
+		// as part of our mountDirPath because our container and the host must agree on the path of beegfs-client.conf,
+		// so a file system might appear to be mounted at both .../isolatedMountDirPath/mount and
+		// /csi/local/isolatedMountDirPath/mount. These duplicate examples above are NOT the bind mounts we care about,
+		// so we filter on isolatedMountDirPath/mount.
+		if entry.Device == "beegfs_nodev" && !strings.Contains(entry.Path, exclude) {
 			for _, opt := range entry.Opts {
 				if strings.Contains(opt, vol.clientConfPath) {
 					// This is a bind mount of the BeeGFS filesystem mounted at mountPath
