@@ -20,7 +20,7 @@ job "beegfs-csi-plugin-node" {
       driver = "docker"
 
       config {
-        image = "netapp/beegfs-csi-driver:v1.2.2"
+        image = "netapp/beegfs-csi-driver:v1.3.0"
 
         # chwrap is used to execute the beegfs-ctl binary already installed on the host. We also read the 
         # beegfs-client.conf template already installed on the host.
