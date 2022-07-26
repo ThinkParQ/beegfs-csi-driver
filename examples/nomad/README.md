@@ -1,9 +1,16 @@
 # BeeGFS CSI Driver HashiCorp Nomad Examples
 
+While the BeeGFS CSI driver is primarily tested on (and intended for integration
+with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
+use with other container orchestrators as well. As a "simple and flexible
+scheduler and orchestrator to deploy and manage containers and non-containerized
+applications across on-prem and clouds at scale", [HashiCorp
+Nomad](https://www.nomadproject.io/) is one such orchestrator.
+
 ## Contents
 
 * [Important Warnings](#important-warnings)
-* [What Is This For?](#what-is-this-for)
+* [What This Is For](#what-this-is-for)
 * [Requirements](#requirements)
 * [Steps](#steps)
   * [Deploy](#deploy)
@@ -25,17 +32,11 @@ BeeGFS CSI driver integration in a generally available Nomad version.
 
 ***
 
-## What Is This For?
+## What This Is For
 
-While the BeeGFS CSI driver is primarily tested on (and intended for integration
-with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
-use with other container orchestrators as well. As a "simple and flexible
-scheduler and orchestrator to deploy and manage containers and non-containerized
-applications across on-prem and clouds at scale", [HashiCorp
-Nomad](https://www.nomadproject.io/) is one such orchestrator.
-
-At a high level, these manifests consists of a Nomad specification for a BeeGFS
-CSI driver volume and a Nomad job that consumes the volume:
+At a high level, these manifests create a Nomad volume (backed by a BeeGFS CSI
+driver volume) and a Nomad job that consumes it. Apply them AFTER the BeeGFS CSI
+driver is [deployed](../../deploy/nomad/README.md) in a Nomad cluster.
 1. `volume.hcl` creates a new Nomad volume backed by a BeeGFS CSI driver volume
    that is automatically provisioned by the BeeGFS CSI driver controller
    service.

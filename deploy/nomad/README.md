@@ -1,9 +1,16 @@
 # BeeGFS CSI Driver HashiCorp Nomad Deployment
 
+While the BeeGFS CSI driver is primarily tested on (and intended for integration
+with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
+use with other container orchestrators as well. As a "simple and flexible
+scheduler and orchestrator to deploy and manage containers and non-containerized
+applications across on-prem and clouds at scale", [HashiCorp Nomad]
+(https://www.nomadproject.io/) is one such orchestrator.
+
 ## Contents
 
 * [Important Warnings](#important-warnings)
-* [What Is This For?](#what-is-this-for)
+* [What This Is For](#what-this-is-for)
 * [Requirements](#requirements)
 * [Steps](#steps)
   * [Deploy](#deploy)
@@ -25,20 +32,16 @@ BeeGFS CSI driver integration in a generally available Nomad version.
 
 ***
 
-## What Is This For?
+## What This Is For
 
-While the BeeGFS CSI driver is primarily tested on (and intended for integration
-with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
-use with other container orchestrators as well. As a "simple and flexible
-scheduler and orchestrator to deploy and manage containers and non-containerized
-applications across on-prem and clouds at scale", [HashiCorp Nomad]
-(https://www.nomadproject.io/) is one such orchestrator.
-
-At a high level, these manifests consists of two separate Nomad jobs:
-1. `controller.nomad` runs the CSI controller service as a "service" type job with
-   a single replica.
-1. `node.nomad` runs the CSI node service as a "system" type job so that a replica
-   runs on every node in the cluster.
+At a high level, these manifests consists of two separate Nomad jobs. Together,
+they get the BeeGFS CSI driver up and running in a Nomad cluster. Apply them
+BEFORE any [example volumes or jobs](../../examples/nomad/README.md) that
+require the BeeGFS CSI driver.
+1. `controller.nomad` runs the CSI controller service as a "service" type job
+   with a single replica.
+1. `node.nomad` runs the CSI node service as a "system" type job so that a
+   replica runs on every node in the cluster.
 
 ***
 
