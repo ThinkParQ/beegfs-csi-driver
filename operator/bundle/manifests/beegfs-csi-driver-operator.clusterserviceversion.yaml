@@ -67,7 +67,7 @@ metadata:
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
-    operators.operatorframework.io/builder: operator-sdk-v1.19.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.22.2
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/netapp/beegfs-csi-driver
     support: NetApp
@@ -566,7 +566,7 @@ spec:
                 - --upstream=http://127.0.0.1:8080/
                 - --logtostderr=true
                 - --v=10
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
                 name: kube-rbac-proxy
                 ports:
                 - containerPort: 8443
