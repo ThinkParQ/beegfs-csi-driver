@@ -310,9 +310,11 @@ var _ = DescribeSanity("Node Service", func(sc *TestContext) {
 		nodeExpansionSupported = isNodeCapabilitySupported(n, csi.NodeServiceCapability_RPC_EXPAND_VOLUME)
 		controllerExpansionSupported = isControllerCapabilitySupported(cl, csi.ControllerServiceCapability_RPC_EXPAND_VOLUME)
 		r = &Resources{
-			Context:          sc,
-			ControllerClient: cl,
-			NodeClient:       n,
+			Context:                    sc,
+			ControllerClient:           cl,
+			NodeClient:                 n,
+			ControllerPublishSupported: controllerPublishSupported,
+			NodeStageSupported:         nodeStageSupported,
 		}
 	})
 

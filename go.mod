@@ -6,7 +6,7 @@ require (
 	github.com/container-storage-interface/spec v1.6.0
 	github.com/go-logr/logr v1.2.3
 	github.com/kubernetes-csi/csi-lib-utils v0.11.0
-	github.com/kubernetes-csi/csi-test/v4 v4.4.0
+	github.com/kubernetes-csi/csi-test/v4 v4.3.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/opencontainers/selinux v1.10.1
@@ -14,7 +14,7 @@ require (
 	github.com/spf13/afero v1.9.2
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.45.0
 	gopkg.in/ini.v1 v1.66.6
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2

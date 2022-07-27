@@ -322,6 +322,8 @@ type bufWriter struct {
 	batchSize int
 	conn      net.Conn
 	err       error
+
+	onFlush func()
 }
 
 func newBufWriter(conn net.Conn, batchSize int) *bufWriter {
@@ -357,6 +359,9 @@ func (w *bufWriter) Flush() error {
 	}
 	if w.offset == 0 {
 		return nil
+	}
+	if w.onFlush != nil {
+		w.onFlush()
 	}
 	_, w.err = w.conn.Write(w.buf[:w.offset])
 	w.offset = 0

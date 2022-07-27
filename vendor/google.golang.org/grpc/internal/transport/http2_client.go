@@ -90,7 +90,7 @@ type http2Client struct {
 	kp               keepalive.ClientParameters
 	keepaliveEnabled bool
 
-	statsHandlers []stats.Handler
+	statsHandler stats.Handler
 
 	initialWindowSize int32
 
@@ -132,7 +132,7 @@ type http2Client struct {
 	kpDormant bool
 
 	// Fields below are for channelz metric collection.
-	channelzID *channelz.Identifier
+	channelzID int64 // channelz unique identification number
 	czData     *channelzData
 
 	onGoAway func(GoAwayReason)
@@ -311,7 +311,7 @@ func newHTTP2Client(connectCtx, ctx context.Context, addr resolver.Address, opts
 		isSecure:              isSecure,
 		perRPCCreds:           perRPCCreds,
 		kp:                    kp,
-		statsHandlers:         opts.StatsHandlers,
+		statsHandler:          opts.StatsHandler,
 		initialWindowSize:     initialWindowSize,
 		onPrefaceReceipt:      onPrefaceReceipt,
 		nextID:                1,
@@ -341,19 +341,18 @@ func newHTTP2Client(connectCtx, ctx context.Context, addr resolver.Address, opts
 			updateFlowControl: t.updateFlowControl,
 		}
 	}
-	for _, sh := range t.statsHandlers {
-		t.ctx = sh.TagConn(t.ctx, &stats.ConnTagInfo{
+	if t.statsHandler != nil {
+		t.ctx = t.statsHandler.TagConn(t.ctx, &stats.ConnTagInfo{
 			RemoteAddr: t.remoteAddr,
 			LocalAddr:  t.localAddr,
 		})
 		connBegin := &stats.ConnBegin{
 			Client: true,
 		}
-		sh.HandleConn(t.ctx, connBegin)
+		t.statsHandler.HandleConn(t.ctx, connBegin)
 	}
-	t.channelzID, err = channelz.RegisterNormalSocket(t, opts.ChannelzParentID, fmt.Sprintf("%s -> %s", t.localAddr, t.remoteAddr))
-	if err != nil {
-		return nil, err
+	if channelz.IsOn() {
+		t.channelzID = channelz.RegisterNormalSocket(t, opts.ChannelzParentID, fmt.Sprintf("%s -> %s", t.localAddr, t.remoteAddr))
 	}
 	if t.keepaliveEnabled {
 		t.kpDormancyCond = sync.NewCond(&t.mu)
@@ -631,8 +630,8 @@ func (t *http2Client) getCallAuthData(ctx context.Context, audience string, call
 // the wire.  However, there are two notable exceptions:
 //
 // 1. If the stream headers violate the max header list size allowed by the
-//    server.  It's possible this could succeed on another transport, even if
-//    it's unlikely, but do not transparently retry.
+//    server.  In this case there is no reason to retry at all, as it is
+//    assumed the RPC would continue to fail on subsequent attempts.
 // 2. If the credentials errored when requesting their headers.  In this case,
 //    it's possible a retry can fix the problem, but indefinitely transparently
 //    retrying is not appropriate as it is likely the credentials, if they can
@@ -640,7 +639,8 @@ func (t *http2Client) getCallAuthData(ctx context.Context, audience string, call
 type NewStreamError struct {
 	Err error
 
-	AllowTransparentRetry bool
+	DoNotRetry            bool
+	DoNotTransparentRetry bool
 }
 
 func (e NewStreamError) Error() string {
@@ -649,11 +649,11 @@ func (e NewStreamError) Error() string {
 
 // NewStream creates a stream and registers it into the transport as "active"
 // streams.  All non-nil errors returned will be *NewStreamError.
-func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream, error) {
+func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (_ *Stream, err error) {
 	ctx = peer.NewContext(ctx, t.getPeer())
 	headerFields, err := t.createHeaderFields(ctx, callHdr)
 	if err != nil {
-		return nil, &NewStreamError{Err: err, AllowTransparentRetry: false}
+		return nil, &NewStreamError{Err: err, DoNotTransparentRetry: true}
 	}
 	s := t.newStream(ctx, callHdr)
 	cleanup := func(err error) {
@@ -753,14 +753,13 @@ func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream,
 			return true
 		}, hdr)
 		if err != nil {
-			// Connection closed.
-			return nil, &NewStreamError{Err: err, AllowTransparentRetry: true}
+			return nil, &NewStreamError{Err: err}
 		}
 		if success {
 			break
 		}
 		if hdrListSizeErr != nil {
-			return nil, &NewStreamError{Err: hdrListSizeErr}
+			return nil, &NewStreamError{Err: hdrListSizeErr, DoNotRetry: true}
 		}
 		firstTry = false
 		select {
@@ -768,32 +767,29 @@ func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (*Stream,
 		case <-ctx.Done():
 			return nil, &NewStreamError{Err: ContextErr(ctx.Err())}
 		case <-t.goAway:
-			return nil, &NewStreamError{Err: errStreamDrain, AllowTransparentRetry: true}
+			return nil, &NewStreamError{Err: errStreamDrain}
 		case <-t.ctx.Done():
-			return nil, &NewStreamError{Err: ErrConnClosing, AllowTransparentRetry: true}
+			return nil, &NewStreamError{Err: ErrConnClosing}
 		}
 	}
-	if len(t.statsHandlers) != 0 {
+	if t.statsHandler != nil {
 		header, ok := metadata.FromOutgoingContext(ctx)
 		if ok {
 			header.Set("user-agent", t.userAgent)
 		} else {
 			header = metadata.Pairs("user-agent", t.userAgent)
 		}
-		for _, sh := range t.statsHandlers {
-			// Note: The header fields are compressed with hpack after this call returns.
-			// No WireLength field is set here.
-			// Note: Creating a new stats object to prevent pollution.
-			outHeader := &stats.OutHeader{
-				Client:      true,
-				FullMethod:  callHdr.Method,
-				RemoteAddr:  t.remoteAddr,
-				LocalAddr:   t.localAddr,
-				Compression: callHdr.SendCompress,
-				Header:      header,
-			}
-			sh.HandleRPC(s.ctx, outHeader)
+		// Note: The header fields are compressed with hpack after this call returns.
+		// No WireLength field is set here.
+		outHeader := &stats.OutHeader{
+			Client:      true,
+			FullMethod:  callHdr.Method,
+			RemoteAddr:  t.remoteAddr,
+			LocalAddr:   t.localAddr,
+			Compression: callHdr.SendCompress,
+			Header:      header,
 		}
+		t.statsHandler.HandleRPC(s.ctx, outHeader)
 	}
 	return s, nil
 }
@@ -902,7 +898,9 @@ func (t *http2Client) Close(err error) {
 	t.controlBuf.finish()
 	t.cancel()
 	t.conn.Close()
-	channelz.RemoveEntry(t.channelzID)
+	if channelz.IsOn() {
+		channelz.RemoveEntry(t.channelzID)
+	}
 	// Append info about previous goaways if there were any, since this may be important
 	// for understanding the root cause for this connection to be closed.
 	_, goAwayDebugMessage := t.GetGoAwayReason()
@@ -919,11 +917,11 @@ func (t *http2Client) Close(err error) {
 	for _, s := range streams {
 		t.closeStream(s, err, false, http2.ErrCodeNo, st, nil, false)
 	}
-	for _, sh := range t.statsHandlers {
+	if t.statsHandler != nil {
 		connEnd := &stats.ConnEnd{
 			Client: true,
 		}
-		sh.HandleConn(t.ctx, connEnd)
+		t.statsHandler.HandleConn(t.ctx, connEnd)
 	}
 }
 
@@ -1435,7 +1433,7 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 		close(s.headerChan)
 	}
 
-	for _, sh := range t.statsHandlers {
+	if t.statsHandler != nil {
 		if isHeader {
 			inHeader := &stats.InHeader{
 				Client:      true,
@@ -1443,14 +1441,14 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 				Header:      metadata.MD(mdata).Copy(),
 				Compression: s.recvCompress,
 			}
-			sh.HandleRPC(s.ctx, inHeader)
+			t.statsHandler.HandleRPC(s.ctx, inHeader)
 		} else {
 			inTrailer := &stats.InTrailer{
 				Client:     true,
 				WireLength: int(frame.Header().Length),
 				Trailer:    metadata.MD(mdata).Copy(),
 			}
-			sh.HandleRPC(s.ctx, inTrailer)
+			t.statsHandler.HandleRPC(s.ctx, inTrailer)
 		}
 	}
 
