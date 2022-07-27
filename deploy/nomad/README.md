@@ -1,102 +1,210 @@
-# Hashicorp Nomad Deployment
+# BeeGFS CSI Driver HashiCorp Nomad Deployment
 
-This directory includes a demo that uses
-the [BeeGFS CSI Driver](https://github.com/NetApp/beegfs-csi-driver) to create
-local BeeGFS volumes that can be mounted via the Nomad CSI implementation. 
-Driver deployment files are located in this directory and example volumes and 
-workloads are located in `/examples/nomad`.
+While the BeeGFS CSI driver is primarily tested on (and intended for integration
+with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
+use with other container orchestrators as well. As a "simple and flexible
+scheduler and orchestrator to deploy and manage containers and non-containerized
+applications across on-prem and clouds at scale", [HashiCorp Nomad]
+(https://www.nomadproject.io/) is one such orchestrator.
 
-## What Is This For?
+## Contents
+
+* [Important Warnings](#important-warnings)
+* [What This Is For](#what-this-is-for)
+* [Requirements](#requirements)
+* [Steps](#steps)
+  * [Deploy](#deploy)
+  * [Test](#test)
+  * [Clean Up](#clean-up)
+
+***
+
+## Important Warnings
 
 At this time the BeeGFS CSI driver is NOT SUPPORTED on Nomad, and is for
-demonstration and development purposes only. DO NOT USE IT IN PRODUCTION. If you
-want to get a quick idea of how the BeeGFS CSI driver works on Nomad in a single
-node environment, this demo is a good option. 
+demonstration and development purposes only. DO NOT USE IT IN PRODUCTION.
 
-At a high level, this demo deploys the BeeGFS CSI driver into a single node 
-Nomad installation, creates two BeeGFS volumes, deploys a Redis workload that 
-mounts these volumes, shows status, and cleans up. Overall, this shows the
-entire lifecycle of the plugin. You may run/modify "./run.sh" as is or run each
-command separately (recommended for debugging purposes).
+No generally available version of Nomad works with these manifests. They are
+tested with a custom version of Nomad. The BeeGFS CSI driver team is working to
+contribute a patch for [Nomad issue
+#13263](https://github.com/hashicorp/nomad/issues/13263), which will enable
+BeeGFS CSI driver integration in a generally available Nomad version.
+
+***
+
+## What This Is For
+
+At a high level, these manifests consists of two separate Nomad jobs. Together,
+they get the BeeGFS CSI driver up and running in a Nomad cluster. Apply them
+BEFORE any [example volumes or jobs](../../examples/nomad/README.md) that
+require the BeeGFS CSI driver.
+1. `controller.nomad` runs the CSI controller service as a "service" type job
+   with a single replica.
+1. `node.nomad` runs the CSI node service as a "system" type job so that a
+   replica runs on every node in the cluster.
+
+***
 
 ## Requirements
 
-* Preinstall the
-  [beegfs-client-dkms](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html)
-  and beegfs-util packages on any Nomad node that will be used with BeeGFS.
-* A running Nomad cluster with `docker.privileged.enabled = true`.
-* Copy/Move the Nomad agent config file `nomad-agent.hcl` in this repo to the
-  default path that Nomad recognizes of (e.g. `/etc/nomad.d/nomad.hcl`).
-  Alternatively, ensure that the options from the included `plugin "docker"`
-  block are included in your existing agent configuration.
-* Modify `examples/nomad/volume.hcl` to refer to an existing BeeGFS file system.
+* An existing BeeGFS file system.
+* An existing Nomad cluster running an [appropriate version of
+  Nomad](#important-warnings). On each client node:
+    * Preinstall the
+      [beegfs-client-dkms](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html)
+      and beegfs-util packages.
+    * Enable the [Docker task
+      driver](#https://www.nomadproject.io/docs/drivers/docker#docker-driver).
+    * [Configure the Docker task
+      driver](https://www.nomadproject.io/docs/drivers/docker#docker-driver) so
+      that allow_privileged = true. 
+* Place valid
+  [csi-beegfs-config.yaml](../../docs/deployment.md#managing-beegfs-client-configuration)
+  contents in both controller.nomad and node.nomad if necessary for your
+  environment.
+* Place valid
+  [csi-beegfs-connauth.yaml](../../docs/deployment.md#connauth-configuration)
+  contents in both `controller.nomad` and `node.nomad` if necessary for your
+  environment.
+* Modify any additional fields marked LIKELY TO REQUIRE MODIFICATION in both
+  `controller.nomad` and `node.nomad`.
 
-The `run.sh` script in this directory prints the demo commands and their 
-outputs.
+***
 
+## Steps
+
+### Deploy
+
+`nomad job run test/nomad/beegfs-7.3-rh8/controller.nomad`
 ```
-$ nomad job run ./plugin.nomad 
-==> Monitoring evaluation "faa39692" 
-Evaluation triggered by job "beegfs-csi-plugin" 
-Allocation "8e2d591a" created: node "d71b39c2", group "csi" 
-Evaluation status changed: "pending" -> "complete" 
-==> Evaluation "faa39692" finished with status "complete" 
-Nodes Healthy = 1 
+==> 2022-07-25T15:47:23-05:00: Monitoring evaluation "c1581366"
+    2022-07-25T15:47:23-05:00: Evaluation triggered by job "beegfs-csi-plugin-controller"
+==> 2022-07-25T15:47:24-05:00: Monitoring evaluation "c1581366"
+    2022-07-25T15:47:24-05:00: Evaluation within deployment: "c4de7e3a"
+    2022-07-25T15:47:24-05:00: Allocation "7d141b6c" created: node "011c950b", group "controller"
+    2022-07-25T15:47:24-05:00: Evaluation status changed: "pending" -> "complete"
+==> 2022-07-25T15:47:24-05:00: Evaluation "c1581366" finished with status "complete"
+==> 2022-07-25T15:47:24-05:00: Monitoring deployment "c4de7e3a"
+  ✓ Deployment "c4de7e3a" successful
+    
+    2022-07-25T15:47:35-05:00
+    ID          = c4de7e3a
+    Job ID      = beegfs-csi-plugin-controller
+    Job Version = 0
+    Status      = successful
+    Description = Deployment completed successfully
+    
+    Deployed
+    Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
+    controller  1        1       1        0          2022-07-25T15:57:33-05:00
+```
 
-$ nomad plugin status 
-beegfs ID = beegfs-plugin0 
-Provider = beegfs.csi.netapp.com 
-Version = v1.2.0-0-gc65b537 
-Controllers Healthy = 1 
-Controllers Expected = 1 
-Nodes Healthy = 1 
-Nodes Expected = 1 
+`nomad job run test/nomad/beegfs-7.3-rh8/node.nomad`
+```
+==> 2022-07-25T15:47:44-05:00: Monitoring evaluation "842ad41f"
+    2022-07-25T15:47:44-05:00: Evaluation triggered by job "beegfs-csi-plugin-node"
+==> 2022-07-25T15:47:45-05:00: Monitoring evaluation "842ad41f"
+    2022-07-25T15:47:45-05:00: Allocation "1891d9ca" created: node "de35373e", group "node"
+    2022-07-25T15:47:45-05:00: Allocation "505e02fc" created: node "011c950b", group "node"
+    2022-07-25T15:47:45-05:00: Evaluation status changed: "pending" -> "complete"
+==> 2022-07-25T15:47:45-05:00: Evaluation "842ad41f" finished with status "complete"
+```
 
-Allocations 
-ID Node ID Task Group Version Desired Status Created Modified 
-8e2d591a d71b39c2 csi 10 run running 4s ago 1s ago 
+`nomad job status beegfs-csi-plugin-controller`
+```
+ID            = beegfs-csi-plugin-controller
+Name          = beegfs-csi-plugin-controller
+Submit Date   = 2022-07-25T15:47:23-05:00
+Type          = service
+Priority      = 50
+Datacenters   = dc1
+Namespace     = default
+Status        = running
+Periodic      = false
+Parameterized = false
 
-$ cat volume.hcl | sed | nomad volume create
-$ sed -e "s/VOLUME_NAME/${VOLUME_BASE_NAME}[0]/" "${DEPLOY_DIR}/volume.hcl" | nomad volume create -
-- Created external volume beegfs://scspa2058537001.rtp.openenglab.netapp.com/nomad/vol/test-volume%5B0%5D with ID test-volume[0] 
+Summary
+Task Group  Queued  Starting  Running  Failed  Complete  Lost  Unknown
+controller  0       0         1        0       0         0     0
 
-$ cat volume.hcl | sed | nomad volume create
-$ sed -e "s/VOLUME_NAME/${VOLUME_BASE_NAME}[1]/" "${DEPLOY_DIR}/volume.hcl" | nomad volume create -
-- Created external volume beegfs://scspa2058537001.rtp.openenglab.netapp.com/nomad/vol/test-volume%5B1%5D with ID test-volume[1] 
+Latest Deployment
+ID          = c4de7e3a
+Status      = successful
+Description = Deployment completed successfully
 
-$ An example Nomad job that uses the volumes we created can be found in examples/nomad/redis.nomad
-$ nomad job run ../../examples/nomad/redis.nomad 
-==> Monitoring evaluation "e5a5118f" 
-Evaluation triggered by job "example" 
-Allocation "89cf02b6" created: node "d71b39c2", group "cache" 
-Allocation "efe63fe4" created: node "d71b39c2", group "cache" 
-==> Monitoring evaluation "e5a5118f" 
-Evaluation within deployment: "08673535" 
-Evaluation status changed: "pending" -> "complete" 
-==> Evaluation "e5a5118f" finished with status "complete" 
+Deployed
+Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
+controller  1        1       1        0          2022-07-25T15:57:33-05:00
 
-$ nomad volume status 
-Container Storage Interface ID Name Plugin ID Schedulable Access Mode 
-test-volume[0] test-volume[0] beegfs-plugin0 true single-node-reader-only 
-test-volume[1] test-volume[1] beegfs-plugin0 true single-node-reader-only 
+Allocations
+ID        Node ID   Task Group  Version  Desired  Status   Created  Modified
+7d141b6c  011c950b  controller  0        run      running  28s ago  17s ago
+```
 
-$ nomad job stop example 
-==> Monitoring evaluation "d6a99c92" 
-Evaluation triggered by job "example" 
-==> Monitoring evaluation "d6a99c92" 
-Evaluation within deployment: "08673535" 
-Evaluation status changed: "pending" -> "complete" 
-==> Evaluation "d6a99c92" finished with status "complete" 
+`nomad job status beegfs-csi-plugin-node`
+```
+ID            = beegfs-csi-plugin-node
+Name          = beegfs-csi-plugin-node
+Submit Date   = 2022-07-25T15:47:44-05:00
+Type          = system
+Priority      = 50
+Datacenters   = dc1
+Namespace     = default
+Status        = running
+Periodic      = false
+Parameterized = false
 
-$ nomad volume delete test-volume[0] 
+Summary
+Task Group  Queued  Starting  Running  Failed  Complete  Lost  Unknown
+node        0       0         2        0       0         0     0
 
-$ nomad volume delete test-volume[1] 
+Allocations
+ID        Node ID   Task Group  Version  Desired  Status   Created  Modified
+1891d9ca  de35373e  node        0        run      running  11s ago  11s ago
+505e02fc  011c950b  node        0        run      running  11s ago  11s ago
+```
 
-$ nomad job stop beegfs 
-Are you sure you want to stop job "beegfs-csi-plugin"? [y/N] y 
-==> Monitoring evaluation "1906534d" 
-Evaluation triggered by job "beegfs-csi-plugin" 
-==> Monitoring evaluation "1906534d" 
-Evaluation status changed: "pending" -> "complete" 
-==> Evaluation "1906534d" finished with status "complete"
+`nomad plugin status --verbose`
+```
+Container Storage Interface
+ID                 Provider               Controllers Healthy/Expected  Nodes Healthy/Expected
+beegfs-csi-plugin  beegfs.csi.netapp.com  1/1                           2/2
+```
+
+### Test
+
+See the [Nomad usage examples](../../examples/nomad/README.md).
+
+### Clean Up
+
+`nomad job stop -purge beegfs-csi-plugin-controller`
+```
+==> 2022-07-25T15:51:19-05:00: Monitoring evaluation "0fec5f9c"
+    2022-07-25T15:51:19-05:00: Evaluation triggered by job "beegfs-csi-plugin-controller"
+==> 2022-07-25T15:51:20-05:00: Monitoring evaluation "0fec5f9c"
+    2022-07-25T15:51:20-05:00: Evaluation within deployment: "c4de7e3a"
+    2022-07-25T15:51:20-05:00: Evaluation status changed: "pending" -> "complete"
+==> 2022-07-25T15:51:20-05:00: Evaluation "0fec5f9c" finished with status "complete"
+==> 2022-07-25T15:51:20-05:00: Monitoring deployment "c4de7e3a"
+  ✓ Deployment "c4de7e3a" successful
+    
+    2022-07-25T15:51:20-05:00
+    ID          = c4de7e3a
+    Job ID      = beegfs-csi-plugin-controller
+    Job Version = 0
+    Status      = successful
+    Description = Deployment completed successfully
+    
+    Deployed
+    Task Group  Desired  Placed  Healthy  Unhealthy  Progress Deadline
+    controller  1        1       1        0          2022-07-25T15:57:33-05:00
+```
+
+`nomad job stop -purge beegfs-csi-plugin-node`
+```
+==> 2022-07-25T15:51:48-05:00: Monitoring evaluation "aea2aacc"
+    2022-07-25T15:51:48-05:00: Evaluation triggered by job "beegfs-csi-plugin-node"
+==> 2022-07-25T15:51:49-05:00: Monitoring evaluation "aea2aacc"
+    2022-07-25T15:51:49-05:00: Evaluation status changed: "pending" -> "complete"
+==> 2022-07-25T15:51:49-05:00: Evaluation "aea2aacc" finished with status "complete"
 ```

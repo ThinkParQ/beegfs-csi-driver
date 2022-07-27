@@ -34,7 +34,7 @@ capability {
 # sysMgmtdHost and volDirBasePath are required.
 parameters {
   # Change this to the IP address or FQDN of the BeeGFS management service for an accessible BeeGFS file system.
-  sysMgmtdHost   = "localhost"
+  sysMgmtdHost   = "10.113.4.71"
 
   # Change this to a path on an accessible BeeGFS file system that makes sense for dynamic volume creation.
   volDirBasePath = "/nomad/vol/"
