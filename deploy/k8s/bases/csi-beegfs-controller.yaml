@@ -41,7 +41,7 @@ spec:
             - mountPath: /csi
               name: socket-dir
         - name: beegfs
-          image: netapp/beegfs-csi-driver:v1.2.2
+          image: netapp/beegfs-csi-driver:v1.3.0
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
