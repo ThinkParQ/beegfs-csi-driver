@@ -22,8 +22,7 @@ job "beegfs-csi-plugin-controller" {
       driver = "docker"
 
       config {
-        # TODO(webere, A430): Make this dynamic.
-        image = "docker.repo.eng.netapp.com/webere/beegfs-csi-driver:webere-nomad-debug"
+        image = "docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master"
 
         # chwrap is used to execute the beegfs-ctl binary already installed on the host. We also read the 
         # beegfs-client.conf template already installed on the host.

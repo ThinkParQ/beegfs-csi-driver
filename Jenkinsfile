@@ -274,6 +274,26 @@ pipeline {
                 }
             }
         }
+        stage("Nomad Test") {
+            when {
+                branch 'master'
+            }
+            options {
+                timeout(time: 1, unit: 'HOURS')
+            }
+            environment {
+                NOMAD_ADDR = credentials('address-nomad')
+                NOMAD_CACERT = credentials('ca-nomad')
+                CSI_CONTAINER_IMAGE = "${uniqueImageTag}"
+            }
+            steps {
+                // We currently only test Nomad with a single BeeGFS "environment" (and thus simply hard code the 
+                // directory containing necessary files here). It will be fairly easy to abstract this to multiple 
+                // environments (like we do for end-to-end Kubernetes testing) if it ever makes sense.
+                // If this script fails, we consider Nomad testing to have failed.
+                sh 'test/nomad/test-nomad.sh test/nomad/beegfs-7.3-rh8/ > results/nomad.log 2>&1'
+            }
+        }
     }
 
     post {
