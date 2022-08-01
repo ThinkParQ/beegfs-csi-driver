@@ -277,6 +277,22 @@ pipeline {
     }
 
     post {
+        always {
+            // We must use a script block to use if. We must use an if block to ensure e-mails only send on desired
+            // branches. (The when directive is only available in a stage, and there are no stages in post.) 
+            script {
+                if (env.BRANCH_NAME.matches('master')) {
+                    // The Mailer plugin automatically sends e-mails on failed builds and on the first successful build 
+                    // after a failed build. 
+                    step([$class: 'Mailer',
+                        // notifyEveryUnstableBuild may be controversial for some projects. However, for the BeeGFS 
+                        // CSI driver we never have unstable builds (only succeess or failures). Setting true for now.
+                        notifyEveryUnstableBuild: true,
+                        recipients: "ng-esg-apheleia@netapp.com",
+                    ])
+                }
+            }
+        }
         cleanup {
             archiveArtifacts(artifacts: 'results/**/*')
             sh """
