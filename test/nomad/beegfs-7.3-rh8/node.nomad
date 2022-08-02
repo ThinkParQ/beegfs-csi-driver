@@ -58,11 +58,11 @@ job "beegfs-csi-plugin-node" {
         # The BeeGFS CSI driver must be instructed to stage and publish volumes in a directory with the same path 
         # inside and outside of its container. Nomad always facilitates staging and publishing in the 
         # /opt/nomad/client/... directory as seen outside the container, but by default it represents this directory 
-        # inside the container as /local/csi. This usage of the stage_publish_dir field ensures the driver operates 
-        # correctly. Note that the final component of the path must match csi_plugin.id. Note that the final component 
-        # of this path must match csi_plugin.id. 
-        # NOTE: This will not work until https://github.com/hashicorp/nomad/issues/13263 is resolved.
-        stage_publish_dir = "/opt/nomad/client/csi/node/beegfs-csi-plugin"
+        # inside the container as /local/csi. This usage of the stage_publish_base_dir field ensures the driver operates 
+        # correctly. Note that the final component of the path must match csi_plugin.id.
+        # NOTE: The code required for this to work was merged into the Nomad repository with 
+        # https://github.com/hashicorp/nomad/pull/13919, but it is not expected to go GA until Nomad v1.3.3.
+        stage_publish_base_dir = "/opt/nomad/client/csi/node/beegfs-csi-plugin"
       }
 
       resources {
@@ -76,7 +76,7 @@ job "beegfs-csi-plugin-node" {
       # for details.
       # This stanza must be kept in sync with its partner in controller.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 config:
   # Test file systems are intentionally misconfigured to first advertise an interface/address that is unreachable. This 
   # connNetFilter configuration overcomes that misconfiguration and speeds up mounting for test cases that don't make 
@@ -102,7 +102,7 @@ EOH
       # for details.
       # This stanza must be kept in sync with its partner in controller.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 - sysMgmtdHost: 10.113.4.72
   connAuth: secret1
 EOH

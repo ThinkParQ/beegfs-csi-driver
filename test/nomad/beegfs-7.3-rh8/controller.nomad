@@ -87,7 +87,7 @@ job "beegfs-csi-plugin-controller" {
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 config:
   # Test file systems are intentionally misconfigured to first advertise an interface/address that is unreachable. This 
   # connNetFilter configuration overcomes that misconfiguration and speeds up mounting for test cases that don't make 
@@ -113,7 +113,7 @@ EOH
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 - sysMgmtdHost: 10.113.4.72
   connAuth: secret1
 EOH
