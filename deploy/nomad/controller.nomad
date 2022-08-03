@@ -87,7 +87,7 @@ job "beegfs-csi-plugin-controller" {
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 # Place valid csi-beegfs-config.yaml contents here.
 EOH
         destination = "${NOMAD_TASK_DIR}/csi-beegfs-config.yaml"
@@ -99,7 +99,7 @@ EOH
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {
-        data        = <<EOH
+        data = <<EOH
 # Place valid csi-beegfs-connauth.yaml contents here.
 EOH
         destination = "${NOMAD_SECRETS_DIR}/csi-beegfs-connauth.yaml"

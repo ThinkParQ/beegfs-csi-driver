@@ -274,9 +274,45 @@ pipeline {
                 }
             }
         }
+        stage("Nomad Test") {
+            when {
+                branch 'master'
+            }
+            options {
+                timeout(time: 1, unit: 'HOURS')
+            }
+            environment {
+                NOMAD_ADDR = credentials('address-nomad')
+                NOMAD_CACERT = credentials('ca-nomad')
+                CSI_CONTAINER_IMAGE = "${uniqueImageTag}"
+            }
+            steps {
+                // We currently only test Nomad with a single BeeGFS "environment" (and thus simply hard code the 
+                // directory containing necessary files here). It will be fairly easy to abstract this to multiple 
+                // environments (like we do for end-to-end Kubernetes testing) if it ever makes sense.
+                // If this script fails, we consider Nomad testing to have failed.
+                sh 'test/nomad/test-nomad.sh test/nomad/beegfs-7.3-rh8/ > results/nomad.log 2>&1'
+            }
+        }
     }
 
     post {
+        always {
+            // We must use a script block to use if. We must use an if block to ensure e-mails only send on desired
+            // branches. (The when directive is only available in a stage, and there are no stages in post.) 
+            script {
+                if (env.BRANCH_NAME.matches('master')) {
+                    // The Mailer plugin automatically sends e-mails on failed builds and on the first successful build 
+                    // after a failed build. 
+                    step([$class: 'Mailer',
+                        // notifyEveryUnstableBuild may be controversial for some projects. However, for the BeeGFS 
+                        // CSI driver we never have unstable builds (only succeess or failures). Setting true for now.
+                        notifyEveryUnstableBuild: true,
+                        recipients: "ng-esg-apheleia@netapp.com",
+                    ])
+                }
+            }
+        }
         cleanup {
             archiveArtifacts(artifacts: 'results/**/*')
             sh """

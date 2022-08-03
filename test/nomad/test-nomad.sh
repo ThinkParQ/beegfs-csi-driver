@@ -25,6 +25,7 @@ This script takes the following actions:
 Assumptions:
   * NOMAD_ADDR is set (so that the CLI can communicate with Nomad)
   * NOMAD_CACERT is set (so that the CLI can communicate with Nomad)
+  * CSI_CONTAINER_IMAGE is set (if necessary) (so that an appropriate container image is deployed)
   * The following files exist:
       * contoller.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
       * node.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
@@ -47,8 +48,13 @@ fi
 
 if [ -z $2 ] || [ $2 == "start" ]; then
     echo "Running deployment start..."
-    nomad job run "$(realpath $1/controller.nomad)"
-    nomad job run "$(realpath $1/node.nomad)"
+    if [ ! -z $CSI_CONTAINER_IMAGE ]; then
+        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/controller.nomad) | nomad job run -
+        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/node.nomad) | nomad job run -
+    else
+        nomad job run $(realpath $1/controller.nomad)
+        nomad job run "$(realpath $1/node.nomad)"
+    fi
 
     # It can take some time for the Nomad plugin infrastructure to realize a controller service is available.
     # This test is somewhat brittle, but it works "for now".
