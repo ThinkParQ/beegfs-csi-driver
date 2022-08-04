@@ -341,12 +341,10 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
     def resultsDir = "results/${jobID}"
     sh "mkdir -p ${resultsDir}"
-    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel"
-    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]' -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial"
-    if (!testEnv.useOperator) {
-        testCommand += " -static-vol-dir-name ${testEnv.k8sCluster}"
-        testCommandDisruptive += " -static-vol-dir-name ${testEnv.k8sCluster}"
-    }
+    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]'" +
+        " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel -static-vol-dir-name ${testEnv.k8sCluster}"
+    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
+        " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial -static-vol-dir-name ${testEnv.k8sCluster}"
     // Redirect output for easier reading.
     testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
     testCommandDisruptive += " > ${resultsDir}/ginkgo-serial.log 2>&1"
