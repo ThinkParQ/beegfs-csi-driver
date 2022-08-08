@@ -24,12 +24,9 @@ Nomad](https://www.nomadproject.io/) is one such orchestrator.
 At this time the BeeGFS CSI driver is NOT SUPPORTED on Nomad, and is for
 demonstration and development purposes only. DO NOT USE IT IN PRODUCTION.
 
-These manifests rely on functionality introduced into Nomad with [Nomad PR 
-#13919](https://github.com/hashicorp/nomad/pull/13919). This functionality is 
-on track for inclusion in Nomad v1.3.3. However, the latest generally available 
-version of Nomad (as of this writing) is v1.3.2. For now, testing of these 
-manifests is done using developer builds of the Nomad [release/1.3.x 
-branch](https://github.com/hashicorp/nomad/tree/release/1.3.x).
+These manifests rely on functionality introduced into Nomad in [version 
+1.3.3](https://github.com/hashicorp/nomad/releases/tag/v1.3.3). They do not work
+with older Nomad versions.
 
 ***
 
