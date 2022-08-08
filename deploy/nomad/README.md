@@ -16,6 +16,9 @@ applications across on-prem and clouds at scale", [HashiCorp Nomad]
   * [Deploy](#deploy)
   * [Test](#test)
   * [Clean Up](#clean-up)
+* [Troubleshooting](#troubleshooting)
+  * [The driver doesn't appear to log anything.](#empty-logs)
+  * [The node service fails to "load map file.](#map-file)
 
 ***
 
@@ -209,3 +212,41 @@ See the [Nomad usage examples](../../examples/nomad/README.md).
     2022-07-25T15:51:49-05:00: Evaluation status changed: "pending" -> "complete"
 ==> 2022-07-25T15:51:49-05:00: Evaluation "aea2aacc" finished with status "complete"
 ```
+
+## Troubleshooting
+
+<a name="empty-logs"></a>
+### The driver doesn't appear to log anything.
+
+The BeeGFS CSI driver outputs all logs to stderr. While many orchestration tools
+(e.g. Kubernetes) display both stdout and stderr by default when container logs 
+are requested, Nomad distinguishes between the two streams. When viewing alloc 
+logs in the Nomad GUI, click the stderr button. When viewing alloc logs using 
+the Nomad CLI, use "nomad alloc logs -stderr".
+
+<a name="map-file"></a>
+### The node service fails to "load map file".
+
+This issue usually first manifests after a volume has been successfully created, 
+when a task running on a node is first attempting to consume it. The driver (and 
+Nomad, after contacting the driver) logs something like:
+
+```
+rpc error: code = Internal desc = beegfs-ctl failed with stdOut:  and stdErr: 
+Error: Failed to load map file: 
+/opt/nomad/client/csi/node/beegfs-csi-plugin/staging/beegfs-csi-volume/rw-file-system-multi-node-multi-writer/beegfs-client.conf
+```
+
+While preparing a volume for use, the node service writes a beegfs-client.conf
+file to a directory within its container, then issues a mount command that makes
+use of it. The mount command executes (for all intents and purposes) outside the
+container, so the internal and external path to the beegfs-client.conf file must
+be the same. The error message above indicates that the mount command (running
+outside the container) can't see the beegfs-client.conf file (written inside the
+container).
+
+The supplied manifests use the `csi_plugin.stage_publish_base_dir` field to
+ensure Nomad issues workable staging and publishing paths to the driver.
+However, this field must be configured differently for different Nomad clusters,
+and likely must be modified if the above error occurs. See the comments above
+this field in [node.nomad](node.nomad) for guidance.

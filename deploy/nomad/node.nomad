@@ -55,13 +55,23 @@ job "beegfs-csi-plugin-node" {
         id = "beegfs-csi-plugin"
         type = "node"
 
+        # LIKELY TO REQUIRE MODIFICATION.
         # The BeeGFS CSI driver must be instructed to stage and publish volumes in a directory with the same path 
-        # inside and outside of its container. Nomad always facilitates staging and publishing in the 
-        # /opt/nomad/client/... directory as seen outside the container, but by default it represents this directory 
+        # inside and outside of its container. Nomad always facilitates staging and publishing in the administrator 
+        # configured Nomad data directory as seen outside the container, but by default it represents this directory 
         # inside the container as /local/csi. This usage of the stage_publish_base_dir field ensures the driver operates 
-        # correctly. Note that the final component of the path must match csi_plugin.id.
-        # NOTE: The code required for this to work was merged into the Nomad repository with 
-        # https://github.com/hashicorp/nomad/pull/13919, but it is not expected to go GA until Nomad v1.3.3.
+        # correctly. 
+        #
+        # This field should be configured like <client.state_dir>/csi/node/<csi_plugin.id>, where:
+        #   * csi_plugin.id is set in this file (and is unlikely to change).
+        #   * client.state_dir is set in Nomad agent configuration files (and may vary by Nomad cluster). See 
+        #     https://www.nomadproject.io/docs/configuration/client for details.
+        #
+        # Many Nomad agent configurations do not explicitly set client.state_dir. In these cases, this field should be 
+        # configured like <data_dir>/client/csi/node/<csi_plugin.id>, where:
+        #   * csi_plugin.id is set in this file (and is unlikely to change).
+        #   * data_dir is set in Nomad agent configuration files (and may vary by Nomad cluster). See
+        #     https://www.nomadproject.io/docs/configuration for details.
         stage_publish_base_dir = "/opt/nomad/client/csi/node/beegfs-csi-plugin"
       }
 
