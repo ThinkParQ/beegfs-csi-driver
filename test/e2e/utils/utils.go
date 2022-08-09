@@ -26,13 +26,18 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientset "k8s.io/client-go/kubernetes"
+	"k8s.io/kubernetes/test/e2e/framework"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	e2essh "k8s.io/kubernetes/test/e2e/framework/ssh"
 	e2evolume "k8s.io/kubernetes/test/e2e/framework/volume"
 )
@@ -192,4 +197,73 @@ func GetRunningNodePodsOrFail(cs clientset.Interface) []corev1.Pod {
 		e2eframework.ExpectNoError(err, "expected to find at least one node pod and for all node pods to run")
 	}
 	return nodePods
+}
+
+// GetUnusedPoolID will return a string representing a pool id that is not in
+// the list of existing configured pool ids. If no such string can be found then
+// an empty string is returned.
+func GetUnusedPoolId(configuredPools []string) string {
+	poolId := ""
+	for id := 5; id < 199; id++ {
+		if !ContainsString(configuredPools, fmt.Sprint(id)) {
+			return fmt.Sprint(id)
+		}
+	}
+	return poolId
+}
+
+// The ContainsString function returns true if the passed in data slice contains
+// an element with the value val. If the value is not found in the slice
+// then false is returned.
+func ContainsString(data []string, val string) bool {
+	for _, entry := range data {
+		if entry == val {
+			return true
+		}
+	}
+	return false
+}
+
+// CreatePVCFromStorageClass is based on createPVCPVFromDynamicProvisionSC which is part of
+// the kubernetes e2e/storage/framework/volume_resource. The purpose of this function is to
+// create a PVC from a given storage class without the built in assertions of the framework's
+// CreateVolumeResource function and it's related functions.
+// This function does not handle cleanup. Be warned!
+func CreatePVCFromStorageClass(
+	f *framework.Framework,
+	name string,
+	claimSize string,
+	sc *storagev1.StorageClass,
+	volMode v1.PersistentVolumeMode,
+	accessModes []v1.PersistentVolumeAccessMode,
+	claimProvisionTimeout time.Duration,
+) (*v1.PersistentVolumeClaim, error) {
+	cs := f.ClientSet
+	ns := f.Namespace.Name
+	pvcCfg := e2epv.PersistentVolumeClaimConfig{
+		NamePrefix:       name,
+		ClaimSize:        claimSize,
+		StorageClassName: &(sc.Name),
+		AccessModes:      accessModes,
+		VolumeMode:       &volMode,
+	}
+
+	pvc := e2epv.MakePersistentVolumeClaim(pvcCfg, ns)
+	var err error
+	pvc, err = e2epv.CreatePVC(cs, ns, pvc)
+	if err != nil {
+		return pvc, err
+	}
+
+	isDelayedBinding := false
+	if sc.VolumeBindingMode != nil {
+		isDelayedBinding = *sc.VolumeBindingMode == storagev1.VolumeBindingWaitForFirstConsumer
+	}
+
+	if !isDelayedBinding {
+		err = e2epv.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, cs, pvc.Namespace, pvc.Name, framework.Poll, claimProvisionTimeout)
+		return pvc, err
+	}
+
+	return pvc, nil
 }

@@ -34,6 +34,7 @@ package testsuites
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"time"
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
@@ -177,6 +178,70 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Storage Pool: 2"))
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Chunksize: 1M"))
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Number of storage targets: desired: 2"))
+	})
+
+	ginkgo.It("should fail volume creation with invalid pool id in stripepattern", func() {
+		if pattern.VolType != storageframework.DynamicPV {
+			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
+		}
+
+		init()
+		defer cleanup()
+		cfg, _ := d.PrepareTest(f)
+		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
+
+		fsExec := utils.NewFSExec(cfg, d, testVolumeSizeRange)
+		defer func() {
+			e2eframework.ExpectNoError(fsExec.Cleanup())
+		}()
+
+		// Get the existing storage pools so we ensure we use an invalid pool id
+		result, err := fsExec.IssueCommandWithBeegfsPaths("beegfs-ctl --mount=%s --liststoragepools", "")
+		e2eframework.ExpectNoError(err)
+		var validPools []string
+		rx, _ := regexp.Compile(`\s+([0-9])`)
+		for _, line := range result {
+			subMatch := rx.FindStringSubmatch(string(line))
+			if len(subMatch) > 1 {
+				validPools = append(validPools, subMatch[1])
+			}
+		}
+		unusedPool := utils.GetUnusedPoolId(validPools)
+		// Ensure that we actually found an unused pool
+		e2eframework.ExpectNotEqual(unusedPool, "")
+
+		// Now set the storageclass params to use the invalid storage pool id
+		d.SetStorageClassParams(map[string]string{
+			"stripePattern/storagePoolID": unusedPool,
+		})
+		defer d.UnsetStorageClassParams()
+
+		// Now attempt to create a volume but expect the volume creation to fail
+		// Do not use storageframework.CreateVolumeResource because that expects the volume
+		// to be created successfully.
+		provisionTimeout := 1 * time.Minute
+		pvc, createError := utils.CreatePVCFromStorageClass(
+			cfg.Framework,
+			d.GetDriverInfo().Name,
+			"10G",
+			d.GetDynamicProvisionStorageClass(cfg, pattern.FsType),
+			pattern.VolMode,
+			d.GetDriverInfo().RequiredAccessModes,
+			provisionTimeout,
+		)
+		// Although we expect an error, attempt to cleanup in case there was no error
+		// creating the pvc.
+		if createError == nil {
+			volResources := storageframework.VolumeResource{
+				Config:  cfg,
+				Pattern: pattern,
+				Pvc:     pvc,
+			}
+			resources = append(resources, &volResources)
+		}
+
+		// Verify that the PVC fails to bind indicating that the PVC will not be created.
+		gomega.Expect(createError.Error()).To(gomega.ContainSubstring("not all in phase Bound within"))
 	})
 
 	ginkgo.It("should use RDMA to connect", func() {
