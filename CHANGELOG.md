@@ -1,6 +1,48 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.3.0] - 2022-08-22
+--------------------
+### Added
+- Support for Kubernetes v1.24.
+- The [Readme](README.md) now includes links to demo videos for a quick start
+  guide, the dynamic provisioning workflow, and the static provisioning
+  workflow.
+- Generalized Nomad deployment and example manifests that work on Nomad v1.3.3
+  and greater.
+
+### Changed
+- Updated the project to adhere to v1.6.0 of the CSI specification.
+- Updated the operator-sdk used to v1.22.2
+- Changed the [default BeeGFS mount options](docs/usage.md#beegfs-mount-options)
+  to include the `nosuid` mount option.
+- Refactor validation of parameters for CreateVolume and
+  ValidateVolumeCapabilities.
+- We are now checking for the BeeGFS client kernel module earlier in the driver
+  initialization process in order to better identify potential driver
+  initialization failures.
+- Replaced usage of k8s.io/utils/mount to use k8s.io/mount-utils instead.
+
+### Deprecated
+- Kubernetes v1.21 support will be dropped in the next driver release according
+  to our [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+
+### Fixed
+- Removed duplicate messages that were occurring in the driver logs for certain
+  errors.
+
+### Removed
+- Support for BeeGFS v7.1.x.
+- Support for Kubernetes v1.20.
+- Single node Nomad deployment and example manifests that worked before Nomad v1.3.0.
+
+### Security
+- Mitigated [CVE-2022-1996](https://nvd.nist.gov/vuln/detail/CVE-2022-1996) by
+  upgrading go-restful to v2.16.0
+- Mitigated [CVE-2022-29526](https://nvd.nist.gov/vuln/detail/CVE-2022-29526) by
+  upgrading to Go v1.17.12
+
 [1.2.2] - 2022-05-09
 --------------------
 ### Added
