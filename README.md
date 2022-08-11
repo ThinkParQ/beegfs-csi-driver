@@ -72,7 +72,7 @@ supported.
 
 | beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Client Versions | CSI Version  |
 | ---------------------- | -------------------------------- | ------------------------------------ | ---------------------- | ------------ |
-| v1.3.0                 | 1.21.4, 1.22.3, 1.23.1, 1.24.1   | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6           | v1.6.0       |
+| v1.3.0                 | 1.21.4, 1.22.3, 1.23.1, 1.24.1   | 4.10 (RHEL only; RHCOS experimental) | 7.3.1, 7.2.7           | v1.6.0       |
 | v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6 [^1]      | v1.5.0       |
 | v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |
 | v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4 [^1]             | v1.5.0       |
@@ -121,9 +121,14 @@ please submit them at https://github.com/NetApp/beegfs-csi-driver/issues.
 * The [BeeGFS DKMS
   client](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html) must be
   preinstalled to each Kubernetes node that needs BeeGFS access.
-  * Note: As part of this setup the beegfs-helperd and beegfs-utils packages must 
-    be installed, and the `beegfs-helperd` service must be started and enabled.
-  * Note: [Experimental support](deploy/openshift-beegfs-client/README.md) for 
+  * As part of this setup the beegfs-helperd and beegfs-utils packages must be
+    installed, and the `beegfs-helperd` service must be started and enabled.
+  * For BeeGFS versions 7.3.1+ or 7.2.7+, the `beegfs-helperd` service must be
+    configured with `connDisableAuthentication = true` or `connAuthFile = <path
+    to a connAuthFile shared by all file systems>`. See [BeeGFS Helperd
+    Configuration](docs/deployment.md#beegfs-helperd-configuration) for other
+    options or more details.
+  * [Experimental support](deploy/openshift-beegfs-client/README.md) for
     OpenShift environments with RedHat CoreOS nodes negates this requirement.
 * Each BeeGFS mount point uses an ephemeral UDP port. On Linux the selected
   ephemeral port is constrained by the values of [IP
@@ -139,25 +144,38 @@ please submit them at https://github.com/NetApp/beegfs-csi-driver/issues.
 <a name="quick-start"></a>
 ### Quick Start
 
-The steps in this section allow you to get the driver up and running quickly. See them in action on 
-[NetApp TV](https://www.youtube.com/watch?v=uu7q_PcHUXA&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_).
+The steps in this section allow you to get the driver up and running quickly.
+See them in action on [NetApp
+TV](https://www.youtube.com/watch?v=uu7q_PcHUXA&list=PLdXI3bZJEw7kJrbLsSFvDGXWJEmqHOFj_).
 For production use cases or air-gapped environments it is recommended to read
 through the full [kubectl deployment guide](docs/deployment.md) or [operator
 deployment guide](operator/README.md).
 
 1. On a machine with kubectl and access to the Kubernetes cluster where you want
    to deploy the BeeGFS CSI driver clone this repository: `git clone
-   https://github.com/NetApp/beegfs-csi-driver.git`
-2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
-   `kubectl apply -k deploy/k8s/overlays/default`
-    * Note by default the beegfs-csi-driver image will be pulled from
-      [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
-3. Verify all components are installed and operational: `kubectl get pods -n
-   beegfs-csi`
-
-As a one-liner: `git clone https://github.com/NetApp/beegfs-csi-driver.git && cd
-beegfs-csi-driver && kubectl apply -k deploy/k8s/overlays/default && kubectl get 
-pods -n beegfs-csi`
+   https://github.com/NetApp/beegfs-csi-driver.git`.
+2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`).
+3. In BeeGFS versions 7.3.1+ or 7.2.7+, explicit connAuth configuration is
+   required. Do one of the following or see [ConnAuth
+   Configuration](#docs/deployment.md#connauth-configuration) for more details.
+   * Set connDisableAuthentication to true in `csi-beegfs-config.yaml` if your
+     existing file system does not use connection authentication.
+     ```yaml
+     config:
+       beegfsClientConf:
+         connDisableAuthentication: true
+     ```
+   * Provide connAuth details in `csi-beegfs-connauth.yaml` if your existing
+     file system does use connection authentication.
+     ```yaml
+     - sysMgmtdHost: <sysMgmtdHost>
+       connAuth: <connAuthSecret>
+     ```
+4. Run `kubectl apply -k deploy/k8s/overlays/default`. Note by default the
+   beegfs-csi-driver image will be pulled from
+   [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
+5. Verify all components are installed and operational: `kubectl get pods -n
+   beegfs-csi`.
 
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.
