@@ -171,8 +171,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		volDirPathBeegfsRoot := path.Join(fsExec.Resource.Sc.Parameters["volDirBasePath"], fsExec.Resource.Pv.Name)
 
 		// Execute beegfs-ctl getentryinfo command to get the stripe pattern info.
-		result, err := fsExec.IssueCommandWithBeegfsPaths("beegfs-ctl --mount=%s --getentryinfo %s",
-			"", volDirPathBeegfsRoot)
+		result, err := fsExec.IssueCtlCommandWithBeegfsPathArgs("--getentryinfo %s", volDirPathBeegfsRoot)
 
 		e2eframework.ExpectNoError(err)
 		gomega.Expect(string(result)).To(gomega.ContainSubstring("Storage Pool: 2"))
@@ -196,7 +195,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		}()
 
 		// Get the existing storage pools so we ensure we use an invalid pool id
-		result, err := fsExec.IssueCommandWithBeegfsPaths("beegfs-ctl --mount=%s --liststoragepools", "")
+		result, err := fsExec.IssueCtlCommandWithBeegfsPathArgs("--liststoragepools")
 		e2eframework.ExpectNoError(err)
 		var validPools []string
 		rx, _ := regexp.Compile(`\s+([0-9])`)
