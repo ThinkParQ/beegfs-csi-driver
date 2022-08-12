@@ -29,11 +29,9 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	clientset "k8s.io/client-go/kubernetes"
-	"k8s.io/kubernetes/test/e2e/framework"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
@@ -230,14 +228,14 @@ func ContainsString(data []string, val string) bool {
 // CreateVolumeResource function and it's related functions.
 // This function does not handle cleanup. Be warned!
 func CreatePVCFromStorageClass(
-	f *framework.Framework,
+	f *e2eframework.Framework,
 	name string,
 	claimSize string,
 	sc *storagev1.StorageClass,
-	volMode v1.PersistentVolumeMode,
-	accessModes []v1.PersistentVolumeAccessMode,
+	volMode corev1.PersistentVolumeMode,
+	accessModes []corev1.PersistentVolumeAccessMode,
 	claimProvisionTimeout time.Duration,
-) (*v1.PersistentVolumeClaim, error) {
+) (*corev1.PersistentVolumeClaim, error) {
 	cs := f.ClientSet
 	ns := f.Namespace.Name
 	pvcCfg := e2epv.PersistentVolumeClaimConfig{
@@ -261,7 +259,7 @@ func CreatePVCFromStorageClass(
 	}
 
 	if !isDelayedBinding {
-		err = e2epv.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, cs, pvc.Namespace, pvc.Name, framework.Poll, claimProvisionTimeout)
+		err = e2epv.WaitForPersistentVolumeClaimPhase(corev1.ClaimBound, cs, pvc.Namespace, pvc.Name, e2eframework.Poll, claimProvisionTimeout)
 		return pvc, err
 	}
 
