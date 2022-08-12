@@ -45,6 +45,9 @@ spec:
         - 10.113.4.0/24
     fileSystemSpecificConfigs:
       - sysMgmtdHost: 10.113.4.65
+        config:
+          beegfsClientConf:
+            connDisableAuthentication: "true"
       - sysMgmtdHost: 10.113.4.66
         config:
           beegfsClientConf:
