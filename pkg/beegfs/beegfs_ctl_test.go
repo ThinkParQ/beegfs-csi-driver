@@ -8,6 +8,8 @@ package beegfs
 import (
 	"reflect"
 	"testing"
+
+	"github.com/pkg/errors"
 )
 
 func TestConstructSetPatternForVolumeArgs(t *testing.T) {
@@ -103,6 +105,45 @@ func TestConstructCreateDirForVolumeArgs(t *testing.T) {
 			got := constructCreateDirForVolumeArgs(tc.config)
 			if !reflect.DeepEqual(tc.wantArgs, got) {
 				t.Fatalf("expected: %s, got: %s", tc.wantArgs, got)
+			}
+		})
+	}
+}
+
+func TestErrorsTypes(t *testing.T) {
+	stdout := "stdOut"
+	stderr := "stdErr"
+	wantString := "beegfs-ctl failed with stdOut: stdOut and stdErr: stdErr"
+	tests := map[string]struct {
+		err       error
+		errorType interface{}
+	}{
+		"ctlNotExistError": {
+			err:       newCtlNotExistError(stdout, stderr),
+			errorType: &ctlNotExistError{},
+		},
+		"ctlExistError": {
+			err:       newCtlExistError(stdout, stderr),
+			errorType: &ctlExistError{},
+		},
+		"ctlConnAuthError": {
+			err:       newCtlConnAuthError(stdout, stderr),
+			errorType: &ctlConnAuthError{},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Any ctlError should output a similar string when Error() is called.
+			gotString := tc.err.Error()
+			if wantString != gotString {
+				t.Fatalf("expected: %s, got: %s", wantString, gotString)
+			}
+
+			// Any ctlError should unwrap to its expected type.
+			err := errors.Wrap(tc.err, "some wrapping message")
+			if !errors.As(err, tc.errorType) {
+				t.Fatalf("expected error to unwrap to type %s", name)
 			}
 		})
 	}
