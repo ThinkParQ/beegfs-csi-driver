@@ -252,7 +252,8 @@ pipeline {
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
                             new TestEnvironment("1.24-rhel8-rdma", "beegfs-7.2-rh8-rdma", "1.24", "root", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
+                            // TODO(webere, A476): Re-enable OpenShift tests when entitlements are available again.
+                            // new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
                         ]
                     } else {
                         testEnvironments = [
@@ -260,7 +261,8 @@ pipeline {
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
                             new TestEnvironment("1.24-rhel8-rdma", "beegfs-7.2-rh8-rdma", "1.24", "root", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
+                            // TODO(webere, A476): Re-enable OpenShift tests when entitlements are available again.
+                            // new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
                         ]
                     }
 

@@ -121,25 +121,39 @@ func (e *FSExec) getBeegfsMountsExcludingBindMounts() (mounts []FSMountData, err
 	return filteredMounts, nil
 }
 
-// getBeegfsMountByValue will return the path of the BeeGFS mount point that is associated
-// with the provided value. An error is returned if there is a problem getting the mount
-// information or if no matching filesystem is found.
-func (e *FSExec) getBeegfsMountByValue(value string) (mount string, err error) {
+// extractCfgFileFromMount returns the path of the beegfs-client.conf file used by the BeeGFS file
+// system described by the passed FSMountData.
+func extractCfgFileFromMount(fs FSMountData) (cfgFile string) {
+	for _, option := range strings.Split(fs.Options, ",") {
+		if strings.Contains(option, "cfgFile=") {
+			cfgFile = strings.TrimLeft(option, "cfgFile=")
+			break
+		}
+	}
+	return
+}
+
+// getBeegfsMountByValue will return the path of the BeeGFS mount point and the path of
+// the beegfs-client.conf file that are associated with the provided value. An error is
+// returned if there is a problem getting the mount information or if no matching
+// filesystem is found.
+func (e *FSExec) getBeegfsMountByValue(value string) (mount, cfgFile string, err error) {
 	mounts, err := e.getBeegfsMountsExcludingBindMounts()
 	if err != nil {
-		return mount, err
+		return mount, cfgFile, err
 	}
 	for _, fs := range mounts {
 		if strings.Contains(fs.Target, value) {
 			mount = fs.Target
+			cfgFile = extractCfgFileFromMount(fs)
 			// Ignore any possible duplicate entries which we don't expect
 			break
 		}
 	}
 	if mount != "" {
-		return mount, nil
+		return mount, cfgFile, nil
 	}
-	return mount, fmt.Errorf("no beegfs filesystem found matching value %s", value)
+	return mount, cfgFile, fmt.Errorf("no beegfs filesystem found matching value %s", value)
 }
 
 // GetVolumeSHA256Checksum will return the SHA256 checksum of the volumeHandle for the volume
@@ -150,31 +164,52 @@ func (e *FSExec) GetVolumeSHA256Checksum() (checksum string) {
 	return fmt.Sprintf("%x", sumData)
 }
 
-// GetVolumeHostMountPath will return the path of the BeeGFS filesystem mount related to
+// GetVolumeHostMountInfo will return the path of the BeeGFS filesystem mount related to
 // the volume associated with this FSExec. This assumes that there is a single volume
 // associated with the FSExec.
-func (e *FSExec) GetVolumeHostMountPath() (string, error) {
+func (e *FSExec) GetVolumeHostMountInfo() (mount, cfgFile string, err error) {
 	volumeHash := e.GetVolumeSHA256Checksum()
 	// First let's check for the mount path using the new sha256 based pathing method
-	hashPath, hashErr := e.getBeegfsMountByValue(volumeHash)
+	hashPath, hashCfgFile, hashErr := e.getBeegfsMountByValue(volumeHash)
 	if hashErr != nil {
 		err := fmt.Errorf("get beegfs mount by hash failed: %w", hashErr)
 		// If the checksum method failed, try the older method using the pv name
-		namePath, nameErr := e.getBeegfsMountByValue(e.Resource.Pv.Name)
+		namePath, nameCfgFile, nameErr := e.getBeegfsMountByValue(e.Resource.Pv.Name)
 		if nameErr != nil {
-			// err = fmt.Errorf("get beegfs mount by name failed: %w", nameErr)
-			return "", fmt.Errorf("get beegfs mount by name failed: %v %v", nameErr, err)
+			return "", "", fmt.Errorf("get beegfs mount by name failed: %v %v", nameErr, err)
 		}
-		return namePath, nil
+		return namePath, nameCfgFile, nil
 	}
-	return hashPath, nil
+	return hashPath, hashCfgFile, nil
+}
+
+// IssueCtlCommandWithBeegfsPathArgs takes a format string (like the ones passed to fmt.Printf, fmt.Sprintf, etc.) and
+// any number of BeeGFS relative paths. The format string should consist of valid beegfs-ctl command arguments. It
+// converts the relative paths to absolute paths on the host that will execute the beegfs-ctl command and ensures it
+// executes using the appropriate beegfs-client.conf file.
+// e.g. IssueCtlCommandWithBeegfsPathArgs(--getentryinfo %s", "e2e-test/dynamic/pvc-058ae06f") executes
+// "beegfs-ctl --cfgFile=/var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-058ae06f/globalmount/beegfs-client.conf
+// --getentryinfo /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-058ae06f/globalmount/mount/e2e-test/dynamic/pvc-058ae06f"
+func (e *FSExec) IssueCtlCommandWithBeegfsPathArgs(cmdFmtString string, beegfsPaths ...string) (string, error) {
+	mountPath, mountCfgFile, err := e.GetVolumeHostMountInfo()
+	if err != nil {
+		return "", err
+	}
+	var substitutions []interface{}
+	substitutions = append(substitutions, mountCfgFile) // We will first substitute the value of cfgFile.
+	for _, relPath := range beegfsPaths {
+		substitutions = append(substitutions, path.Join(mountPath, relPath))
+	}
+	return e.IssueCommandWithResult(fmt.Sprintf("beegfs-ctl --cfgFile=%s "+cmdFmtString, substitutions...))
 }
 
 // IssueCommandWithBeegfsPaths takes a format string (like the ones passed to fmt.Printf, fmt.Sprintf, etc.) and any
 // number of BeeGFS relative paths. It converts the relative paths to absolute paths on the host that will execute a
 // command.
+// e.g. IssueCommandWithBeegfsPaths("rm -rf %s", "e2e-test/delete/some-name") executes
+// "rm -rf /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-058ae06f/globalmount/mount/e2e-test/delete/some-name"
 func (e *FSExec) IssueCommandWithBeegfsPaths(cmdFmtString string, beegfsPaths ...string) (string, error) {
-	mountPath, err := e.GetVolumeHostMountPath()
+	mountPath, _, err := e.GetVolumeHostMountInfo()
 	if err != nil {
 		return "", err
 	}

@@ -33,7 +33,11 @@ func newBeeGFSCtlExecutor() (*beegfsCtlExecutor, error) {
 	// with the --help option.
 	executor := beegfsCtlExecutor{}
 	if _, err := executor.execute(context.TODO(), "", []string{"--help"}); err != nil {
-		return nil, errors.Wrap(err, "beegfs-ctl is likely not installed or not in path")
+		// A connAuth error here is not significant, as we will likely be picking up connAuth configuration on a per
+		// file system basis. For now, we just want to know if we can execute beegfs-ctl or not.
+		if !errors.As(err, &ctlConnAuthError{}) {
+			return nil, errors.Wrap(err, "beegfs-ctl is likely not installed or not in path")
+		}
 	}
 	return &executor, nil
 }
@@ -162,6 +166,8 @@ func (*beegfsCtlExecutor) execute(ctx context.Context, clientConfPath string, ar
 			err = errors.WithStack(newCtlNotExistError(stdOutString, stdErrString))
 		} else if strings.Contains(stdErrString, "exists already") {
 			err = errors.WithStack(newCtlExistError(stdOutString, stdErrString))
+		} else if strings.Contains(stdErrString, "No connAuthFile configured") {
+			err = errors.WithStack(newCtlConnAuthError(stdOutString, stdErrString))
 		} else {
 			err = errors.Wrapf(err, "beegfs-ctl failed with stdOut: %s and stdErr: %s", stdOutString, stdErrString)
 		}
@@ -176,30 +182,41 @@ func (*beegfsCtlExecutor) execute(ctx context.Context, clientConfPath string, ar
 	return stdOutString, err
 }
 
-// ctlNotExistError indicates that beegfs-ctl failed to stat or modify an entry that does not exist.
-type ctlNotExistError struct {
+// ctlError defines a common structure for the more specific errors it is intended to be embedded into.
+type ctlError struct {
 	stdOutString string
 	stdErrString string
+}
+
+func (err ctlError) Error() string {
+	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
+}
+
+// ctlNotExistError indicates that beegfs-ctl failed to stat or modify an entry that does not exist.
+type ctlNotExistError struct {
+	ctlError
 }
 
 func newCtlNotExistError(stdOutString, stdErrString string) ctlNotExistError {
-	return ctlNotExistError{stdOutString: stdOutString, stdErrString: stdErrString}
-}
-func (err ctlNotExistError) Error() string {
-	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
+	return ctlNotExistError{ctlError{stdOutString: stdOutString, stdErrString: stdErrString}}
 }
 
-// ctlExistError indicates the beegfs-ctl failed to create an entry that already exists.
+// ctlExistError indicates that beegfs-ctl failed to create an entry that already exists.
 type ctlExistError struct {
-	stdOutString string
-	stdErrString string
+	ctlError
 }
 
 func newCtlExistError(stdOutString, stdErrString string) ctlExistError {
-	return ctlExistError{stdOutString: stdOutString, stdErrString: stdErrString}
+	return ctlExistError{ctlError{stdOutString: stdOutString, stdErrString: stdErrString}}
 }
-func (err ctlExistError) Error() string {
-	return fmt.Sprintf("beegfs-ctl failed with stdOut: %v and stdErr: %v", err.stdOutString, err.stdErrString)
+
+// ctlConnAuthError indicates that beegfs-ctl can't do anything useful because of a connAuth misconfiguration.
+type ctlConnAuthError struct {
+	ctlError
+}
+
+func newCtlConnAuthError(stdOutString, stdErrString string) ctlConnAuthError {
+	return ctlConnAuthError{ctlError{stdOutString: stdOutString, stdErrString: stdErrString}}
 }
 
 // fakeBeeGFSCtlExecutor is a mock implementation of beegfsCtlExecutorInterface useful for testing.
