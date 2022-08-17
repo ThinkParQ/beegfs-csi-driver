@@ -4,7 +4,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 # The GO_BUILD_VERSION is the official go version we are building the BeeGFS CSI driver with.
-GO_BUILD_VERSION="go1.17.12"
+GO_BUILD_VERSION="go1.17.13"
 INSTALLED_VERSION=$(go version | { read _ _ ver _; echo ${ver}; } )  || die "determining version of go failed"
 
 if [ "$INSTALLED_VERSION" == "$GO_BUILD_VERSION" ]
