@@ -45,8 +45,10 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 ### Security
 - Mitigated [CVE-2022-1996](https://nvd.nist.gov/vuln/detail/CVE-2022-1996) by
   upgrading go-restful to v2.16.0
-- Mitigated [CVE-2022-29526](https://nvd.nist.gov/vuln/detail/CVE-2022-29526) by
-  upgrading to Go v1.17.12
+- Mitigated [CVE-2022-29526](https://nvd.nist.gov/vuln/detail/CVE-2022-29526),
+  [CVE-2022-30629](https://nvd.nist.gov/vuln/detail/CVE-2022-30629), and
+  [CVE-2022-32189](https://nvd.nist.gov/vuln/detail/CVE-2022-32189) by upgrading
+  to Go v1.17.13
 
 [1.2.2] - 2022-05-09
 --------------------
