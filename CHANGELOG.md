@@ -5,6 +5,11 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 --------------------
 ### Added
 - Support for Kubernetes v1.24.
+- Support for BeeGFS v7.3.1 and BeeGFS v7.2.7. See the new [Notable BeeGFS
+  Client Parameters](docs/deployment.md#notable) and [BeeGFS Helperd
+  Configuration](docs/deployment.md#beegfs-helperd-configuration) sections in
+  the deployment guide for important notes when upgrading BeeGFS to these
+  versions.
 - The [Readme](README.md) now includes links to demo videos for a quick start
   guide, the dynamic provisioning workflow, and the static provisioning
   workflow.

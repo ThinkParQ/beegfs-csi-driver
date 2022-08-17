@@ -12,6 +12,8 @@
 * [Example Application Deployment](#example-application-deployment)
 * [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
   * [General Configuration](#general-configuration)
+    * [ConnAuth Configuration](#connauth-configuration)
+    * [BeeGFS Helperd Configuration](#beegfs-helperd)
   * [Kubernetes Configuration](#kubernetes-configuration)
   * [BeeGFS Client Parameters](#beegfs-client-parameters)
 * [Notes for Kubernetes Administrators](#kubernetes-administrator-notes)
@@ -36,7 +38,12 @@ runs a component of the driver:
   install the following packages: 
   * beegfs-client-dkms
   * beegfs-helperd
-  * beegfs-utils  
+  * beegfs-utils
+* For BeeGFS versions 7.3.1+ or 7.2.7+, configure the `beegfs-helperd` service
+  (in `/etc/beegfs/beegfs-helperd.conf`) with `connDisableAuthentication = true`
+  or `connAuthFile = <path to a connAuthFile shared by all file systems>`. See
+  [BeeGFS Helperd Configuration](#beegfs-helperd-configuration) for other
+  options or more details.
 * Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd
   && systemctl enable beegfs-helperd`
 
@@ -384,9 +391,6 @@ values defined in its configuration file on top of the default
 beegfs-client.conf that ships with each BeeGFS distribution. Each `config`
 section may optionally contain parameters that override previous sections.
 
-NOTE: The configuration file is specified by the `--config-path` command line 
-argument. For Kubernetes, the deployment manifests handle this automatically.
-
 Depending on the topology of your cluster, some nodes MAY need different
 configuration than others. This requirement can be handled in one of two ways:
 1. The administrator creates unique configuration files and deploys each to the
@@ -478,16 +482,23 @@ nodeSpecificConfigs:  # OPTIONAL
     fileSystemSpecificConfigs:  # as above
 ```
 
+NOTE: When running the driver directly, the configuration file is specified by
+the `--config-path` command line argument. For Kubernetes, the deployment
+manifests handle this automatically.
+
 <a name="connauth-configuration"></a>
 #### ConnAuth Configuration
+
+As of BeeGFS v7.3.1+ and v7.2.7+, connection based authentication is enabled by
+default unless explicitly disabled. See the [BeeGFS
+docs](https://doc.beegfs.io/latest/advanced_topics/authentication.html) for more
+details.
+
+##### Option 1: Use Connection Authentication
 
 For security purposes, the contents of BeeGFS connAuthFiles are stored in a
 separate file. This file is optional, and should only be used if the
 connAuthFile configuration option is used on a file system's other services.
-
-NOTE: The connAuth configuration file is specified by the `--connauth-path`
-command line argument. For Kubernetes, the deployment manifests handle this
-automatically.
 
 ```yaml
 - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
@@ -499,6 +510,82 @@ automatically.
 NOTE: Unlike general configuration, connAuth configuration is only applied at a 
 per file system level. There is no default connAuth and the concept of a node 
 specific connAuth doesn't make sense.
+
+NOTE: When running the driver directly, the connAuth configuration file is
+specified by the `--connauth-path` command line argument. For Kubernetes, the
+deployment manifests handle this automatically.
+
+NOTE: It is also possible to create a connAuthFile and set the connAuthFile
+parameter in the default beegfs-client.conf file on every node. This option
+makes the most sense if also [configuring
+beegfs-helperd](#beegfs-helperd-configuration) to use connection authentication,
+as this requires per-node configuration of beegfs-helperd.conf.
+
+##### Option 2: Disable Connection Authentication
+
+Only if you are using BeeGFS v7.3.1+ or v7.2.7+ and do not want to use
+connection authentication, you must explicitly disable it by setting the
+following.
+
+```yaml
+config:
+  beegfsClientConf:
+    connDisableAuthentication: "true"
+```
+
+NOTE: This parameter does not exist in previous BeeGFS versions and BeeGFS will 
+fail to mount if it is provided for a file system that does not support it.
+
+<a name="beegfs-helperd-configuration"></a>
+#### BeeGFS Helperd Configuration
+
+The [BeeGFS Helperd 
+service](https://doc.beegfs.io/latest/advanced_topics/client_compat.html?highlight=helperd#helperd) 
+is used by the BeeGFS client kernel module for DNS resolution and logging. 
+BeeGFS can run without it, but this is not a typical configuration.
+
+Previously, it was common to run beegfs-helperd without a connAuthFile on all
+nodes that were to host the BeeGFS CSI driver. This allowed the driver to mount
+different file systems (with different connAuthFiles) simultaneously.
+Connections between the client and the (usually local) beegfs-helperd service
+were not authenticated, but connections between the client and and other file
+system services were authenticated per the driver's [connAuth
+configuration](#connauth-configuration).
+
+As of BeeGFS v7.3.1+ and v7.2.7+, BeeGFS requires a connAuthFile to be used by 
+all services (including beegfs-helperd) or for authentication to be explicitly 
+disabled in each service. The BeeGFS CSI driver is not able to modify the 
+configuration of the beegfs-helperd service, so care must be taken to configure 
+it appropriately as a prerequisite. 
+
+Recommended options:
+
+* Set `connDisableAuthentication = true` in `/etc/beegfs/beegfs-helperd.conf`
+  before starting and enabling beegfs-helperd on each node. This disables
+  authentication between the BeeGFS client and beegfs-helpderd, but does not
+  disable authentication between the client and other file system services. It 
+  allows the client to interact with beegfs-helperd regardless of whether or not
+  the file system it is mounting uses a connAuthFile.
+* On each node, pre-populate a connAuthFile (e.g. `/etc/beegfs/connAuthFile`)
+  with a shared secret that will be used by all BeeGFS file systems the driver
+  will mount. Set `connAuthFile` in both `/etc/beegfs/beegfs-helperd.conf` and
+  `/etc/beegfs/beegfs-client.conf`. Start and enable beegfs-helperd. Do not use
+  the [connAuth configuration mechanisms](#connauth-configuration) built into
+  the driver. It is not possible to use different connAuth secrets for different
+  file systems with this approach.
+
+Non-recommended options:
+
+* Run without beegfs-helperd by setting `logType: syslog` and
+  `sysMountSanityCheckMS: 0` either in the driver configuration or in
+  `/etc/beegfs/beegfs-client.conf` on all nodes (see more detailed instructions
+  on the [BeeGFS docs
+  site](https://doc.beegfs.io/latest/advanced_topics/client_compat.html?highlight=helperd#running-without-helperd)).
+  This approach routes logs through syslog (so that they appear in the same
+  location as other service logs instead of more "standard" BeeGFS locations)
+  and prevents the use of DNS names with BeeGFS services. It also disables the
+  BeeGFS mount sanity check, allowing mounts to "succeed" even when critical
+  BeeGFS services cannot be reached.
 
 <a name="kubernetes-configuration"></a>
 ### Kubernetes Configuration
@@ -537,11 +624,21 @@ see the [Troubleshooting Guide](troubleshooting.md#k8s-determining-the-beegfs-cl
 <a name="beegfs-client-parameters"></a>
 ### BeeGFS Client Parameters (beegfsClientConf)
 
-The following beegfs-client.conf parameters appear in the BeeGFS v7.2
+The following beegfs-client.conf parameters appear in the BeeGFS v7.3.1
 [beegfs-client.conf
-file](https://git.beegfs.io/pub/v7/-/blob/7.2/client_module/build/dist/etc/beegfs-client.conf).
+file](https://git.beegfs.io/pub/v7/-/blob/7.3.1/client_module/build/dist/etc/beegfs-client.conf).
 Other parameters may exist for newer or older BeeGFS versions. The list a
 parameter falls under determines its level of support in the driver.
+
+<a name="notable"></a>
+#### Notable
+
+Special attention should be paid to these parameters.
+
+* `connDisableAuthentication` - Added in BeeGFS v7.3.1 and BeeGFS v7.2.7. If the
+  file system the BeeGFS client will connect to does not use connAuth files,
+  this must be set to `true`.
+
 
 <a name="no-effect"></a>
 #### No Effect
@@ -572,10 +669,11 @@ if specified here.
   [connAuth configuration file](#connauth-configuration).
 * `connInterfacesFile` - Overridden by lists in the 
   [driver configuration file](#general-configuration).
+* `connRDMAInterfacesFile` - Overriden by lists in the driver configuration
+  file.
 * `connNetFilterFile` - Overridden by lists in the driver configuration file.
 * `connTcpOnlyFilterFile` - Overridden by lists in the driver configuration 
   file.
-* `connRDMAInterfaces` - Overriden by lists in the driver configuration file.
 
 <a name="tested"></a>
 #### Tested
@@ -592,13 +690,15 @@ These parameters SHOULD result in the desired effect but have not been tested.
 * `connHelperdPortTCP`
 * `connMgmtdPortTCP`
 * `connMgmtdPortUDP`
-* `connPortShift`
 * `connCommRetrySecs`
 * `connFallbackExpirationSecs`
 * `connMaxInternodeNum`
 * `connMaxConcurrentAttempts`
 * `connTCPFallbackEnabled`
 * `connUseRDMA`
+* `connTCPFallbackEnabled`
+* `connTCPRcvBufSize`
+* `connUDPRcvBufSize`
 * `connRDMABufNum`
 * `connRDMABufSize`
 * `connRDMATypeOfService`
