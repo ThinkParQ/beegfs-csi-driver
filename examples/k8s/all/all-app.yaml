@@ -1,4 +1,4 @@
-# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Copyright 2022 NetApp, Inc. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
 kind: Pod
 apiVersion: v1
@@ -11,6 +11,8 @@ spec:
       volumeMounts:
       - mountPath: /mnt/dyn
         name: csi-beegfs-dyn-volume
+      - mountPath: /mnt/ge
+        name: csi-beegfs-ge-volume
       - mountPath: /mnt/static
         name: csi-beegfs-static-volume 
       - mountPath: /mnt/static-ro
@@ -22,9 +24,13 @@ spec:
       # Confirm that the pod has access to BeeGFS:
       #   -> kubectl exec -it csi-beegfs-all-app -- ash
       #   -> ls /mnt/dyn
+      #   -> ls /mnt/ge
       #   -> ls /mnt/static 
+      # Confirm that the pod has read-only access to BeeGFS:
+      #   -> kubectl exec -it csi-beegfs-all-app -- ash
+      #   -> touch /mnt/static-ro/file # This should fail to write the file
       #   -> ls /mnt/static-ro
-      command: [ "ash", "-c", 'touch "/mnt/dyn/touched-by-${POD_UUID}" "/mnt/static/touched-by-k8s-name-${POD_UUID}" && sleep 7d']
+      command: [ "ash", "-c", 'touch "/mnt/dyn/touched-by-${POD_UUID}" "/mnt/ge/touched-by-${POD_UUID}" "/mnt/static/touched-by-k8s-name-${POD_UUID}" && sleep 7d']
       env:
         - name: POD_UUID
           valueFrom:
@@ -34,6 +40,17 @@ spec:
     - name: csi-beegfs-dyn-volume
       persistentVolumeClaim:
         claimName: csi-beegfs-dyn-pvc # defined in dyn-pvc.yaml
+      volumes:
+    - name: csi-beegfs-ge-volume
+      ephemeral:
+        volumeClaimTemplate: # similar to ../dyn/dyn-pvc.yaml
+          spec:
+            accessModes:
+            - ReadWriteMany
+            resources:
+              requests:
+                storage: 100Gi
+            storageClassName: csi-beegfs-ge-sc # defined in ge-sc.yaml
     - name: csi-beegfs-static-volume
       persistentVolumeClaim:
         claimName: csi-beegfs-static-pvc # defined in static-pvc.yaml
