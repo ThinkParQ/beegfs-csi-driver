@@ -66,6 +66,8 @@ spec:
       RUN rpm --import https://www.beegfs.io/release/beegfs_${BEEGFS_CLIENT_VERSION}/gpg/GPG-KEY-beegfs
       RUN yum install -y beegfs-client beegfs-utils beegfs-helperd
       RUN echo "" > /etc/beegfs/beegfs-mounts.conf
+      # See docs/deployment.md#beegfs-helperd-configuration for implications of the following.
+      RUN sed -i '/connDisableAuthentication/s/false/true/' /etc/beegfs/beegfs-helperd.conf
 
       ADD poststart.sh /usr/local/sbin/poststart.sh
       RUN chmod +x /usr/local/sbin/poststart.sh
@@ -73,7 +75,7 @@ spec:
     dockerStrategy:
       buildArgs:
         - name: BEEGFS_CLIENT_VERSION
-          value: 7.2.6
+          value: 7.2.7
       from:
         api: image.openshift.io/v1
         kind: ImageStreamTag
