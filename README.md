@@ -82,6 +82,20 @@ supported.
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.
 
+### Known Incompatibilities
+
+#### BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+
+Versions of the BeeGFS CSI driver prior to v1.3.0 are known to have issues
+initializing the driver when used in conjunction with BeeGFS clients 7.2.7 or
+7.3.1. These issues relate to the changes in these BeeGFS versions that require
+[Connection Authentication configuration to be
+set](docs/deployment.md#connauth-configuration). The v1.3.0 release of the
+driver resolves these issues and maintains compatibility with the prior BeeGFS
+versions (7.2.6 and 7.3.0). Therefore, in an environment where an existing
+installation is upgrading from BeeGFS 7.2.6 or 7.3.0 to 7.2.7 or 7.3.1 the
+recommendation would be to upgrade the BeeGFS CSI driver to v1.3.0 or later
+before upgrading the BeeGFS clients.
+
 [^1]: Support for the BeeGFS 7.1.5 filesystem is provided when the BeeGFS 7.2.x
     client is used. These configurations were tested in that manner.
 
