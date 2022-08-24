@@ -32,7 +32,7 @@ secretGenerator:
 # container names (e.g. when a private registry is used). The default image names MAY change in a future driver update.
 # Check /deploy/k8s/bases for updated names in the case of a failing upgrade.
 # images:
-#   - name: netapp/beegfs-csi-driver
+#   - name: docker.io/netapp/beegfs-csi-driver
 #     newName:
 #     newTag:
 #   - name: k8s.gcr.io/sig-storage/csi-provisioner

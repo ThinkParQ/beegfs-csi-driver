@@ -5,6 +5,7 @@
 
 * [Basics](#basics)
 * [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
+* [Upgrading to v1.4.0](#upgrade-1.4.0-kubernetes-deployment)
 
 <a name="basics"></a>
 ## Basics
@@ -68,3 +69,33 @@ be strings, so integers and booleans must be quoted. If you used v1.1.0 and
 specified parameters like: `connMgmtdPortTCP: 8000` or `connUseRDMA: true`, 
 modify your configuration file, specifying parameters like `connMgmtdPortTCP: 
 "8000"` or `connUseRDMA: "true"`.
+
+<a name="upgrade-1.4.0-kubernetes-deployment"></a>
+### Upgrading to v1.4.0
+
+v1.4.0 changes the default driver container image name from
+`netapp/beegfs-csi-driver` to `docker.io/netapp/beegfs-csi-driver` to
+accommodate container engines (e.g. Podman) that do not treat Docker Hub as a
+default. The actual hosting location of the image has not changed.
+
+If you were previously using an overlay to override this image name, you must
+update your overlay with the new default name.
+
+This kustomization stanza:
+```
+images:
+  - name: netapp/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+```
+
+Becomes this kustomization stanza:
+```
+images:
+  - name: docker.io/netapp/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+```
+
+Note: Overriding driver container image name is not common and most overlays
+will not need to be modified.
