@@ -1,6 +1,15 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+
+[1.4.0] - TBD
+--------------------
+### Changed
+- Changed the default driver container name from `netapp/beegfs-csi-driver` to
+  `docker.io/netapp/beegfs-csi-driver`. See the [upgrade
+  instructions](deploy/k8s/README.md#upgrade-1.2.0-kubernetes-deployment) if you
+  were previously overriding this name with a Kustomize overlay.
+
 [1.3.0] - 2022-08-22
 --------------------
 ### Added

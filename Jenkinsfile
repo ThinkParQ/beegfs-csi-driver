@@ -406,7 +406,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                 sh """
                     cp -r deploy/k8s/overlays/default ${overlay}
                     (cd ${overlay} && \\
-                    kustomize edit set image netapp/beegfs-csi-driver=${uniqueImageTag} && \\
+                    kustomize edit set image docker.io/netapp/beegfs-csi-driver=${uniqueImageTag} && \\
                     sed -i 's?/versions/latest?/versions/v${testEnv.k8sVersion}?g' kustomization.yaml)
                 """
                 try {

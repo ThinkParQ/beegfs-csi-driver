@@ -137,11 +137,12 @@ Docker registries. You must either ensure all necessary images (see
 available on all nodes, or ensure they can be pulled from some internal 
 registry.
 
-If your air-gapped environment does not have a DockerHub mirror, one option is
+If your air-gapped environment does not have a Docker Hub mirror, one option is
 pulling the necessary images from a machine with access to the internet
-(example: `docker pull netapp/beegfs-csi-driver`) then save them as tar files
-with [docker save](https://docs.docker.com/engine/reference/commandline/save/)
-so they can be copied to the air-gapped Kubernetes nodes and loaded with [docker
+(example: `docker pull docker.io/netapp/beegfs-csi-driver`) then save them as
+tar files with [docker
+save](https://docs.docker.com/engine/reference/commandline/save/) so they can be
+copied to the air-gapped Kubernetes nodes and loaded with [docker
 load](https://docs.docker.com/engine/reference/commandline/load/).
 
 Once the images are available, modify *deploy/k8s/overlays/my-overlay* to point 
