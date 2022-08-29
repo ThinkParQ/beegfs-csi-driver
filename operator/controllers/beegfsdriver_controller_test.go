@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	deploy "github.com/netapp/beegfs-csi-driver/deploy/k8s"
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
@@ -520,10 +521,11 @@ func getContainerImageForName(name string, containers []corev1.Container) string
 // getValidCRWithNoFields is a helper function that returns a pointer to a BeegfsDriver CR in a random namespace with
 // no configuration.
 func getValidCRWithNoFields() *beegfsv1.BeegfsDriver {
+	rand.Seed(time.Now().UnixMilli())
 	return &beegfsv1.BeegfsDriver{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "csi-beegfs-cr",
-			Namespace: fmt.Sprintf("test-%s", strconv.Itoa(rand.Intn(10000))), // Use a random namespace.
+			Namespace: fmt.Sprintf("test-%s", strconv.Itoa(rand.Intn(100000))), // Use a random namespace.
 		},
 	}
 }
