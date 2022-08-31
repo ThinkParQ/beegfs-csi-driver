@@ -392,6 +392,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                             grep -v beegfs-csi | xargs kubectl delete ns --cascade=foreground || true
                         oc delete -f test/env/${testEnv.beegfsHost}/csi-beegfs-cr.yaml || true
                         operator-sdk cleanup beegfs-csi-driver-operator || true
+                        oc delete sc \$(oc get sc -A | grep beegfs.csi.netapp.com | awk 'match(\$6,/[0-9]+d/) {print \$1}') || true
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
@@ -435,6 +436,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                         kubectl get ns --no-headers | awk '{print \$1}' | grep -e provisioning- -e stress- -e beegfs- -e multivolume- -e ephemeral- -e volumemode- -e disruptive- |
                             grep -v beegfs-csi | xargs kubectl delete ns --cascade=foreground || true
                         kubectl delete --cascade=foreground -k ${overlay} || true
+                        kubectl delete sc \$(kubectl get sc -A | grep beegfs.csi.netapp.com | awk 'match(\$6,/[0-9]+d/) {print \$1}') || true
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
