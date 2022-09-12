@@ -39,7 +39,7 @@ import (
 )
 
 var (
-	// controllerCaps represents the capability of controller service
+	// controllerCaps represents the capabilities of the controller service
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
@@ -47,7 +47,6 @@ var (
 
 type controllerServer struct {
 	ctlExec                beegfsCtlExecutorInterface
-	caps                   []*csi.ControllerServiceCapability
 	nodeID                 string
 	pluginConfig           beegfsv1.PluginConfig
 	clientConfTemplatePath string
@@ -65,11 +64,7 @@ func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 		return nil, err
 	}
 	return &controllerServer{
-		ctlExec: executor,
-		caps: getControllerServiceCapabilities(
-			[]csi.ControllerServiceCapability_RPC_Type{
-				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-			}),
+		ctlExec:                executor,
 		nodeID:                 nodeID,
 		pluginConfig:           pluginConfig,
 		clientConfTemplatePath: clientConfTemplatePath,
@@ -84,11 +79,7 @@ func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clie
 func newControllerServerSanity(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
 	nodeUnstageTimeout uint64) *controllerServer {
 	return &controllerServer{
-		ctlExec: &fakeBeegfsCtlExecutor{},
-		caps: getControllerServiceCapabilities(
-			[]csi.ControllerServiceCapability_RPC_Type{
-				csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
-			}),
+		ctlExec:                &fakeBeegfsCtlExecutor{},
 		nodeID:                 nodeID,
 		pluginConfig:           pluginConfig,
 		clientConfTemplatePath: clientConfTemplatePath,
@@ -282,18 +273,7 @@ func (cs *controllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVol
 }
 
 func (cs *controllerServer) ControllerGetCapabilities(ctx context.Context, req *csi.ControllerGetCapabilitiesRequest) (*csi.ControllerGetCapabilitiesResponse, error) {
-	var caps []*csi.ControllerServiceCapability
-	for _, cap := range controllerCaps {
-		c := &csi.ControllerServiceCapability{
-			Type: &csi.ControllerServiceCapability_Rpc{
-				Rpc: &csi.ControllerServiceCapability_RPC{
-					Type: cap,
-				},
-			},
-		}
-		caps = append(caps, c)
-	}
-	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
+	return &csi.ControllerGetCapabilitiesResponse{Capabilities: getControllerServiceCapabilities(controllerCaps)}, nil
 }
 
 func (cs *controllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
@@ -404,11 +384,13 @@ func (cs *controllerServer) ControllerGetVolume(ctx context.Context, in *csi.Con
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
+// getControllerServiceCapabilities will convert a slice of ControllerServiceCapability_RPC_Type entries to a slice
+// of ControllerServiceCapability structs. This makes it easier to define a set of ControllerServiceCapabilities by Type
+// and then pass them on with the more complicated ControllerServiceCapability structure.
 func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_Type) []*csi.ControllerServiceCapability {
 	var csc []*csi.ControllerServiceCapability
-
 	for _, cap := range cl {
-		LogDebug(nil, "Enabling controller service capability", "capability", cap.String())
+		LogDebug(nil, "Adding controller service capability", "capability", cap.String())
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{
@@ -417,7 +399,6 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 			},
 		})
 	}
-
 	return csc
 }
 
