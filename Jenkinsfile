@@ -284,6 +284,7 @@ pipeline {
                 NOMAD_ADDR = credentials('address-nomad')
                 NOMAD_CACERT = credentials('ca-nomad')
                 CSI_CONTAINER_IMAGE = "${uniqueImageTag}"
+                CONTAINER_DRIVER = 'docker'
             }
             steps {
                 // We currently only test Nomad with a single BeeGFS "environment" (and thus simply hard code the 

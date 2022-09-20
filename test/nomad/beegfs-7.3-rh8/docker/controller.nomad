@@ -17,8 +17,6 @@ job "beegfs-csi-plugin-controller" {
     count = 1
 
     task "controller" {
-      # This plugin has only been tested with the docker driver. It may be possible to support the podman driver in the 
-      # future. 
       driver = "docker"
 
       config {

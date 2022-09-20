@@ -16,9 +16,9 @@ job "beegfs-csi-job" {
   group "beegfs-group" {
     count = 1
 
-    task "beegfs-task-docker" {
-      # The BeeGFS CSI driver should be able to provision and mount volumes for any Nomad task driver that supports 
-      # volumes. It has been tested with the Docker and Exec task drivers.
+    task "beegfs-task-container" {
+      # Change this from "docker" to "podman" to run with the Podman task driver. test-nomad.sh handles this
+      # automatically.
       driver = "docker"
 
       config {
@@ -27,7 +27,7 @@ job "beegfs-csi-job" {
         # Create a file with the alloc's ID in its name to demonstrate the ability to write to BeeGFS. Then, sleep to 
         # demonstrate the container runs successfully. Use different files for different task drivers to avoid 
         # permissions issues (e.g. a docker container writes as root and an isolated user can't touch its file).
-        args = [ "ash", "-c", "touch /mnt/beegfs-csi-volume/touched-by-${NOMAD_ALLOC_ID}-docker && sleep 7d" ]
+        args = [ "ash", "-c", "touch /mnt/beegfs-csi-volume/touched-by-${NOMAD_ALLOC_ID}-container && sleep 7d" ]
       }
 
       volume_mount {
@@ -42,8 +42,6 @@ job "beegfs-csi-job" {
     }
 
     task "beegfs-task-exec" {
-      # The BeeGFS CSI driver should be able to provision and mount volumes for any Nomad task driver that supports 
-      # volumes. It has been tested with the Docker and Exec task drivers.
       driver = "exec"
 
       config {
