@@ -26,10 +26,11 @@ Assumptions:
   * NOMAD_ADDR is set (so that the CLI can communicate with Nomad)
   * NOMAD_CACERT is set (so that the CLI can communicate with Nomad)
   * CSI_CONTAINER_IMAGE is set (if necessary) (so that an appropriate container image is deployed)
+  * CONTAINER_DRIVER is set (optionally) (Podman can be used instead of Docker with CONTAINER_DRIVER=podman)
   * The following files exist:
-      * contoller.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
-      * node.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
-      * volume.hcl (containing appropriate sysMgmtdHost and volDirBasePath parameters)
+      * <$1>/<CONTAINER_DRIVER>/controller.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
+      * <$1>/<CONTAINER_DRIVER>/node.nomad (containing appropriate csi-beegfs-config.yaml and csi-beegfs-connauth.yaml)
+      * <$1>/volume.hcl (containing appropriate sysMgmtdHost and volDirBasePath parameters)
       * job.nomad
 EOH
 )
@@ -46,20 +47,26 @@ if [ ! -z $2 ] && [ "$2" != "start" ] && [ "$2" != "stop" ]; then
     exit 2
 fi
 
+CONTAINER_DRIVER="${CONTAINER_DRIVER:-docker}"
+if [ $CONTAINER_DRIVER != "docker" ] && [ $CONTAINER_DRIVER != "podman" ]; then
+    echo "CONTAINER_DRIVER must be docker or podman, not $CONTAINER_DRIVER"
+    exit 3
+fi
+
 if [ -z $2 ] || [ $2 == "start" ]; then
     echo "Running deployment start..."
     if [ ! -z $CSI_CONTAINER_IMAGE ]; then
-        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/controller.nomad) | nomad job run -
-        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/node.nomad) | nomad job run -
+        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/$CONTAINER_DRIVER/controller.nomad) | nomad job run -
+        sed "s|docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master|$CSI_CONTAINER_IMAGE|g" $(realpath $1/$CONTAINER_DRIVER/node.nomad) | nomad job run -
     else
-        nomad job run $(realpath $1/controller.nomad)
-        nomad job run "$(realpath $1/node.nomad)"
+        nomad job run "$(realpath $1/$CONTAINER_DRIVER/controller.nomad)"
+        nomad job run "$(realpath $1/$CONTAINER_DRIVER/node.nomad)"
     fi
 
     # It can take some time for the Nomad plugin infrastructure to realize a controller service is available.
     # This test is somewhat brittle, but it works "for now".
     i=0
-    while ! nomad plugin status beegfs-csi-plugin | grep "Controllers Healthy" | grep 1 >/dev/null; do
+    while ! [ $(nomad plugin status beegfs-csi-plugin | awk '/Controllers Healthy/{print $NF}') -eq $(nomad plugin status beegfs-csi-plugin | awk '/Controllers Expected/{print $NF}') ]; do
         if [ $i -lt 30 ]; then
             echo "Waited $i seconds for controller to be healthy..."
             sleep 5
@@ -72,9 +79,8 @@ if [ -z $2 ] || [ $2 == "start" ]; then
 
     # It can take some time for the Nomad plugin infrastructure to realize a node service is available.
     # This test is somewhat brittle, but it works "for now".
-    NUM_NOMAD_NODES=$(nomad node status -quiet | wc -l)
     i=0
-    while ! nomad plugin status beegfs-csi-plugin | grep "Nodes Healthy" | grep $NUM_NOMAD_NODES >/dev/null; do
+    while ! [ $(nomad plugin status beegfs-csi-plugin | awk '/Nodes Healthy/{print $NF}') -eq $(nomad plugin status beegfs-csi-plugin | awk '/Nodes Expected/{print $NF}') ]; do
         if [ $i -lt 30 ]; then
             echo "Waited $i seconds for nodes to be healthy..."
             sleep 5
@@ -86,7 +92,12 @@ if [ -z $2 ] || [ $2 == "start" ]; then
     done
 
     nomad volume create "$(realpath $1/volume.hcl)"
-    nomad job run "$(dirname $0)/job.nomad"
+    
+    if [ $CONTAINER_DRIVER == podman ]; then
+        sed 's|docker|podman|g' "$(dirname $0)/job.nomad" | nomad job run -
+    else
+        nomad job run "$(dirname $0)/job.nomad"
+    fi
 fi
 
 if [ -z $2 ] || [ $2 == "stop" ]; then

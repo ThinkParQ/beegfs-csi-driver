@@ -15,9 +15,7 @@ job "beegfs-csi-plugin-node" {
   # A group is analagous to a Kubernetes Pod.
   group "node" {
     task "node" {
-      # This plugin has only been tested with the docker driver. It may be possible to support the podman driver in the 
-      # future. 
-      driver = "docker"
+      driver = "podman"
 
       config {
         image = "docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver:master"
@@ -25,16 +23,9 @@ job "beegfs-csi-plugin-node" {
         # chwrap is used to execute the beegfs-ctl binary already installed on the host. We also read the 
         # beegfs-client.conf template already installed on the host.
         # The host filesystem is mounted at: /host.
-        mount {
-          type     = "bind"
-          target   = "/host"
-          source   = "/"
-          readonly = true
-          bind_options {
-            # Because we chwrap mount/umount, we must propagate the container's /host mounts to the node.
-            propagation = "rshared"
-          }
-        }
+        # TODO(webere, A511): Go back to using a mount block (as we do for the Docker driver) when 
+        # https://github.com/hashicorp/nomad-driver-podman/issues/142 is resolved.
+        volumes = ["/:/host:ro,rshared"]
 
         args = [
           "--driver-name=beegfs.csi.netapp.com",

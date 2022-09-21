@@ -16,19 +16,41 @@ job "beegfs-csi-job" {
   group "beegfs-group" {
     count = 1
 
-    # Required and arbitrarily chosen. The ID which creates an individual unit of work in this job. 
-    # Full task options can be found at: https://www.nomadproject.io/docs/job-specification/task
-    task "beegfs-task" {
-      # This plugin has only been tested with the docker driver. It may be possible to support the podman driver in the 
-      # future. 
+    task "beegfs-task-container" {
+      # Change this from "docker" to "podman" to run with the Podman task driver. test-nomad.sh handles this
+      # automatically.
       driver = "docker"
 
       config {
         image = "alpine:latest"
 
-        # Create a file with the alloc's ID as its name to demonstrate the ability to write to BeeGFS. Then, sleeps to 
-        # demonstrate the container runs successfully.
-        args = [ "ash", "-c", "touch /mnt/beegfs-csi-volume/touched-by-${NOMAD_ALLOC_ID} && sleep 7d" ]
+        # Create a file with the alloc's ID in its name to demonstrate the ability to write to BeeGFS. Then, sleep to 
+        # demonstrate the container runs successfully. Use different files for different task drivers to avoid 
+        # permissions issues (e.g. a docker container writes as root and an isolated user can't touch its file).
+        args = [ "ash", "-c", "touch /mnt/beegfs-csi-volume/touched-by-${NOMAD_ALLOC_ID}-container && sleep 7d" ]
+      }
+
+      volume_mount {
+        volume = "beegfs-csi-volume"
+        destination = "/mnt/beegfs-csi-volume"
+      }
+
+      resources {
+        cpu = 256
+        memory = 128
+      }
+    }
+
+    task "beegfs-task-exec" {
+      driver = "exec"
+
+      config {
+        command = "/usr/bin/bash"
+
+        # Create a file with the alloc's ID in its name to demonstrate the ability to write to BeeGFS. Then, sleep to 
+        # demonstrate the container runs successfully. Use different files for different task drivers to avoid 
+        # permissions issues (e.g. a docker container writes as root and an isolated user can't touch its file).
+        args = [ "-c", "touch /mnt/beegfs-csi-volume/touched-by-${NOMAD_ALLOC_ID}-exec && sleep 7d" ]
       }
 
       volume_mount {
