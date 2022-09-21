@@ -7,6 +7,7 @@
 * [Dynamic Provisioning Workflow](#dynamic-provisioning-workflow)
 * [Static Provisioning Workflow](#static-provisioning-workflow)
 * [Best Practices](#best-practices)
+* [Managing ReadOnly Volumes](#managing-readonly-volumes)
 * [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
 * [Limitations and Known Issues](#limitations-and-known-issues)
 
@@ -302,6 +303,155 @@ created Kubernetes Persistent Volume Claim.
   to prevent directory contents from being overwritten. Instead set sensible
   permissions, especially on static directories containing shared datasets (more
   details [below](#read-only-and-access-modes-in-kubernetes)). 
+
+***
+
+<a name="managing-readonly-volumes"></a>
+## Managing ReadOnly Volumes
+
+In some cases an administrator or a user may wish to have a BeeGFS volume
+mounted in ReadOnly mode within a container. There are several mechanisms to
+accomplish this goal. The following describes some of the approaches to
+configuring ReadOnly volumes and relevant information on how to choose the right
+approach for your situation.
+
+### Configuring ReadOnly Volumes Within a Pod Specification
+
+Who: A kubernetes user or administrator
+
+Within a Pod specification there are two options that currently apply to the
+BeeGFS CSI driver for configuring a volume to be mounted as ReadOnly.
+* There is a readOnly attribute of the [VolumeMounts for a
+  container](https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#volumes-1).
+* There is a readOnly attribute of the [PersistentVolumeClaim source in the
+  Volume configuration of a
+  Pod](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/volume/#exposed-persistent-volumes).
+
+#### Using The Container VolumeMount Method
+
+This method can be used for any volume type, including BeeGFS volumes configured
+as PersistentVolumeClaims. For other volume types that aren't configured as
+PersistentVolumeClaims this might be the only option to specify the ReadOnly
+mode in the Pod configuration. The following is an example of a pod
+specification that uses this method to set the readOnly attribute.
+
+```yaml
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-sample
+spec:
+  containers:
+    - name: sample
+      volumeMounts:
+        - mountPath: /mnt/static
+          name: csi-beegfs-static-volume
+          readOnly: true
+  volumes:
+    - name: csi-beegfs-static-volume
+      persistentVolumeClaim:
+        claimName: beegfs-pvc-1
+```
+
+In this scenario the volume is staged with ReadWrite permissions and the
+ReadOnly permission is applied in a subsequent bind mount specific to the
+targeted container. Therefore the scope of this ReadOnly configuration is the
+single container within the Pod.
+
+#### Using the Volumes PersistentVolumeClaim Method
+
+This method is available to any volume being presented to a pod as a
+PersistentVolumeClaim. The following is an example of a pod specification that
+uses this method to set the readOnly attribute.
+
+```yaml
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-sample
+spec:
+  containers:
+    - name: sample
+      volumeMounts:
+        - mountPath: /mnt/static
+          name: csi-beegfs-static-volume
+  volumes:
+    - name: csi-beegfs-static-volume
+      persistentVolumeClaim:
+        claimName: beegfs-pvc-1
+        readOnly: true
+```
+
+In this scenario the volume is staged with ReadWrite permissions and the
+ReadOnly permission is applied in a subsequent bind mount where the volume is
+made available to the Pod. Therefore the scope of this ReadOnly configuration is
+all containers within the Pod.
+
+#### Additional Considerations
+
+You may not want to use one of the Pod configuration methods for configuring the
+ReadOnly volume under these circumstances.
+* The targeted volume may be used by multiple pods and you may not control the
+  Pod configuration for all Pods that use the volume.
+* You are an administrator and you want to control the ReadOnly attributes for a
+  volume instead of letting users managing the Pods control the access for that
+  volume.
+
+### Configuring ReadOnly Volumes With MountOptions
+
+Who: A Kubernetes administrator working closely with a BeeGFS administrator
+
+The ReadOnly attribute for a volume can also be configured through the
+mountOptions property of a persistent volume or a storage class object.
+
+#### Configuring ReadOnly on a PersistentVolume
+
+When defining the [PersistentVolume
+spec](https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-v1/#PersistentVolumeSpec)
+you can use the mountOptions property to define the mount options to use for
+that particular volume. This can include configuring the volume to be ReadOnly
+with the `ro` mount option. The following is an example.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-sample
+spec:
+  accessModes:
+    - ReadOnlyMany
+  capacity:
+    storage: 100Gi
+  mountOptions:
+    - ro
+    - nosuid
+    - relatime
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "csi-beegfs-dyn-sc"
+  csi:
+    driver: beegfs.csi.netapp.com
+    # Replace "localhost" with the IP address or hostname of the BeeGFS management daemon.
+    # "all" k8s clusters may share access to statically provisioned volumes.
+    # Ensure that the directory, e.g. "k8s/all/static", exists on BeeGFS.  The driver will not create the directory.
+    volumeHandle: beegfs://localhost/k8s/all/static
+```
+
+In this scenario the volume will be staged as ReadOnly and all bind mounts will
+be ReadOnly. Also, all uses of the volume will be ReadOnly regardless of the Pod
+configuration for any Pod using this volume.
+
+NOTE: If you specify any mount options with the mountOptions property, then you
+need to specify all of your desired mount options here. See the [BeeGFS Mount
+Options](#beegfs-mount-options) section for information on the default mount
+options used.
+
+#### Configuring ReadOnly on a StorageClass
+
+A StorageClass object can be configured with a mountOptions parameter similar to
+how a PersistentVolume object can be configured with mountOptions. However, the
+mountOptions for a StorageClass are only applied to dynamically provisioned
+volumes. Any mountOptions configured on a StorageClass do not apply to a
+statically defined PersistentVolume that references that StorageClass object.
 
 ***
 
