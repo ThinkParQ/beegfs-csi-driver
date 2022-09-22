@@ -306,6 +306,10 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			// but they do not work because they ignore stdErr, which we want to read.
 			_, stdErr, err := f.ExecWithOptions(execOptions)
 			e2eframework.ExpectError(err) // The touch should not be successful.
+
+			// Added logging so we can see what stdErr contains when failing this test.
+			// Remove once TODO(kcole, A472) has been fixed.
+			e2eframework.Logf("stdErr contains: %s", stdErr)
 			gomega.Expect(stdErr).To(gomega.ContainSubstring("Read-only file system"))
 		}
 	})
