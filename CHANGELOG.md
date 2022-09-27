@@ -17,6 +17,10 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 ### Removed
 - Support for Kubernetes v1.21.
 
+### Security
+- Mitigated [CVE-2022-28948](https://nvd.nist.gov/vuln/detail/CVE-2022-28948) by
+  upgrading go-yaml to v3.0.1.
+
 [1.3.0] - 2022-08-22
 --------------------
 ### Added
