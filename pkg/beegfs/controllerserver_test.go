@@ -96,6 +96,45 @@ func TestGetStripePatternConfigFromParams(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		"storagePoolId validation wrong example": {
+			reqParams: map[string]string{
+				"stripePattern/storagepoolid": "a",
+				"stripePattern/chunksize":     "2m",
+				"stripePattern/numtargets":    "3",
+			},
+			want: stripePatternConfig{
+				storagePoolID:           "",
+				stripePatternChunkSize:  "",
+				stripePatternNumTargets: "",
+			},
+			wantErr: true,
+		},
+		"chunkSize validation wrong example": {
+			reqParams: map[string]string{
+				"stripePattern/storagepoolid": "2",
+				"stripePattern/chunksize":     "2&",
+				"stripePattern/numtargets":    "3",
+			},
+			want: stripePatternConfig{
+				storagePoolID:           "",
+				stripePatternChunkSize:  "",
+				stripePatternNumTargets: "",
+			},
+			wantErr: true,
+		},
+		"numTargets validation wrong example": {
+			reqParams: map[string]string{
+				"stripePattern/storagepoolid": "2",
+				"stripePattern/chunksize":     "2m",
+				"stripePattern/numtargets":    "a",
+			},
+			want: stripePatternConfig{
+				storagePoolID:           "",
+				stripePatternChunkSize:  "",
+				stripePatternNumTargets: "",
+			},
+			wantErr: true,
+		},
 	}
 
 	for name, tc := range tests {

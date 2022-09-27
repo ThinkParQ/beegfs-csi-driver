@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -403,7 +404,7 @@ func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_T
 }
 
 // getStripePatternConfigFromParams parses a map of parameters and sets stripePatternConfig variables, if provided.
-// Once a parameters is found and set, it is deleted from the original map. This is to help validateReqParams narrow
+// Once a parameter is found it is verified, set, and then deleted from the original map. This is to help validateReqParams narrow
 // down if extra parameters exist. getStripePatternConfigFromParams then returns a stripePatternConfig object and the
 // original map excluding stripePattern parameters.
 func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatternConfig, map[string]string, error) {
@@ -413,12 +414,34 @@ func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatter
 			switch param {
 			case stripePatternStoragePoolIDKey:
 				cfg.storagePoolID = reqParams[stripePatternStoragePoolIDKey]
+				// Validate storagePoolID is an integer only.
+				if cfg.storagePoolID != "" {
+					_, err := strconv.ParseUint(cfg.storagePoolID, 10, 16)
+					if err != nil {
+						return cfg, nil, errors.Wrap(err, "could not parse provided StoragePoolID")
+					}
+				}
 				delete(reqParams, stripePatternStoragePoolIDKey)
 			case stripePatternChunkSizeKey:
 				cfg.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
+				// Validate StripePatternChunkSize has only digits followed by a single upper or lowercase letter.
+				if cfg.stripePatternChunkSize != "" {
+					r, _ := regexp.Compile("(^[0-9]+[a-zA-Z]$)")
+					matched := r.MatchString(cfg.stripePatternChunkSize)
+					if !matched {
+						return cfg, nil, errors.New("could not parse provided chunkSize")
+					}
+				}
 				delete(reqParams, stripePatternChunkSizeKey)
 			case stripePatternNumTargetsKey:
 				cfg.stripePatternNumTargets = reqParams[stripePatternNumTargetsKey]
+				// Validate stripePatternNumTargets value is an integer.
+				if cfg.stripePatternNumTargets != "" {
+					_, err := strconv.ParseUint(cfg.stripePatternNumTargets, 10, 16)
+					if err != nil {
+						return cfg, nil, errors.Wrap(err, "could not parse provided numTargets")
+					}
+				}
 				delete(reqParams, stripePatternNumTargetsKey)
 			default:
 				return cfg, nil, errors.Errorf("CreateVolume parameter invalid: %s", param)
