@@ -39,6 +39,13 @@ spec:
             name: socket-dir
           - mountPath: /registration
             name: registration-dir
+          resources:
+            limits:
+              cpu: 80m
+              memory: 100Mi
+            requests:
+              cpu: 20m
+              memory: 10Mi
         - name: beegfs
           image: docker.io/netapp/beegfs-csi-driver:v1.3.0
           args:
@@ -94,6 +101,13 @@ spec:
               name: config-dir
             - mountPath: /csi/connauth
               name: connauth-dir
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 20Mi
         - name: liveness-probe
           volumeMounts:
           - mountPath: /csi
@@ -102,7 +116,13 @@ spec:
           args:
           - --csi-address=/csi/csi.sock
           - --health-port=9898
-
+          resources:
+            limits:
+              cpu: 80m
+              memory: 100Mi
+            requests:
+              cpu: 20m
+              memory: 20Mi
       volumes:
         # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
         - hostPath:

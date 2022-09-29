@@ -42,6 +42,13 @@ spec:
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
+          resources:
+            limits:
+              cpu: 80m
+              memory: 128Mi
+            requests:
+              cpu: 20m
+              memory: 24Mi
         - name: beegfs
           image: docker.io/netapp/beegfs-csi-driver:v1.3.0
           args:
@@ -81,6 +88,13 @@ spec:
               # We must know whether a directory is a mount point in order to decide how to handle it.
               mountPropagation: HostToContainer
               name: plugin-dir
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 16Mi
       volumes:
         # The plugin uses host-dir and chwrap to execute binaries installed on the host itself.
         - hostPath:

@@ -10,6 +10,8 @@ patchesStrategicMerge:
   # See ../examples/patches for additional patch ideas.
   - patches/image-pull-policy.yaml
   - patches/node-affinity.yaml
+  # Uncomment the following line and edit the referenced file to adjust the driver resource limits
+  # - patches/container-resources.yaml
 configMapGenerator:
   # Kustomize will append a hash of the ConfigMap data to this name because it is considered "bad practice" to change
   # the data held in a live ConfigMap. Kustomize will also change all references to this ConfigMap to include the hash.

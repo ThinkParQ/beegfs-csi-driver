@@ -79,7 +79,11 @@ Steps:
   * An example Secret config file is provided at 
     *deploy/k8s/overlays/examples/csi-beegfs-connauth.yaml*. Please see 
     the section on [ConnAuth Configuration](#connauth-configuration) for full 
-    details. 
+    details.
+* Enable any desired patches for the BeeGFS CSI driver configuration by
+  including a reference to any patch files in the kustomization.yaml file for
+  the overlay beng used to deploy the driver.
+  * Example patch files can be found in *deploy/k8s/overlays/examples/patches/*
 * Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`) and run:
   `kubectl apply -k deploy/k8s/overlays/my-overlay`.
   * Note by default the beegfs-csi-driver image will be pulled from
@@ -834,7 +838,8 @@ enabled and helps to prevent the exploitation of container runtime vulnerabiliti
 <a name="resource-and-performance-considerations"></a>
 ### Resource and Performance Considerations
 
-**Limit the number of in-flight requests.**
+<a name="limit-in-flight-requests"></a>
+#### Limit the number of in-flight requests.
 
 The controller service responds to CreateVolume and DeleteVolume requests made by the [external-provisioner sidecar
 container](https://github.com/kubernetes-csi/external-provisioner) deployed alongside it. (The sidecar handles all
@@ -849,6 +854,25 @@ Limited stress testing has found that no issues occur with 200 simultaneous Pers
 200 simultaneous Persistent Volume Claim deletions, so the --worker-threads argument does not appear in the default
 manifests. Add it as an argument to the `csi-provisioner` Container in the `csi-beegfs-controller` Stateful Set
 definition if an issue is observed. See the [Kubernetes deployment README.md](../deploy/k8s/README.md) for instructions.
+
+<a name="managing-requests-and-limits"></a>
+#### Managing CPU and Memory Requests and Limits
+
+Starting in v1.4.0 of the BeeGFS CSI driver the driver containers are now
+configured with default requests and limits for both cpu and memory resources.
+The default values should work for most scenarios but the values can be adjusted
+as necessary for a particular deployment.
+
+The recommended way to change the value of a cpu or memory request or limit is
+to use a patch to modify the settings during the deployment with kustomize. The
+default overlay directories have a `container-resources.yaml` file included in
+the overlay's patch directory which contains the default resource values. Simply
+modify the file in your copied version of the overlay directory and uncomment
+(or add) the reference to the `patches/container-resource.yaml` file in the
+patchesStrategicMerge section of your overlay's kustomization.yaml file. Once
+the patch file is referenced in the overlay kustomization file then apply the
+overlay to deploy the driver or to update the existing deployment's
+configuration.
 
 ***
 

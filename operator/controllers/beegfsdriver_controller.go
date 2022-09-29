@@ -464,6 +464,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
 	setNodeAffinity(log, &driver.Spec.NodeAffinityControllerService, &sts.Spec.Template.Spec)
+	setControllerResources(log, driver.Spec.ContainerResourceOverrides, sts.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionControllerServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Stateful Set doesn't exist. Let's create it.
@@ -487,6 +488,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
 	setNodeAffinity(log, &driver.Spec.NodeAffinityNodeService, &ds.Spec.Template.Spec)
+	setNodeResources(log, driver.Spec.ContainerResourceOverrides, ds.Spec.Template.Spec.Containers)
 	if meta.FindStatusCondition(driver.Status.Conditions, beegfsv1.ConditionNodeServiceReady).Reason ==
 		beegfsv1.ReasonServiceNotCreated {
 		// The Daemon Set doesn't exist. Let's create it.
@@ -605,6 +607,131 @@ func setImages(log logr.Logger, containers []corev1.Container, overrides beegfsv
 			log.V(5).Info("Setting Container image", "containerName", container.Name,
 				"containerImage", newImage)
 			containers[i].Image = newImage
+		}
+	}
+}
+
+// setNodeResources takes a ContainerResourceOverrides (overrides) object and applies any values from the overrides
+// to the relevant container from the provided slice of Container specs (containers). The provided container specs
+// should be the set of containers for the BeeGFS driver's node pod.
+func setNodeResources(log logr.Logger, overrides beegfsv1.ContainerResourceOverrides, containers []corev1.Container) {
+	for i, container := range containers {
+		switch container.Name {
+		case "beegfs":
+			if len(overrides.NodeBeegfsResources.Limits) > 0 {
+				if cpu, ok := overrides.NodeBeegfsResources.Limits["cpu"]; ok {
+					log.Info("Overriding node beegfs cpu limit", "values", cpu)
+					containers[i].Resources.Limits["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeBeegfsResources.Limits["memory"]; ok {
+					log.Info("Overriding node beegfs memory limit", "values", memory)
+					containers[i].Resources.Limits["memory"] = memory
+				}
+			}
+			if len(overrides.NodeBeegfsResources.Requests) > 0 {
+				if cpu, ok := overrides.NodeBeegfsResources.Requests["cpu"]; ok {
+					log.Info("Overriding node beegfs cpu requests", "values", cpu)
+					containers[i].Resources.Requests["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeBeegfsResources.Requests["memory"]; ok {
+					log.Info("Overriding node beegfs memory requests", "values", memory)
+					containers[i].Resources.Requests["memory"] = memory
+				}
+			}
+		case "node-driver-registrar":
+			if len(overrides.NodeDriverRegistrarResources.Limits) > 0 {
+				if cpu, ok := overrides.NodeBeegfsResources.Limits["cpu"]; ok {
+					log.Info("Overriding node node-driver-registrar cpu limit", "values", cpu)
+					containers[i].Resources.Limits["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeDriverRegistrarResources.Limits["memory"]; ok {
+					log.Info("Overriding node node-driver-registrar memory limit", "values", memory)
+					containers[i].Resources.Limits["memory"] = memory
+				}
+			}
+			if len(overrides.NodeDriverRegistrarResources.Requests) > 0 {
+				if cpu, ok := overrides.NodeDriverRegistrarResources.Requests["cpu"]; ok {
+					log.Info("Overriding node node-driver-registrar cpu requests", "values", cpu)
+					containers[i].Resources.Requests["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeDriverRegistrarResources.Requests["memory"]; ok {
+					log.Info("Overriding node node-driver-registrar memory requests", "values", memory)
+					containers[i].Resources.Requests["memory"] = memory
+				}
+			}
+		case "liveness-probe":
+			if len(overrides.NodeLivenessProbeResources.Limits) > 0 {
+				if cpu, ok := overrides.NodeLivenessProbeResources.Limits["cpu"]; ok {
+					log.Info("Overriding node liveness-probe cpu limit", "values", cpu)
+					containers[i].Resources.Limits["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeLivenessProbeResources.Limits["memory"]; ok {
+					log.Info("Overriding node liveness-probe memory limit", "values", memory)
+					containers[i].Resources.Limits["memory"] = memory
+				}
+			}
+			if len(overrides.NodeLivenessProbeResources.Requests) > 0 {
+				if cpu, ok := overrides.NodeLivenessProbeResources.Requests["cpu"]; ok {
+					log.Info("Overriding node liveness-probe cpu requests", "values", cpu)
+					containers[i].Resources.Requests["cpu"] = cpu
+				}
+				if memory, ok := overrides.NodeLivenessProbeResources.Requests["memory"]; ok {
+					log.Info("Overriding node liveness-probe memory requests", "values", memory)
+					containers[i].Resources.Requests["memory"] = memory
+				}
+			}
+		}
+	}
+}
+
+// setControllerResources takes a ContainerResourceOverrides (overrides) object and applies any values from the overrides
+// to the relevant container from the provided slice of Container specs (containers). The provided container specs
+// should be the set of containers for the BeeGFS driver's controller pod.
+func setControllerResources(log logr.Logger, overrides beegfsv1.ContainerResourceOverrides, containers []corev1.Container) {
+	for i, container := range containers {
+		switch container.Name {
+		case "beegfs":
+			if len(overrides.ControllerBeegfsResources.Limits) > 0 {
+				if cpu, ok := overrides.ControllerBeegfsResources.Limits["cpu"]; ok {
+					log.Info("Overriding controller beegfs cpu limit", "values", cpu)
+					containers[i].Resources.Limits["cpu"] = cpu
+				}
+				if memory, ok := overrides.ControllerBeegfsResources.Limits["memory"]; ok {
+					log.Info("Overriding controller beegfs memory limit", "values", memory)
+					containers[i].Resources.Limits["memory"] = memory
+				}
+			}
+			if len(overrides.ControllerBeegfsResources.Requests) > 0 {
+				if cpu, ok := overrides.ControllerBeegfsResources.Requests["cpu"]; ok {
+					log.Info("Overriding controller beegfs cpu requests", "values", cpu)
+					containers[i].Resources.Requests["cpu"] = cpu
+				}
+				if memory, ok := overrides.ControllerBeegfsResources.Requests["memory"]; ok {
+					log.Info("Overriding controller beegfs memory requests", "values", memory)
+					containers[i].Resources.Requests["memory"] = memory
+				}
+			}
+		case "csi-provisioner":
+			if len(overrides.ControllerCsiProvisionerResources.Limits) > 0 {
+				if cpu, ok := overrides.ControllerCsiProvisionerResources.Limits["cpu"]; ok {
+					log.Info("Overriding controller csi-provisioner cpu limit", "values", cpu)
+					containers[i].Resources.Limits["cpu"] = cpu
+				}
+				if memory, ok := overrides.ControllerCsiProvisionerResources.Limits["memory"]; ok {
+					log.Info("Overriding controller csi-provisioner memory limit", "values", memory)
+					containers[i].Resources.Limits["memory"] = memory
+				}
+			}
+			if len(overrides.ControllerCsiProvisionerResources.Requests) > 0 {
+				if cpu, ok := overrides.ControllerCsiProvisionerResources.Requests["cpu"]; ok {
+					log.Info("Overriding controller csi-provisioner cpu requests", "values", cpu)
+					containers[i].Resources.Requests["cpu"] = cpu
+				}
+				if memory, ok := overrides.ControllerCsiProvisionerResources.Requests["memory"]; ok {
+					log.Info("Overriding controller csi-provisioner memory requests", "values", memory)
+					containers[i].Resources.Requests["memory"] = memory
+				}
+			}
 		}
 	}
 }

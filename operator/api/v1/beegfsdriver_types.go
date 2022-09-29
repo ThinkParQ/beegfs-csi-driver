@@ -27,7 +27,8 @@ import (
 
 // BeegfsDriverSpec defines the desired state of BeegfsDriver
 type BeegfsDriverSpec struct {
-	ContainerImageOverrides ContainerImageOverrides `json:"containerImageOverrides,omitempty"`
+	ContainerImageOverrides    ContainerImageOverrides    `json:"containerImageOverrides,omitempty"`
+	ContainerResourceOverrides ContainerResourceOverrides `json:"containerResourceOverrides,omitempty"`
 	// The logging level of deployed containers expressed as an integer from 0 (low detail) to 5 (high detail). 0
 	// only logs errors. 3 logs most RPC requests/responses and some detail about driver actions. 5 logs all RPC
 	// requests/responses, including redundant/frequently occurring ones. Empty defaults to level 3.
@@ -125,6 +126,40 @@ type ContainerImageOverride struct {
 	// A tag (e.g. v2.2.2 or latest).
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	Tag string `json:"tag"`
+}
+
+// The ContainerResourceOverrides allow for customization of the container resource limits and requests.
+// Each container has default requests and limits for both cpu and memory resources. Only explicitly defined
+// overrides will be applied, otherwise the default values will be used. For example, if the cpu limit for the
+// controller's beegfs container is the only resource with an override set, only the controller's beegfs container
+// cpu limit setting will be overridden. Every other value will use the default setting. Storage resources are not
+// used by the BeeGFS CSI driver. Any storage resource values configured will be ignored.
+type ContainerResourceOverrides struct {
+	// The resource specifications for the beegfs container of the BeeGFS driver controller pod.
+	// The default values for requests are (cpu: 50m, memory: 16Mi).
+	// The default values for limits are (cpu: 100m, memory: 100Mi).
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Controller beegfs resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
+	ControllerBeegfsResources corev1.ResourceRequirements `json:"controllerBeegfs,omitempty"`
+	// The resource specifications for the csi-provisioner container of the BeeGFS driver controller pod.
+	// The default values for requests are (cpu: 20m, memory: 24Mi)
+	// The default values for limits are (cpu: 80m, memory 128Mi)
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Controller csi-provisioner resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
+	ControllerCsiProvisionerResources corev1.ResourceRequirements `json:"controllerCsiProvisioner,omitempty"`
+	// The resource specifications for the beegfs container of the BeeGFS driver node pod.
+	// The default values for requests are (cpu: 50m, memory: 20Mi)
+	// The default values for limits are (cpu: 100m, memory: 100Mi)
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node beegfs resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
+	NodeBeegfsResources corev1.ResourceRequirements `json:"nodeBeegfs,omitempty"`
+	// The resource specifications for the node-driver-registrar container of the BeeGFS driver node pod.
+	// The default values for requests are (cpu: 20m, memory: 10Mi)
+	// The default values for limits are (cpu: 80m, memory 100Mi)
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node node-driver-registrar resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
+	NodeDriverRegistrarResources corev1.ResourceRequirements `json:"nodeDriverRegistrar,omitempty"`
+	// The resource specifications for the liveness-probe container of the BeeGFS driver node pod.
+	// The default values for requests are (cpu: 20m, memory: 20Mi)
+	// The default values for limits are (cpu: 80m, memory: 100Mi)
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node liveness-probe resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
+	NodeLivenessProbeResources corev1.ResourceRequirements `json:"nodeLivenessProbe,omitempty"`
 }
 
 // The primary configuration structure containing all of the custom configuration (beegfs-client.conf keys/values and

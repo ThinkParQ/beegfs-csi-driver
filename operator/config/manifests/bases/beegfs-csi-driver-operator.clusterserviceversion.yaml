@@ -79,6 +79,44 @@ spec:
       - description: A tag (e.g. v2.2.2 or latest).
         displayName: Tag
         path: containerImageOverrides.livenessProbe.tag
+      - description: 'The resource specifications for the beegfs container of the
+          BeeGFS driver controller pod. The default values for requests are (cpu:
+          50m, memory: 16Mi). The default values for limits are (cpu: 100m, memory:
+          100Mi).'
+        displayName: Controller beegfs resources
+        path: containerResourceOverrides.controllerBeegfs
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: 'The resource specifications for the csi-provisioner container
+          of the BeeGFS driver controller pod. The default values for requests are
+          (cpu: 20m, memory: 24Mi) The default values for limits are (cpu: 80m, memory
+          128Mi)'
+        displayName: Controller csi-provisioner resources
+        path: containerResourceOverrides.controllerCsiProvisioner
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: 'The resource specifications for the beegfs container of the
+          BeeGFS driver node pod. The default values for requests are (cpu: 50m, memory:
+          20Mi) The default values for limits are (cpu: 100m, memory: 100Mi)'
+        displayName: Node beegfs resources
+        path: containerResourceOverrides.nodeBeegfs
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: 'The resource specifications for the node-driver-registrar container
+          of the BeeGFS driver node pod. The default values for requests are (cpu:
+          20m, memory: 10Mi) The default values for limits are (cpu: 80m, memory 100Mi)'
+        displayName: Node node-driver-registrar resources
+        path: containerResourceOverrides.nodeDriverRegistrar
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
+      - description: 'The resource specifications for the liveness-probe container
+          of the BeeGFS driver node pod. The default values for requests are (cpu:
+          20m, memory: 20Mi) The default values for limits are (cpu: 80m, memory:
+          100Mi)'
+        displayName: Node liveness-probe resources
+        path: containerResourceOverrides.nodeLivenessProbe
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:resourceRequirements
       - description: The logging level of deployed containers expressed as an integer
           from 0 (low detail) to 5 (high detail). 0 only logs errors. 3 logs most
           RPC requests/responses and some detail about driver actions. 5 logs all
