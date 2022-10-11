@@ -10,6 +10,9 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   instructions](deploy/k8s/README.md#upgrade-1.2.0-kubernetes-deployment) if you
   were previously overriding this name with a Kustomize overlay.
 
+### Removed
+- Support for Kubernetes v1.21.
+
 [1.3.0] - 2022-08-22
 --------------------
 ### Added
