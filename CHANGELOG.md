@@ -20,6 +20,8 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 ### Security
 - Mitigated [CVE-2022-28948](https://nvd.nist.gov/vuln/detail/CVE-2022-28948) by
   upgrading go-yaml to v3.0.1.
+- Mitigated [CVE-2022-27664](https://nvd.nist.gov/vuln/detail/CVE-2022-27664) by
+  upgrading Go to v1.18.7.
 
 [1.3.0] - 2022-08-22
 --------------------
