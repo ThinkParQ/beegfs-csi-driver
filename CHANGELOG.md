@@ -4,6 +4,10 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 
 [1.4.0] - TBD
 --------------------
+### Added
+- Added default container resource requests and limits along with documentation
+  for how to modify the resource specifications.
+  
 ### Changed
 - Changed the default driver container name from `netapp/beegfs-csi-driver` to
   `docker.io/netapp/beegfs-csi-driver`. See the [upgrade

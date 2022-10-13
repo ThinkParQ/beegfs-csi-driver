@@ -1,0 +1,75 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# This file is ignored by default. Copy it to an overlay and add a reference to it in
+# overlay-<something>/kustomization.yaml to enable it.
+
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: csi-beegfs-controller
+spec:
+  template:
+    spec:
+      containers:
+        - name: beegfs
+          resources:
+            # The following values are the defaults. Change any values you wish to 
+            # adjust before applying the patch.
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 16Mi
+        - name: csi-provisioner
+          resources:
+            # The following values are the defaults. Change any values you wish to 
+            # adjust before applying the patch.
+            limits:
+              cpu: 80m
+              memory: 128Mi
+            requests:
+              cpu: 20m
+              memory: 24Mi
+
+---
+
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+ name: csi-beegfs-node
+spec:
+ template:
+   spec:
+     containers:
+       - name: beegfs
+         resources:
+            # The following values are the defaults. Change any values you wish to 
+            # adjust before applying the patch.
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 20Mi
+        - name: node-driver-registrar
+          resources:
+            # The following values are the defaults. Change any values you wish to 
+            # adjust before applying the patch.
+            limits:
+              cpu: 80m
+              memory: 100Mi
+            requests:
+              cpu: 20m
+              memory: 10Mi
+        - name: liveness-probe
+          resources:
+            # The following values are the defaults. Change any values you wish to 
+            # adjust before applying the patch.
+            limits:
+              cpu: 80m
+              memory: 100Mi
+            requests:
+              cpu: 20m
+              memory: 20Mi
