@@ -35,7 +35,6 @@ import (
 	"fmt"
 	"path"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
@@ -311,6 +310,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			// Added logging so we can see what stdErr contains when failing this test.
 			// Remove once TODO(kcole, A472) has been fixed.
 			e2eframework.Logf("stdErr contains: %s", stdErr)
+			e2eframework.Logf("stdErr contains: %+v", err)
 			gomega.Expect(stdErr).To(gomega.ContainSubstring("Read-only file system"))
 		}
 	})
@@ -523,70 +523,5 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		gomega.Expect(deleteTime).To(gomega.BeNumerically(">=", interfaceFallbackTime))
 
 		utils.UpdatePluginConfigInUse(f.ClientSet, f.DynamicClient, *oldConfig) // Restore the original config.
-	})
-
-	ginkgo.It("should not exceed expected times for bulk volume creation and deletion [Slow] [Serial]", func() {
-		// This test helps us ensure future changes to the driver do not significantly change the
-		// time it takes for bulk volume creation and bulk volume deletion. It also ensures our driver
-		// can function as intended with a large load on the controller service.
-
-		// The possibility exist for this test to cause orphaned mounts if a failure occurs inside
-		// CreateVolumeResource. This can happen due to multiple CreateVolumeResource calls
-		// happening simultaneously. If one produces a failure while another CreateVolumeResource
-		// goroutine has not returned yet, those resources won't be added to the resources slice
-		// and will not be cleaned up.
-
-		if pattern.VolType != storageframework.DynamicPV {
-			e2eskipper.Skipf("This test only works with dynamic volumes -- skipping")
-		}
-
-		init()
-		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
-		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
-
-		// Create resources and resourceChannel for safe volume cleanup
-		resources = make([]*storageframework.VolumeResource, 0)
-		resourceChannel := make(chan *storageframework.VolumeResource)
-		defer close(resourceChannel)
-		var numVolumes = 200
-		var creationWG sync.WaitGroup
-		creationWG.Add(numVolumes)
-
-		// Create 200 volumes simultaneously and verify timing.
-		startTime := time.Now()
-		for i := 0; i < numVolumes; i++ {
-			go func(resourceChannel chan *storageframework.VolumeResource) {
-				defer ginkgo.GinkgoRecover()
-				defer creationWG.Done()
-				resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
-				resourceChannel <- resource // Allow for cleanup.
-			}(resourceChannel)
-		}
-		// Pass all resourceChannel values into resources for cleanup.
-		for i := 0; i < numVolumes; i++ {
-			resources = append(resources, <-resourceChannel)
-		}
-		createTime := time.Since(startTime)
-		// Check to see if creation time for all volumes took longer than expected.
-		gomega.Expect(createTime).To(gomega.BeNumerically("<=", 90*time.Second))
-
-		var deletionWG sync.WaitGroup
-		deletionWG.Add(len(resources))
-
-		// Delete 200 volumes simultaneously and verify timing.
-		startTime = time.Now()
-		for i := range resources {
-			go func(resource *storageframework.VolumeResource) {
-				defer ginkgo.GinkgoRecover()
-				defer deletionWG.Done()
-				err := resource.CleanupResource()
-				e2eframework.ExpectNoError(err, "expect to delete volumes without significant time delay")
-			}(resources[i])
-		}
-		deletionWG.Wait()
-		deleteTime := time.Since(startTime)
-		// Check to see if deletion time for all volumes took longer than expected.
-		gomega.Expect(deleteTime).To(gomega.BeNumerically("<=", 90*time.Second))
 	})
 }
