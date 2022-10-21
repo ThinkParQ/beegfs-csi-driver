@@ -330,3 +330,23 @@ Potential solutions:
   [connNetFilter](https://doc.beegfs.io/latest/advanced_topics/network_configuration.html) configuration so that it
   automatically avoids contacting the inaccessible interface. (This may be necessary in environments where only specific
   clients cannot access the advertised interface.)
+
+***
+<a name="pod-stuck-in-terminating-after-subpath-delete"></a>
+## Pod Stuck In Terminating after Subpath Deletion
+
+Pods utilizing the BeeGFS CSI driver are susceptible to an issue where the Pod
+may become stuck in the terminating state if there are multiple containers in
+the Pod, one of the containers in the Pod has mounted a subpath of a volume used
+by the other container, and the subpath is deleted from the container with the
+entire volume.
+
+See [Kubernetes issue
+97031](https://github.com/kubernetes/kubernetes/issues/97031) and its
+associated [Pull Request
+106906](https://github.com/kubernetes/kubernetes/pull/106906) for more details.
+
+This issue is fixed in the following Kubernetes versions:
+ * 1.23.2
+ * 1.22.6
+ * 1.21.9
