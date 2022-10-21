@@ -287,10 +287,18 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Get a node Pod, which could be running in any namespace.
 		pods, err := e2epod.WaitForPodsWithLabel(f.ClientSet, "",
 			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"}))
-		e2eframework.ExpectNoError(err, "There should be at least one node pod")
+		e2eframework.ExpectNoError(err, "expected at least 1 node pod")
 		nodePod := pods.Items[0]
+		// Just because nodePod exists doesn't mean it's running. Attempting to exec into a non-running Pod will cause
+		// an error.
+		e2epod.WaitForPodNameRunningInNamespace(f.ClientSet, nodePod.Name, nodePod.Namespace)
 
 		for _, pod := range []corev1.Pod{controllerPod, nodePod} {
+			// Added logging so we can see why this test is failing.
+			// TODO(kcole, A472): Remove when the root cause of failures has been fixed.
+			e2eframework.Logf("Preparing to execute command in pod: %+v", pod)
+			e2eframework.ExpectNoError(err)
+
 			execOptions := e2eframework.ExecOptions{
 				// touch is chwrapped, so attempting to write /test-file actually attempts to write to /host/test-file.
 				// This test used to attempt to write to /tmp/test-file, but in OpenShift, /tmp is mounted so that it
@@ -307,8 +315,8 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			_, stdErr, err := f.ExecWithOptions(execOptions)
 			e2eframework.ExpectError(err) // The touch should not be successful.
 
-			// Added logging so we can see what stdErr contains when failing this test.
-			// Remove once TODO(kcole, A472) has been fixed.
+			// Added logging so we can see why this test is failing.
+			// TODO(kcole, A472): Remove when the root cause of failures has been fixed.
 			e2eframework.Logf("stdErr contains: %s", stdErr)
 			e2eframework.Logf("stdErr contains: %+v", err)
 			gomega.Expect(stdErr).To(gomega.ContainSubstring("Read-only file system"))
