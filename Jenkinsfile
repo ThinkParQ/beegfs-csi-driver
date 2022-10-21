@@ -322,26 +322,34 @@ pipeline {
 }
 
 def runIntegrationSuite(TestEnvironment testEnv) {
-    // Always skip the broken subpath test.
-    String ginkgoSkipRegex = "should be able to unmount after the subpath directory is deleted"
+    // For parallel testing skip the Disruptive and Serial tagged tests
+    String ginkgoSkipRegexRegular = "\\[Disruptive\\]|\\[Serial\\]"
+    String ginkgoSkipRegexDisruptive = ""
     // Skip the [Slow] tests except on master.
     // Ginkgo requires a \ escape and Groovy requires a \ escape for every \.
     if (!env.BRANCH_NAME.matches('master')) {
-        ginkgoSkipRegex += "|\\[Slow\\]"
+        ginkgoSkipRegexRegular += "|\\[Slow\\]"
+        ginkgoSkipRegexDisruptive += "\\[Slow\\]"
     }
     // TODO: A463 (remove after all versions are no longer supported)
     if (testEnv.k8sCluster.matches('(1.22)|(1.23-ubuntu-rdma)|(openshift)')) {
-        ginkgoSkipRegex += "|provisioning should mount multiple PV pointing to the same storage on the same node"
-        // The following test covers a feature that is alpha in releases prior to 1.24
-        ginkgoSkipRegex += "|provisioning should provision storage with any volume data source"
+        // This test is not included in the Disruptive or Serial set so we don't need to exclude it 
+        // from the testCommandDisruptive command.
+        ginkgoSkipRegexRegular += "|provisioning should mount multiple PV pointing to the same storage on the same node"
+        // The following test covers a feature that is alpha in releases prior to 1.24 and is a Serial test
+        // so should be excluded from the Disruptive test run.
+        if (ginkgoSkipRegexDisruptive.length() > 0) {
+            ginkgoSkipRegexDisruptive += "|"
+        }
+        ginkgoSkipRegexDisruptive += "provisioning should provision storage with any volume data source"
     }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
     def resultsDir = "results/${jobID}"
     sh "mkdir -p ${resultsDir}"
-    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegex}|\\[Disruptive\\]|\\[Serial\\]'" +
+    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegexRegular}'" +
         " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel -static-vol-dir-name ${testEnv.k8sCluster}"
-    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegex}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
+    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegexDisruptive}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
         " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial -static-vol-dir-name ${testEnv.k8sCluster}"
     // Redirect output for easier reading.
     testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
