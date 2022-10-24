@@ -17,20 +17,18 @@ spec:
             # The following values are the defaults. Change any values you wish to 
             # adjust before applying the patch.
             limits:
-              cpu: 100m
-              memory: 100Mi
+              memory: 256Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 16Mi
         - name: csi-provisioner
           resources:
             # The following values are the defaults. Change any values you wish to 
             # adjust before applying the patch.
             limits:
-              cpu: 80m
-              memory: 128Mi
+              memory: 256Mi
             requests:
-              cpu: 20m
+              cpu: 80m
               memory: 24Mi
 
 ---
@@ -48,28 +46,25 @@ spec:
             # The following values are the defaults. Change any values you wish to 
             # adjust before applying the patch.
             limits:
-              cpu: 100m
-              memory: 100Mi
+              memory: 128Mi
             requests:
-              cpu: 50m
+              cpu: 100m
               memory: 20Mi
         - name: node-driver-registrar
           resources:
             # The following values are the defaults. Change any values you wish to 
             # adjust before applying the patch.
             limits:
-              cpu: 80m
-              memory: 100Mi
+              memory: 128Mi
             requests:
-              cpu: 20m
+              cpu: 80m
               memory: 10Mi
         - name: liveness-probe
           resources:
             # The following values are the defaults. Change any values you wish to 
             # adjust before applying the patch.
             limits:
-              cpu: 80m
-              memory: 100Mi
+              memory: 128Mi
             requests:
-              cpu: 20m
+              cpu: 100m
               memory: 20Mi
