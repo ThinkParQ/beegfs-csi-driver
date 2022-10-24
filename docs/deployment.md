@@ -3,6 +3,13 @@
 <a name="contents"></a>
 ## Contents
 
+* [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
+  * [Manual Image Verification](#manual-image-verification)
+    * [Download Certificates and Tools](#download-certificates-and-tools)
+    * [Verify the Signing Certificate is Trusted](#verify-the-signing-certificate-is-trusted)
+    * [Extract the Public Key From the Certificate](#extract-the-public-key-from-the-certificate)
+    * [Validate the BeeGFS CSI Driver Image Signatures](#validate-the-beegfs-csi-driver-image-signatures)
+  * [Automating Image Verification with Admission Controllers](#automating-image-verification)
 * [Deploying to Kubernetes](#deploying-to-kubernetes)
   * [Kubernetes Node Preparation](#kubernetes-node-preparation)
   * [Kubernetes Deployment](#kubernetes-deployment)
@@ -22,6 +29,100 @@
 * [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 ***
+
+<a name="verify-driver-image-signatures"></a>
+## Verifying BeeGFS CSI Driver Image Signatures
+
+Starting with v1.4.0 of the BeeGFS CSI driver the container images will now be
+signed with the use of [Cosign](https://github.com/sigstore/cosign). The
+following steps describe the process you can use to verify trust with the
+signing certificate and to validate that the BeeGFS CSI driver images to be
+deployed have a valid signature. Verification of the driver's image signatures
+is optional.
+
+<a name="manual-image-verification"></a>
+### Manual Image Verification
+
+<a name="download-certificates-and-tools"></a>
+#### Download Certificates and Tools
+
+The following tools and files should be available on a Linux host.
+
+  * The openssl command.
+  * The [cosign](https://github.com/sigstore/cosign/releases) utility.
+  * The certificate and CA chain file used to generate the image signatures.
+    * Download the files from the [BeeGFS CSI driver
+      releases](https://github.com/NetApp/beegfs-csi-driver/releases) page.
+
+<a name="verify-the-signing-certificate-is-trusted"></a>
+#### Verify the Signing Certificate is Trusted
+
+Use the following openssl command to validate that the certificate used for
+signing the images was signed by a trusted Certificate Authority.
+
+```
+openssl verify -show_chain -CAfile beegfs-csi-signer-ca-chain.crt beegfs-csi-signer.crt
+```
+
+If this command returns Ok then the certificate in the beegfs-csi-signer.crt was
+signed by a trusted CA.
+
+<a name="extract-the-public-key-from-the-certificate"></a>
+#### Extract the Public Key From the Certificate
+
+This step is optional.
+
+The cosign command can use either the certificate or the public key to validate
+the image signatures. If you just want to manually validate the images you can
+skip the step of extracting the public key. If you want to automate image
+verification in Kubernetes you may need the public key instead of the
+certificate.
+
+```
+openssl x509 -in beegfs-csi-signer.crt -inform PEM -pubkey -noout > beegfs-csi-signer-pubkey.pem
+```
+
+<a name="validate-the-beegfs-csi-driver-image-signatures"></a>
+#### Validate the BeeGFS CSI Driver Image Signatures
+
+Identify the image you want to validate. You can validate the image with either
+the version tag or the image digest. Starting with v1.40 of the BeeGFS CSI
+driver the image digests will be documented on the [BeeGFS CSI Driver GitHub
+Releases](https://github.com/NetApp/beegfs-csi-driver/releases) page for
+reference.
+
+Use the cosign command to validate the signature of the BeeGFS CSI driver
+container. Make sure to use the appropriate tag or digest that you want to use
+instead of the example tag and digest.
+
+Validate the image by digest using the certificate file. 
+```
+cosign verify --cert beegfs-csi-signer.crt docker.io/netapp/beegfs-csi-driver@sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
+```
+or
+
+Validate the image by tag using the extracted public key.
+```
+cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver:v1.3.0
+```
+
+<a name="automating-image-verification"></a>
+### Automating Image Verification with Admission Controllers
+
+Kubernetes can be extended to automatically validate container image signatures
+through the use of Admission Controllers. The admission controller can be
+configured with the public key of a trusted signer and require that deployed
+images matching a configured pattern have been signed by that key before the
+image is allowed to run. Configuration and use of Admission Controllers is
+beyond the scope of this document. For more information see the documentation
+for the Admission Controller that you are using.
+
+The following Admission Controllers are known to work with Cosign signatures.
+
+* [Sigstore Policy Controller](https://docs.sigstore.dev/policy-controller/overview/)
+* [Connaisseur](https://sse-secure-systems.github.io/connaisseur/)
+
+*** 
 
 <a name="deploying-to-kubernetes"></a>
 ## Deploying to Kubernetes

@@ -10,6 +10,10 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 - Support for Kubernetes v1.25.
 - Added default container resource requests and limits along with documentation
   for how to modify the resource specifications.
+- Container images will now be signed with
+  [Cosign](https://github.com/sigstore/cosign). Documentation on how to verify
+  the signatures has been added to the [deployment guide](docs/deployment.md)
+  and the [operator README](operator/README.md).
   
 ### Changed
 - Changed the default driver container name from `netapp/beegfs-csi-driver` to
