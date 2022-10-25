@@ -159,6 +159,18 @@ From the *operator/* directory
    * Modifying *config/manifests/bases/beegfs-csi-driver-operator.clustersericeversion.yaml* for other fields.
 2. Run `make bundle`.
 
+### Prepare Changes For a Pull Request
+
+If you have done manual testing of changes with builds created from the dev
+environment, you'll want to unset any custom VERSION environment variables or
+changes to the Makefile for the version. Then run through the following sequence
+to generate the necessary changes without pushing any builds to the registry.
+
+* make generate manifests
+* make build
+* rm bin/kustomize
+* make manifests bundle
+
 ## Testing
 <a name="testing"></a>
 

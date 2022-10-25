@@ -106,8 +106,8 @@ spec:
                   controllerBeegfs:
                     description: 'The resource specifications for the beegfs container
                       of the BeeGFS driver controller pod. The default values for
-                      requests are (cpu: 50m, memory: 16Mi). The default values for
-                      limits are (cpu: 100m, memory: 100Mi).'
+                      requests are (cpu: 100m, memory: 16Mi). The default values for
+                      limits are (cpu: None, memory: 256Mi).'
                     properties:
                       limits:
                         additionalProperties:
@@ -135,8 +135,8 @@ spec:
                   controllerCsiProvisioner:
                     description: 'The resource specifications for the csi-provisioner
                       container of the BeeGFS driver controller pod. The default values
-                      for requests are (cpu: 20m, memory: 24Mi) The default values
-                      for limits are (cpu: 80m, memory 128Mi)'
+                      for requests are (cpu: 80m, memory: 24Mi) The default values
+                      for limits are (cpu: None, memory 256Mi)'
                     properties:
                       limits:
                         additionalProperties:
@@ -164,8 +164,8 @@ spec:
                   nodeBeegfs:
                     description: 'The resource specifications for the beegfs container
                       of the BeeGFS driver node pod. The default values for requests
-                      are (cpu: 50m, memory: 20Mi) The default values for limits are
-                      (cpu: 100m, memory: 100Mi)'
+                      are (cpu: 100m, memory: 20Mi) The default values for limits
+                      are (cpu: None, memory: 128Mi)'
                     properties:
                       limits:
                         additionalProperties:
@@ -193,8 +193,8 @@ spec:
                   nodeDriverRegistrar:
                     description: 'The resource specifications for the node-driver-registrar
                       container of the BeeGFS driver node pod. The default values
-                      for requests are (cpu: 20m, memory: 10Mi) The default values
-                      for limits are (cpu: 80m, memory 100Mi)'
+                      for requests are (cpu: 80m, memory: 10Mi) The default values
+                      for limits are (cpu: None, memory 128Mi)'
                     properties:
                       limits:
                         additionalProperties:
@@ -222,8 +222,8 @@ spec:
                   nodeLivenessProbe:
                     description: 'The resource specifications for the liveness-probe
                       container of the BeeGFS driver node pod. The default values
-                      for requests are (cpu: 20m, memory: 20Mi) The default values
-                      for limits are (cpu: 80m, memory: 100Mi)'
+                      for requests are (cpu: 60m, memory: 20Mi) The default values
+                      for limits are (cpu: None, memory: 128Mi)'
                     properties:
                       limits:
                         additionalProperties:

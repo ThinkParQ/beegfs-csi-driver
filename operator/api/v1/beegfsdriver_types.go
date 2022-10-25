@@ -136,28 +136,28 @@ type ContainerImageOverride struct {
 // used by the BeeGFS CSI driver. Any storage resource values configured will be ignored.
 type ContainerResourceOverrides struct {
 	// The resource specifications for the beegfs container of the BeeGFS driver controller pod.
-	// The default values for requests are (cpu: 50m, memory: 16Mi).
-	// The default values for limits are (cpu: 100m, memory: 100Mi).
+	// The default values for requests are (cpu: 100m, memory: 16Mi).
+	// The default values for limits are (cpu: None, memory: 256Mi).
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Controller beegfs resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	ControllerBeegfsResources corev1.ResourceRequirements `json:"controllerBeegfs,omitempty"`
 	// The resource specifications for the csi-provisioner container of the BeeGFS driver controller pod.
-	// The default values for requests are (cpu: 20m, memory: 24Mi)
-	// The default values for limits are (cpu: 80m, memory 128Mi)
+	// The default values for requests are (cpu: 80m, memory: 24Mi)
+	// The default values for limits are (cpu: None, memory 256Mi)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Controller csi-provisioner resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	ControllerCsiProvisionerResources corev1.ResourceRequirements `json:"controllerCsiProvisioner,omitempty"`
 	// The resource specifications for the beegfs container of the BeeGFS driver node pod.
-	// The default values for requests are (cpu: 50m, memory: 20Mi)
-	// The default values for limits are (cpu: 100m, memory: 100Mi)
+	// The default values for requests are (cpu: 100m, memory: 20Mi)
+	// The default values for limits are (cpu: None, memory: 128Mi)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node beegfs resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	NodeBeegfsResources corev1.ResourceRequirements `json:"nodeBeegfs,omitempty"`
 	// The resource specifications for the node-driver-registrar container of the BeeGFS driver node pod.
-	// The default values for requests are (cpu: 20m, memory: 10Mi)
-	// The default values for limits are (cpu: 80m, memory 100Mi)
+	// The default values for requests are (cpu: 80m, memory: 10Mi)
+	// The default values for limits are (cpu: None, memory 128Mi)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node node-driver-registrar resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	NodeDriverRegistrarResources corev1.ResourceRequirements `json:"nodeDriverRegistrar,omitempty"`
 	// The resource specifications for the liveness-probe container of the BeeGFS driver node pod.
-	// The default values for requests are (cpu: 20m, memory: 20Mi)
-	// The default values for limits are (cpu: 80m, memory: 100Mi)
+	// The default values for requests are (cpu: 60m, memory: 20Mi)
+	// The default values for limits are (cpu: None, memory: 128Mi)
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Node liveness-probe resources",xDescriptors={"urn:alm:descriptor:com.tectonic.ui:resourceRequirements"}
 	NodeLivenessProbeResources corev1.ResourceRequirements `json:"nodeLivenessProbe,omitempty"`
 }
