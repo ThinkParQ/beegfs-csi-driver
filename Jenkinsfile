@@ -241,23 +241,19 @@ pipeline {
             steps {
                 script {
                     TestEnvironment[] testEnvironments
-                    // Most Pre-provisioned PV tests use createVolumeResource(), which calls createPVCPV(). createPVCPV()
-                    // creates a PVC and PV that reference a Storage Class with the same name as the test Namespace, but it
-                    // doesn't actually create this Storage Class. The OpenShift Pod admission webhook refuses to allow
-                    // Pods that reference a non-existent storage class. For now, pass staticVolDirName=""
                     if (env.BRANCH_NAME.matches('master')) {
                         testEnvironments = [
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
                             new TestEnvironment("1.24-rhel8-rdma", "beegfs-7.2-rh8-rdma", "1.24", "root", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.24", "root", true)
                         ]
                     } else {
                         testEnvironments = [
                             new TestEnvironment("1.22", "beegfs-7.3-rh8", "1.22", "root", false),
                             new TestEnvironment("1.23-ubuntu-rdma", "beegfs-7.3-rh8-rdma", "1.23", "user", false),
                             new TestEnvironment("1.24-rhel8-rdma", "beegfs-7.2-rh8-rdma", "1.24", "root", false),
-                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.23", "root", true)
+                            new TestEnvironment("openshift", "beegfs-7.2-rh8-rdma", "1.24", "root", true)
                         ]
                     }
 
@@ -332,7 +328,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
         ginkgoSkipRegexDisruptive += "\\[Slow\\]"
     }
     // TODO: A463 (remove after all versions are no longer supported)
-    if (testEnv.k8sCluster.matches('(1.22)|(1.23-ubuntu-rdma)|(openshift)')) {
+    if (testEnv.k8sVersion.matches('(1.22)|(1.23)')) {
         // This test is not included in the Disruptive or Serial set so we don't need to exclude it 
         // from the testCommandDisruptive command.
         ginkgoSkipRegexRegular += "|provisioning should mount multiple PV pointing to the same storage on the same node"

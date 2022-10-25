@@ -5,6 +5,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 [1.4.0] - TBD
 --------------------
 ### Added
+- Support for RedHat OpenShift v4.11.
 - Added default container resource requests and limits along with documentation
   for how to modify the resource specifications.
   
@@ -16,6 +17,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 
 ### Removed
 - Support for Kubernetes v1.21.
+- Support for RedHat OpenShift v4.10.
 
 ### Security
 - Mitigated [CVE-2022-28948](https://nvd.nist.gov/vuln/detail/CVE-2022-28948) by
