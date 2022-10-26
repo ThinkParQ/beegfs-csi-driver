@@ -156,6 +156,14 @@ func GetRunningControllerPod(cs clientset.Interface) (corev1.Pod, error) {
 	if err != nil {
 		return corev1.Pod{}, err
 	}
+	// WaitForPodsWithLabelRunningReady only cares about the exact number of running Pods it finds. It will happily
+	// return more than one Pod as long as only one is running. We could filter the returned list of Pods for the
+	// running one, but it's likely better to return an error instead, as we don't expect to find multiple controller
+	// Pods (what if one of them is not running right now, but starts to run again momentarily?).
+	if len(controllerPods.Items) > 1 {
+		e2eframework.Logf("Expected 1 controller pod but found %d: %+v", len(controllerPods.Items), controllerPods)
+		return corev1.Pod{}, fmt.Errorf("expected 1 controller pod but found %d", len(controllerPods.Items))
+	}
 	return controllerPods.Items[0], nil
 }
 
@@ -164,7 +172,7 @@ func GetRunningControllerPod(cs clientset.Interface) (corev1.Pod, error) {
 func GetRunningControllerPodOrFail(cs clientset.Interface) corev1.Pod {
 	controllerPod, err := GetRunningControllerPod(cs)
 	if err != nil {
-		e2eframework.ExpectNoError(err, "expected to find exactly one controller pod")
+		e2eframework.ExpectNoError(err, "failed to get exactly 1 running controller pod")
 	}
 	return controllerPod
 }
