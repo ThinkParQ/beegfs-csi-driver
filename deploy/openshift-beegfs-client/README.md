@@ -6,6 +6,7 @@
 * [What Is This For?](#what-is-this-for)
 * [Requirements](#requirements)
 * [Steps](#steps)
+* [Upgrading BeeGFS Version](#upgrading-beegfs)
 * [How Does It Work?](#how-does-it-work)
 * [Is It Tested?](#is-it-tested)
 * [What Is Next?](#what-is-next)
@@ -76,6 +77,68 @@ THESE MANIFESTS ARE CURRENTLY EXPERIMENTAL AND NOT RECOMMENDED FOR PRODUCTION US
 1. Deploy the BeeGFS CSI operator and driver as normal from the OpenShift GUI. When defining the BeegfsDriver spec, 
    delete the default affinity rules that prevent the driver from installing on RHCOS nodes.
 
+<a name="upgrading-beegfs"></a>
+## Upgrading BeeGFS Version
+
+1.  Navigate to the directory containing this README and the `beegfs-client-*.yaml` deployment manifests.
+1.  Change the `value` in `beegfs-client-bc.yaml` to the desired BeeGFS version.
+    ```
+    strategy:
+       dockerStrategy:
+          buildArgs:
+             - name: BEEGFS_CLIENT_VERSION
+               value: <BeeGFS Version>
+    ```
+1.  After making the version change reapply `beegfs-client-bc.yaml`.
+    ```
+    -> oc apply -f beegfs-client-bc.yaml
+      imagestream.image.openshift.io/beegfs-client unchanged
+      configmap/beegfs-client-poststart unchanged
+      buildconfig.build.openshift.io/beegfs-client configured
+    ```
+1.  A new build will need to be initiated. You can do this through the OpenShift GUI.
+    * Navigate to "BuildConfigs" under the "Builds" tab in the OpenShift GUI.
+    * On the desired BuildConfig, click "Start Build" from the more settings icon.
+1. Verify the build was successful and the image respositry has been updated.
+   ```
+    -> oc get build -n beegfs-csi
+    NAME              TYPE     FROM         STATUS     STARTED         DURATION
+    beegfs-client-1   Docker   Dockerfile   Complete   6 minutes ago   1m18s
+
+    -> oc get is -n beegfs-csi
+    NAME            IMAGE REPOSITORY                                                            TAGS     UPDATED
+    beegfs-client   image-registry.openshift-image-registry.svc:5000/beegfs-csi/beegfs-client   latest   6 minutes ago
+     ```
+    * Navigate to the logs of your new build in the OpenShift GUI and verify the correct BeeGFS version was installed.
+    ```
+    Installed:
+    beegfs-client-20:7.2.8-el8.noarch beegfs-common-20:7.2.8-el8.noarch
+    beegfs-helperd-20:7.2.8-el8.x86_64 beegfs-utils-20:7.2.8-el8.x86_64
+    ```
+1.  Delete and reapply the DaemonSet and verify the beegfs-client Pod comes up on all nodes.
+    ```
+    -> oc delete ds beegfs-client -n beegfs-csi
+    daemonset.apps "beegfs-client" deleted
+
+    -> oc apply -f beegfs-client-ds.yaml 
+    serviceaccount/beegfs-client created
+    role.rbac.authorization.k8s.io/beegfs-client created
+    rolebinding.rbac.authorization.k8s.io/beegfs-client created
+    daemonset.apps/beegfs-client created
+
+    -> oc get ds -n beegfs-csi
+    NAME            DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+    beegfs-client   8         8         8       8            8           <none>          11m
+    ```
+1.  Verify client pods are running the desired BeeGFS version.
+    * Navigate to a client pods terminal in OpenShift GUI.
+    * Verify the desired BeeGFS version.
+    ```
+    -> cat /var/log/beegfs-client.log 
+    (1) Oct25 19:13:15 Main [App] >> BeeGFS Helper Daemon Version: 7.2.8
+    (1) Oct25 19:13:15 Main [App] >> Client log messages will be prefixed with an asterisk (*) symbol.
+    ```
+    
 <a name="how-does-it-work"></a>
 ## How Does It Work?
 
