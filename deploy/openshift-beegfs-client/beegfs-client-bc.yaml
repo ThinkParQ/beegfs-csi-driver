@@ -75,7 +75,7 @@ spec:
     dockerStrategy:
       buildArgs:
         - name: BEEGFS_CLIENT_VERSION
-          value: 7.2.7
+          value: 7.2.8
       from:
         api: image.openshift.io/v1
         kind: ImageStreamTag
