@@ -640,7 +640,7 @@ func setNodeResources(log logr.Logger, overrides beegfsv1.ContainerResourceOverr
 			}
 		case "node-driver-registrar":
 			if len(overrides.NodeDriverRegistrarResources.Limits) > 0 {
-				if cpu, ok := overrides.NodeBeegfsResources.Limits["cpu"]; ok {
+				if cpu, ok := overrides.NodeDriverRegistrarResources.Limits["cpu"]; ok {
 					log.Info("Overriding node node-driver-registrar cpu limit", "values", cpu)
 					containers[i].Resources.Limits["cpu"] = cpu
 				}
