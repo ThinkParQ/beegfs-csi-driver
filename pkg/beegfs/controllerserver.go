@@ -426,7 +426,7 @@ func getStripePatternConfigFromParams(reqParams map[string]string) (stripePatter
 				cfg.stripePatternChunkSize = reqParams[stripePatternChunkSizeKey]
 				// Validate StripePatternChunkSize has only digits followed by a single upper or lowercase letter.
 				if cfg.stripePatternChunkSize != "" {
-					r, _ := regexp.Compile("(^[0-9]+[a-zA-Z]$)")
+					r := regexp.MustCompile("(^[0-9]+[a-zA-Z]$)")
 					matched := r.MatchString(cfg.stripePatternChunkSize)
 					if !matched {
 						return cfg, nil, errors.New("could not parse provided chunkSize")
