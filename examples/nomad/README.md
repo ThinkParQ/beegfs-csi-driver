@@ -1,16 +1,8 @@
 # BeeGFS CSI Driver HashiCorp Nomad Examples
 
-While the BeeGFS CSI driver is primarily tested on (and intended for integration
-with) Kubernetes, adherence to the Container Storage Interface (CSI) enables its
-use with other container orchestrators as well. As a "simple and flexible
-scheduler and orchestrator to deploy and manage containers and non-containerized
-applications across on-prem and clouds at scale", [HashiCorp
-Nomad](https://www.nomadproject.io/) is one such orchestrator.
-
 ## Contents
 
-* [Important Warnings](#important-warnings)
-* [What This Is For](#what-this-is-for)
+* [Overview](#overview)
 * [Requirements](#requirements)
 * [Steps](#steps)
   * [Deploy](#deploy)
@@ -19,18 +11,8 @@ Nomad](https://www.nomadproject.io/) is one such orchestrator.
 
 ***
 
-## Important Warnings
-
-At this time the BeeGFS CSI driver is NOT SUPPORTED on Nomad, and is for
-demonstration and development purposes only. DO NOT USE IT IN PRODUCTION.
-
-These manifests rely on functionality introduced into Nomad in [version 
-1.3.3](https://github.com/hashicorp/nomad/releases/tag/v1.3.3). They do not work
-with older Nomad versions.
-
-***
-
-## What This Is For
+<a name="overview"></a>
+## Overview
 
 At a high level, these manifests create a Nomad volume (backed by a BeeGFS CSI
 driver volume) and a Nomad job that consumes it. Apply them AFTER the BeeGFS CSI
@@ -43,10 +25,12 @@ driver is [deployed](../../deploy/nomad/README.md) in a Nomad cluster.
 
 ***
 
+<a name="requirements"></a>
 ## Requirements
+
 * An existing BeeGFS file system.
 * An existing Nomad cluster running an [appropriate version of
-  Nomad](#important-warnings) and the [BeeGFS CSI
+  Nomad](../../docs/nomad#maturity-compatibility) and the [BeeGFS CSI
   driver](../../deploy/nomad/README.md).
 * Modify `sysMgmtdHost` and `volDirBasePath` in `volume.hcl` as appropriate for
   the existing file system.
@@ -55,8 +39,10 @@ driver is [deployed](../../deploy/nomad/README.md) in a Nomad cluster.
 
 ***
 
+<a name="steps"></a>
 ## Steps
 
+<a name="deploy"></a>
 ### Deploy
 
 `nomad plugin status --verbose`
@@ -126,6 +112,7 @@ ID        Node ID   Task Group    Version  Desired  Status   Created   Modified
 5d102b33  de35373e  beegfs-group  0        run      running  1m2s ago  50s ago
 ```
 
+<a name="test"></a>
 ### Test
 
 At this point, it's probably interesting to poke around and try to understand whether Nomad is "actually" consuming a BeeGFS directory. Here are a couple of ideas.
@@ -154,6 +141,7 @@ total 0
 -rw-r--r--. 1 root root 0 Jul 25 16:11 touched-by-5d102b33-9312-36a8-4a5b-27f8fd78a9b4
 ```
 
+<a name="clean-up"></a>
 ### Clean Up
 
 `nomad job stop -purge beegfs-csi-job`

@@ -83,6 +83,9 @@ supported.
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.
 
+The BeeGFS CSI driver is also tested for use with Hashicorp Nomad. See our 
+[Nomad documentation](docs/nomad.md) for details.
+
 ### Known Incompatibilities
 
 #### BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+
