@@ -39,7 +39,7 @@ import (
 
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/utils"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
