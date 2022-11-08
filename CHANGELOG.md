@@ -6,7 +6,8 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 --------------------
 ### Added
 - Support for RedHat OpenShift v4.11.
-- Support for BeeGFS v7.3.2 and BeeGFS v7.2.8
+- Support for BeeGFS v7.3.2 and BeeGFS v7.2.8.
+- Support for Kubernetes v1.25.
 - Added default container resource requests and limits along with documentation
   for how to modify the resource specifications.
   
