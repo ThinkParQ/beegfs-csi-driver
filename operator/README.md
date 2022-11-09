@@ -5,6 +5,9 @@
 
 * [Overview](#overview)
 * [Requirements](#requirements)
+* [Verify the Operator Signature](#verify-operator-signature)
+  * [Verify Trust in the Signing Certificate](#verify-trust-in-the-signing-certificate)
+  * [Validate the BeeGFS CSI Driver Operator Image Signature](#validate-the-beegfs-csi-driver-operator-image-signature)
 * [Install the Operator](#install-operator)
   * [Install from the Openshift Console](#install-operator-openshift-console)
   * [Install the Operator from OperatorHub](#install-operator-operator-hub)
@@ -51,6 +54,60 @@ NOT supported. However, Red Hat Enterprise Linux (RHEL) nodes can be added to an
 OpenShift cluster and RHEL is supported for running BeeGFS. By default, the 
 operator will install the driver in an OpenShift cluster with a node affinity 
 that ensures it does not run on RHCOS nodes.
+
+## Verify the Operator Image Signature
+<a name="verify-operator-signature"></a>
+
+The BeeGFS CSI Driver Operator is signed with the same key as the BeeGFS CSI
+Driver container images. You can choose to manually verify the signature
+associated with the BeeGFS CSI Driver Operator image starting with version 1.4.0
+of the driver and operator.
+
+### Verify Trust in the Signing Certificate
+<a name="verify-trust-in-the-signing-certificate"></a>
+
+Follow the first two steps from [verifying the driver image
+signatures](../docs/deployment.md#verifying-beegfs-csi-driver-image-signatures)
+to download the necessary image verification tools and to verify the trust in
+the signing certificates.
+
+### Validate the BeeGFS CSI Driver Operator Image Signature
+<a name="validate-the-beegfs-csi-driver-operator-image-signature"></a>
+
+First find the container image reference used for the operator.
+
+If you are installing from the OpenShift Console:
+ * Navigate to the OperatorHub pane of the console.
+ * Search for and click on the BeeGFS CSI driver operator.
+ * Within the details of the operator you can find the container image which is
+   the reference to the image used for the operator. Note this image reference.
+
+If you are installing from OperatorHub:
+  * Navigate to [OperatorHub.io](https://operatorhub.io/).
+  * search for and click on the BeeGFS CSI driver operator. It is in the Storage
+    category.
+  * Within the details for the BeeGFS CSI driver operator find the container
+    image. Note this image reference.
+
+On a host with the cosign command installed and the BeeGFS signing certificate
+available, verify the image signature using the cosign command. Remember to use
+the image reference of the version you want to install.
+
+Example validation using the certificate file.
+```
+cosign verify --cert beegfs-csi-signer.crt docker.io/netapp/beegfs-csi-driver-operator:v1.4.0
+```
+
+or
+
+Example validation using the extracted public key.
+```
+cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver-operator:v1.4.0
+```
+
+If the image signature is properly validated then continue installing the
+operator.
+
 
 ## Install the Operator
 <a name="install-operator"></a>
@@ -234,6 +291,27 @@ data:
     - sysMgmtdHost: some.other.specific.file.system
       connAuth: some-other-secret
 ```
+
+### Verify the BeeGFS CSI Driver Image Signature
+
+If you want to verify the signature of the BeeGFS CSI Driver image deployed by
+the operator you can follow the steps in the [BeeGFS CSI Driver Deployment
+guide](../docs/deployment.md#verify-the-signing-certificate-is-trusted) for
+verifying the signature of the driver image.
+
+Note that by default the operator will deploy an image using the same version
+tag as is used by the operator.
+
+For example, if you have the following operator version installed.
+
+```
+beegfs-csi-driver-operator.v1.4.0
+```
+
+The version of the driver that would be deployed would match ```v1.4.0``` and
+would deploy the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0```. In this
+case the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0``` would be the
+image to use with for the signature verification.
 
 ### Install from the OpenShift Console
 <a name="install-driver-openshift-console"></a>

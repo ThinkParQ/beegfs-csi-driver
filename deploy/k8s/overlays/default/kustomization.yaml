@@ -30,13 +30,17 @@ secretGenerator:
     files:
       - csi-beegfs-connauth.yaml
 
-# Uncomment this section and fill it in as appropriate for air-gapped deployments or deployments that require custom
-# container names (e.g. when a private registry is used). The default image names MAY change in a future driver update.
-# Check /deploy/k8s/bases for updated names in the case of a failing upgrade.
-# images:
-#   - name: docker.io/netapp/beegfs-csi-driver
-#     newName:
-#     newTag:
+# The images section is used to transform the image name to specify the specific image to use in the deployment 
+# manifests. This section can be used to adjust the registry and image names and tags for air-gapped environments
+# or other scenarios where custom containers names are used. You can adjust the registry and/or location within
+# a registry with the newName field. You can change the tag being used with the NewTag field. You can also
+# use an image digest with the digest field.
+# See https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_imagetagtransformer_
+# for more information on how to use this section.
+#images:
+#  - name: docker.io/netapp/beegfs-csi-driver
+#    newTag: v1.3.0
+#    digest: sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
 #   - name: k8s.gcr.io/sig-storage/csi-provisioner
 #     newName:
 #     newTag:
