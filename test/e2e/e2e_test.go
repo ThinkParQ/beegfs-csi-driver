@@ -23,11 +23,9 @@ package e2e
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"math/rand"
 	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -35,9 +33,7 @@ import (
 	"github.com/netapp/beegfs-csi-driver/test/e2e/driver"
 	beegfssuites "github.com/netapp/beegfs-csi-driver/test/e2e/testsuites"
 	"github.com/netapp/beegfs-csi-driver/test/e2e/utils"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	e2eframework "k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/testfiles"
@@ -65,6 +61,7 @@ func init() {
 	flag.StringVar(&dynamicVolDirBasePathBeegfsRoot, "dynamic-vol-dir-base-path", "/e2e-test/dynamic", "Path (from BeeGFS root) to the pre-existing base directory for dynamic provisioning tests. Defaults to /e2e/dynamic.")
 	flag.StringVar(&staticVolDirBasePathBeegfsRoot, "static-vol-dir-base-path", "/e2e-test/static", "Path (from BeeGFS root) to the pre-existing base directory for static provisioning tests. Defaults to /e2e/static.")
 	flag.StringVar(&staticVolDirName, "static-vol-dir-name", "", "Name of the pre-existing directory under static-vol-dir-base-path to be used as a volume for static provisioning tests. Static provisioning tests are skipped if left unset.")
+	testfiles.AddFileSource(e2etestingmanifests.GetE2ETestingManifestsFS())
 }
 
 var beegfsSuitesToRun = []func() storageframework.TestSuite{
@@ -154,22 +151,18 @@ var _ = ginkgo.Describe("E2E Tests", func() {
 func Test(t *testing.T) {
 	// Much of the code in this function is copied directly from the RunE2ETests function in
 	// the k8s.io/kubernetes/test/e2e package
-	// (https://github.com/kubernetes/kubernetes/blob/v1.19.0/test/e2e/e2e.go#L92-L131).
+	// (https://github.com/kubernetes/kubernetes/blob/v1.25.3/test/e2e/e2e.go#L94-L118).
 
-	config.DefaultReporterConfig.NoColor = true
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	testfiles.AddFileSource(e2etestingmanifests.GetE2ETestingManifestsFS())
-	// Run tests through the Ginkgo runner with output to console + JUnit for Jenkins
-	var r []ginkgo.Reporter
+	gomega.RegisterFailHandler(e2eframework.Fail)
+
+	// Create ReportDir (in case it has not already been created).
 	if e2eframework.TestContext.ReportDir != "" {
 		if err := os.MkdirAll(e2eframework.TestContext.ReportDir, 0755); err != nil {
 			log.Fatalf("Failed creating report directory: %v", err)
-		} else {
-			r = append(r, reporters.NewJUnitReporter(path.Join(e2eframework.TestContext.ReportDir,
-				fmt.Sprintf("junit_%v%02d.xml", e2eframework.TestContext.ReportPrefix,
-					config.GinkgoConfig.ParallelNode))))
 		}
 	}
-	log.Printf("Starting e2e run %q on Ginkgo node %d", e2eframework.RunID, config.GinkgoConfig.ParallelNode)
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "E2E Tests", r)
+
+	suiteConfig, reporterConfig := e2eframework.CreateGinkgoConfig()
+	log.Printf("Starting e2e run %q on Ginkgo node %d", e2eframework.RunID, suiteConfig.ParallelProcess)
+	ginkgo.RunSpecs(t, "E2E Tests", suiteConfig, reporterConfig)
 }

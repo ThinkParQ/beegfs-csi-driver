@@ -343,12 +343,12 @@ def runIntegrationSuite(TestEnvironment testEnv) {
     }
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
-    def resultsDir = "results/${jobID}"
+    def resultsDir = "${WORKSPACE}/results/${jobID}"
     sh "mkdir -p ${resultsDir}"
-    def testCommand = "ginkgo -v -p -nodes 8 -noColor -skip '${ginkgoSkipRegexRegular}'" +
-        " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix parallel -static-vol-dir-name ${testEnv.k8sCluster}"
-    def testCommandDisruptive = "ginkgo -v -noColor -skip '${ginkgoSkipRegexDisruptive}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
-        " -timeout 60m ./test/e2e/ -- -report-dir ../../${resultsDir} -report-prefix serial -static-vol-dir-name ${testEnv.k8sCluster}"
+    def testCommand = "ginkgo -v -procs 8 -no-color -skip '${ginkgoSkipRegexRegular}'" +
+        " -timeout 60m -junit-report junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
+    def testCommandDisruptive = "ginkgo -v -no-color -skip '${ginkgoSkipRegexDisruptive}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
+        " -timeout 60m -junit-report junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
     // Redirect output for easier reading.
     testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
     testCommandDisruptive += " > ${resultsDir}/ginkgo-serial.log 2>&1"
@@ -401,7 +401,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    junit "${resultsDir}/*.xml"
+                    // junit "${resultsDir}/*.xml"
                 }
             }
         } else {
@@ -445,7 +445,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    junit "${resultsDir}/*.xml"
+                    // junit "${resultsDir}/*.xml"
                 }
             }
         }
