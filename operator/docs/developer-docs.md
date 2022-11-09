@@ -8,6 +8,12 @@
 * [Development Environment](#development-environment)
 * [Directory Structure](#directory-structure)
 * [General Workflows](#general-workflows)
+  * [Build and Test the Operator Controller Manager](#build-and-test-the-operator-controller-manager)
+  * [Change the BeegfsDrivers API](#change-the-beegfsdrivers-api)
+  * [Change the Behavior of the Controller](#change-the-behavior-of-the-controller)
+  * [Change the Way OLM Displays or Installs the Operator](#change-the-way-olm-displays-or-installs-the-operator)
+  * [Prepare Changes For a Pull Request](#prepare-changes-for-a-pull-request)
+  * [Update the operator-sdk version](#update-the-operator-sdk-version)
 * [Testing](#testing)
   * [Bundle Validation](#bundle-validation)
   * [Unit Testing](#unit-testing)
@@ -46,7 +52,7 @@ automatic download of necessary binaries (e.g., controller-gen, kustomize,
 etc.). The following are not automatically downloaded and must be pre-installed
 in a dev environment:
 * [Golang (the version specified in *go.mod*)](https://golang.org/doc/install)
-* [Operator SDK (currently v1.22.2)](https://sdk.operatorframework.io/docs/installation/)
+* [Operator SDK (currently v1.25.0)](https://sdk.operatorframework.io/docs/installation/)
 
 ## Directory Structure
 <a name="directory-structure"></a>
@@ -132,6 +138,7 @@ The following files and directories are included:
 <a name="general-workflows"></a>
 
 ### Build and Test the Operator Controller Manager
+<a name="build-and-test-the-operator-controller-manager"></a>
 
 From the *operator/* directory
 
@@ -140,17 +147,20 @@ From the *operator/* directory
 * `make docker-build` builds the operator controller manager container.
 
 ### Change the BeegfsDrivers API
+<a name="change-the-driver-api"></a>
 
 1. Modify the structs and kubebuilder markers in *api/*.
 2. Run `make generate manifests` to update generated deep copy functions and
    the CRD.
 
 ### Change the Behavior of the Controller
+<a name="change-the-behavior-of-the-controller"></a>
 
 1. Modify the code in *controllers/*.
 2. Build and/or test as described above.
 
 ### Change the Way OLM Displays or Installs the Operator
+<a name="change-olm-display-or-install"></a>
 
 1. Modify the CSV by:
    * Modifying the operator-sdk markers in *api/* for
@@ -160,6 +170,7 @@ From the *operator/* directory
 2. Run `make bundle`.
 
 ### Prepare Changes For a Pull Request
+<a name="prepare-changes-for-a-pull-request"></a>
 
 If you have done manual testing of changes with builds created from the dev
 environment, you'll want to unset any custom VERSION environment variables or
@@ -168,8 +179,36 @@ to generate the necessary changes without pushing any builds to the registry.
 
 * make generate manifests
 * make build
-* rm bin/kustomize
 * make manifests bundle
+
+### Update the operator-sdk version
+<a name="update-the-operator-sdk-version"></a>
+
+When updating the operator-sdk version start by reviewing the [Upgrade SDK
+Version](https://sdk.operatorframework.io/docs/upgrading-sdk-version/) section
+of the Operator SDK documentation.
+
+First identify the operator-sdk version currently being used which is documented
+in the [development environment](#development-environment) section. For each new
+operator-sdk version beyond the version that is currently being used, go to the
+upgrade documentation for that version. The upgrade documentation may list a set
+of modifications that should be applied to the project to make the project
+compatible with the newer operator-sdk version. Apply any changes that are
+targeted for 'go/v3' based operators. Some changes are not applicable if they
+only apply to other operator types (Ex. Helm or Ansible).
+
+NOTE: Changes need to be applied for **all** operator-sdk versions up to and
+including the new target version.
+
+Follow the [operator-sdk
+installation](https://sdk.operatorframework.io/docs/installation/) instructions
+to install the version of the operator-sdk that will be used. If there were
+multiple versions released make sure to apply the changes for all versions, but
+only install the operator-sdk version that you want to end up using.
+
+After the new operator-sdk version is installed follow the steps for [preparing
+changes for a pull request](#prepare-changes-for-a-pull-request) to generate the
+changes related to the new operator-sdk version that need to be committed.
 
 ## Testing
 <a name="testing"></a>
