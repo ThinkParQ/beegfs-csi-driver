@@ -103,7 +103,7 @@ or
 
 Validate the image by tag using the extracted public key.
 ```
-cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver:v1.3.0
+cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver:v1.4.0
 ```
 
 <a name="automating-image-verification"></a>

@@ -46,7 +46,7 @@ spec:
               cpu: 80m
               memory: 10Mi
         - name: beegfs
-          image: docker.io/netapp/beegfs-csi-driver:v1.3.0
+          image: docker.io/netapp/beegfs-csi-driver:v1.4.0
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
