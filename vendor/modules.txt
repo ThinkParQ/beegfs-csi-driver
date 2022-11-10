@@ -60,8 +60,8 @@ github.com/blang/semver/v4
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/container-storage-interface/spec v1.6.0
-## explicit; go 1.16
+# github.com/container-storage-interface/spec v1.7.0
+## explicit; go 1.18
 github.com/container-storage-interface/spec/lib/go/csi
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
@@ -166,7 +166,7 @@ github.com/json-iterator/go
 # github.com/kubernetes-csi/csi-lib-utils v0.11.0
 ## explicit; go 1.16
 github.com/kubernetes-csi/csi-lib-utils/protosanitizer
-# github.com/kubernetes-csi/csi-test/v4 v4.3.0
+# github.com/kubernetes-csi/csi-test/v4 v4.4.0
 ## explicit; go 1.16
 github.com/kubernetes-csi/csi-test/v4/pkg/sanity
 github.com/kubernetes-csi/csi-test/v4/utils
@@ -250,7 +250,7 @@ github.com/onsi/gomega/types
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
-# github.com/opencontainers/selinux v1.10.1
+# github.com/opencontainers/selinux v1.10.2
 ## explicit; go 1.13
 github.com/opencontainers/selinux/go-selinux
 github.com/opencontainers/selinux/go-selinux/label
@@ -383,7 +383,7 @@ golang.org/x/crypto/pkcs12
 golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/net v0.1.0
+# golang.org/x/net v0.2.0
 ## explicit; go 1.17
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -407,14 +407,14 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.1.0
+# golang.org/x/sys v0.2.0
 ## explicit; go 1.17
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/term v0.1.0
+# golang.org/x/term v0.2.0
 ## explicit; go 1.17
 golang.org/x/term
 # golang.org/x/text v0.4.0
@@ -553,7 +553,7 @@ google.golang.org/protobuf/types/known/wrapperspb
 # gopkg.in/inf.v0 v0.9.1
 ## explicit
 gopkg.in/inf.v0
-# gopkg.in/ini.v1 v1.66.6
+# gopkg.in/ini.v1 v1.67.0
 ## explicit
 gopkg.in/ini.v1
 # gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7
@@ -718,7 +718,7 @@ k8s.io/apiserver/pkg/util/feature
 k8s.io/apiserver/pkg/util/webhook
 k8s.io/apiserver/pkg/util/x509metrics
 k8s.io/apiserver/pkg/warning
-# k8s.io/client-go v0.25.3 => k8s.io/client-go v0.25.3
+# k8s.io/client-go v1.5.2 => k8s.io/client-go v0.25.3
 ## explicit; go 1.19
 k8s.io/client-go/applyconfigurations/admissionregistration/v1
 k8s.io/client-go/applyconfigurations/admissionregistration/v1beta1
@@ -1001,7 +1001,7 @@ k8s.io/component-helpers/storage/volume
 ## explicit; go 1.19
 k8s.io/csi-translation-lib
 k8s.io/csi-translation-lib/plugins
-# k8s.io/klog/v2 v2.70.1
+# k8s.io/klog/v2 v2.80.1
 ## explicit; go 1.13
 k8s.io/klog/v2
 k8s.io/klog/v2/internal/buffer
@@ -1098,7 +1098,7 @@ k8s.io/kubernetes/test/utils/image
 # k8s.io/mount-utils v0.25.3 => k8s.io/mount-utils v0.25.3
 ## explicit; go 1.19
 k8s.io/mount-utils
-# k8s.io/pod-security-admission v0.0.0 => k8s.io/pod-security-admission v0.25.3
+# k8s.io/pod-security-admission v0.25.3 => k8s.io/pod-security-admission v0.25.3
 ## explicit; go 1.19
 k8s.io/pod-security-admission/api
 k8s.io/pod-security-admission/policy

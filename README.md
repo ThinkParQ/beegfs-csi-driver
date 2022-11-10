@@ -72,7 +72,7 @@ supported.
 
 | beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Client Versions | CSI Version  |
 | ---------------------- | -------------------------------- | ------------------------------------ | ---------------------- | ------------ |
-| v1.4.0                 | 1.22.6, 1.23.5, 1.24.1, 1.25.2   | 4.11 (RHEL only; RHCOS experimental) | 7.3.2, 7.2.8           | v1.6.0       |
+| v1.4.0                 | 1.22.6, 1.23.5, 1.24.1, 1.25.2   | 4.11 (RHEL only; RHCOS experimental) | 7.3.2, 7.2.8           | v1.7.0       |
 | v1.3.0                 | 1.21.4, 1.22.3, 1.23.1, 1.24.1   | 4.10 (RHEL only; RHCOS experimental) | 7.3.1, 7.2.7           | v1.6.0       |
 | v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6 [^1]      | v1.5.0       |
 | v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |

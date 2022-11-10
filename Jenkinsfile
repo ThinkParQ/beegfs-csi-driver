@@ -344,6 +344,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
     def resultsDir = "${WORKSPACE}/results/${jobID}"
+    def junitPath = "results/${jobID}/junit.xml"
     sh "mkdir -p ${resultsDir}"
     def testCommand = "ginkgo -v -procs 8 -no-color -skip '${ginkgoSkipRegexRegular}'" +
         " -timeout 60m -junit-report junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
@@ -403,7 +404,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    // junit "${resultsDir}/*.xml"
+                    junit junitPath
                 }
             }
         } else {
@@ -447,7 +448,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
                     """
                     // Use junit here (on a per-environment basis) instead of once in post so Jenkins visualizer makes
                     // it clear which environment failed.
-                    // junit "${resultsDir}/*.xml"
+                    junit junitPath
                 }
             }
         }
