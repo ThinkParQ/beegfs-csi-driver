@@ -344,12 +344,12 @@ def runIntegrationSuite(TestEnvironment testEnv) {
 
     def jobID = "${testEnv.k8sCluster}-${testEnv.beegfsHost}"
     def resultsDir = "${WORKSPACE}/results/${jobID}"
-    def junitPath = "results/${jobID}/junit.xml"
+    def junitPath = "results/${jobID}/*.xml"
     sh "mkdir -p ${resultsDir}"
     def testCommand = "ginkgo -v -procs 8 -no-color -skip '${ginkgoSkipRegexRegular}'" +
-        " -timeout 60m -junit-report junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
+        " -timeout 60m -junit-report parallel-junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
     def testCommandDisruptive = "ginkgo -v -no-color -skip '${ginkgoSkipRegexDisruptive}' -focus '\\[Disruptive\\]|\\[Serial\\]'" +
-        " -timeout 60m -junit-report junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
+        " -timeout 60m -junit-report serial-junit.xml -output-dir ${resultsDir} ./test/e2e/ -- -report-dir ${resultsDir} -static-vol-dir-name ${testEnv.k8sCluster}"
     // Redirect output for easier reading.
     testCommand += " > ${resultsDir}/ginkgo-parallel.log 2>&1"
     testCommandDisruptive += " > ${resultsDir}/ginkgo-serial.log 2>&1"
