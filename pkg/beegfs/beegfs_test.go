@@ -6,6 +6,7 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	iofs "io/fs"
 	"path"
 	"reflect"
 	"testing"
@@ -14,16 +15,33 @@ import (
 	"github.com/spf13/afero"
 )
 
+// errPermissionFs wraps MemMapFs and replaces MemMapFs.Open with a function that operates identically except that it
+// returns an fs.ErrPermission when it is called on a particular path. It is required for TestNewBeegfsDriver and is a
+// consequence of https://github.com/spf13/afero/issues/150.
+type errPermissionFs struct {
+	afero.MemMapFs
+}
+
+const badPermissionsClientConfTemplatePath = "/badPermissionsClientConfTemplatePath"
+
+func (m *errPermissionFs) Open(name string) (afero.File, error) {
+	if name == badPermissionsClientConfTemplatePath {
+		return nil, iofs.ErrPermission
+	}
+	return m.MemMapFs.Open(name)
+}
+
 // TestNewBeegfsDriver only tests various expected failure conditions. Some string parameters are not allowed to be
 // empty. Many of these parameters are file paths. It is not possible to validate file paths because Linux allows
 // paths with virtually all characters. However, we can ensure that a file exists at a path and can be read if it is
 // supposed to.
 func TestNewBeegfsDriver(t *testing.T) {
-	fs = afero.NewMemMapFs()
+	fs = &errPermissionFs{}
 	fsutil = afero.Afero{Fs: fs}
 
+	// badPermissionsClientConfTemplatePath (the counterpart to goodClientConfTemplatePath) is declared outside
+	// TestNewBeegfsDriver for use in errPermissionsFs.
 	const goodClientConfTemplatePath = "/goodClientConfTemplatePath"
-	const badPermissionsClientConfTemplatePath = "/badPermissionsClientConfTemplatePath"
 
 	type testCase struct {
 		connAuthPath           string
@@ -75,13 +93,11 @@ func TestNewBeegfsDriver(t *testing.T) {
 			tc.clientConfTemplatePath = ""
 			return tc
 		},
-		// TODO(webere, A336): Add this test case when https://github.com/spf13/afero/issues/150 is resolved.
-		// "bad permissions on clientConfTemplatePath": func() testCase {
-		//	 tc := defaultTestCase
-		//	 tc.clientConfTemplatePath = badPermissionsClientConfTemplatePath
-		//	 t.Log("uid", os.Getuid())
-		//	 return tc
-		// },
+		"bad permissions on clientConfTemplatePath": func() testCase {
+			tc := defaultTestCase
+			tc.clientConfTemplatePath = badPermissionsClientConfTemplatePath
+			return tc
+		},
 	}
 
 	for name, tcFunc := range tests {
