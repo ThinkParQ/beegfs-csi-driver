@@ -329,7 +329,7 @@ def runIntegrationSuite(TestEnvironment testEnv) {
         ginkgoSkipRegexRegular += "|\\[Slow\\]"
         ginkgoSkipRegexDisruptive += "\\[Slow\\]"
     }
-    // TODO: A463 (remove after all versions are no longer supported)
+    // TODO(gmarks, A463): Remove after all versions are no longer supported.
     if (testEnv.k8sVersion.matches('(1.22)|(1.23)')) {
         // This test is not included in the Disruptive or Serial set so we don't need to exclude it 
         // from the testCommandDisruptive command.

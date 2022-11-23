@@ -81,9 +81,6 @@ var k8sSuitesToRun = []func() storageframework.TestSuite{
 	// The driver currently doesn't support any of these options so it is expected that all provisioning tests will skip.
 	storagesuites.InitProvisioningTestSuite,  // No specs run.
 	storagesuites.InitSnapshottableTestSuite, // No specs run.
-	// One subpath test (should be able to unmount after the subpath directory is deleted [LinuxOnly]) fails
-	// consistently and must be skipped in the "go test" or "ginkgo" command.
-	// TODO(webere, A200): Fix broken subpath functionality.
 	storagesuites.InitSubPathTestSuite,
 	storagesuites.InitTopologyTestSuite,     // No specs run.
 	storagesuites.InitVolumeExpandTestSuite, // No specs run.
