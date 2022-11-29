@@ -14,6 +14,8 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   [Cosign](https://github.com/sigstore/cosign). Documentation on how to verify
   the signatures has been added to the [deployment guide](docs/deployment.md)
   and the [operator README](operator/README.md).
+- Added [documentation](docs/usage.md#managing-readonly-volumes) for read-only
+  volumes.
   
 ### Changed
 - Updated the project to adhere to v1.7.0 of the CSI specification.
@@ -24,6 +26,16 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   were previously overriding this name with a Kustomize overlay.
 - Improved testing for Nomad deployments.
 - Updated [Nomad documentation](docs/nomad.md) to reflect Alpha maturity level.
+
+### Deprecated
+- Kubernetes v1.22 support will be dropped in the next driver release according
+  to our [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+
+### Fixed
+- Implemented verification of user provided stripePattern values.
+- Default container logs will now be from the driver instead of csi-provisioner
+  when executing "kubectl log" commands.
 
 ### Removed
 - Support for Kubernetes v1.21.
