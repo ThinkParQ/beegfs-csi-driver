@@ -22,6 +22,8 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   `docker.io/netapp/beegfs-csi-driver`. See the [upgrade
   instructions](deploy/k8s/README.md#upgrade-1.2.0-kubernetes-deployment) if you
   were previously overriding this name with a Kustomize overlay.
+- Improved testing for Nomad deployments.
+- Updated [Nomad documentation](docs/nomad.md) to reflect Alpha maturity level.
 
 ### Removed
 - Support for Kubernetes v1.21.
