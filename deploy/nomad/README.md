@@ -30,12 +30,12 @@ require the BeeGFS CSI driver.
 
 * An existing BeeGFS file system.
 * An existing Nomad cluster running an [appropriate version of
-  Nomad](../../docs/nomad#maturity-compatibility). On each client node:
+  Nomad](../../docs/nomad.md#maturity-compatibility). On each client node:
     * Preinstall the
       [beegfs-client-dkms](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html)
       and beegfs-util packages.
     * Enable the [Docker task
-      driver](#https://www.nomadproject.io/docs/drivers/docker#docker-driver).
+      driver](https://www.nomadproject.io/docs/drivers/docker#docker-driver).
     * [Configure the Docker task
       driver](https://www.nomadproject.io/docs/drivers/docker#docker-driver) so
       that allow_privileged = true. 
