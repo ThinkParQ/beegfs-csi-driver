@@ -33,6 +33,18 @@ var _ = Describe("Integration tests using envtest", func() {
 		cr = getValidCRWithAllFields()
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: cr.Namespace}}
 		ctx = context.Background()
+		// TODO(gmarks, A393): Remove the following debugging section once the duplicate namespace issue is resolved.
+		fmt.Println("Creating ns = ", ns.Name)
+		nsList := new(corev1.NamespaceList)
+		var usedNames []string
+		k8sClient.List(ctx, nsList)
+		for _, v := range nsList.Items {
+			for _, nsv := range v.Labels {
+				usedNames = append(usedNames, nsv)
+			}
+		}
+		fmt.Println("Used Names: ", usedNames)
+		// END DEBUG
 		Expect(k8sClient.Create(ctx, ns)).To(Succeed())
 		Expect(k8sClient.Create(ctx, cr)).To(Succeed())
 	})
