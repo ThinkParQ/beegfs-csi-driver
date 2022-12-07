@@ -3,7 +3,7 @@ NetApp Notice Report
 Copyright 2022
 
 About this document
-The following copyright statements and licenses apply to the software components that are distributed with the esg-beegfs-csi-driver version 1.3.0 product.  This product does not necessarily use all the software components referred to below.
+The following copyright statements and licenses apply to the software components that are distributed with the esg-beegfs-csi-driver version 1.4.0 product.  This product does not necessarily use all the software components referred to below.
 
 Where required, source code is published at the following location.
 https://opensource.netapp.com/
@@ -40,23 +40,27 @@ beorn7-perks v1.0.1 : MIT License
 
 blang-semver v4.0.0 : MIT License
 
-client-go v0.24.2 : Apache License 2.0
+cespare/xxhash v2.1.2 : MIT License
 
-client_golang v1.12.1 : Apache License 2.0
+client-go v0.25.3 : Apache License 2.0
 
-container-storage-interface/spec v1.6.0 : Apache License 2.0
+client_golang v1.12.2 : Apache License 2.0
+
+container-storage-interface/spec v1.7.0 : Apache License 2.0
 
 docker-registry 2.8.1 : Apache License 2.0
 
 evanphx/json-patch v4.12.0 : BSD 3-clause "New" or "Revised" License
 
+evanphx/json-patch v5.6.0 : BSD 3-clause "New" or "Revised" License
+
 felixge/httpsnoop v1.0.1 : MIT License
 
-form3tech-oss/jwt-go v3.2.3 : MIT License
+fsnotify-fsnotify 1.5.4 : BSD 3-clause "New" or "Revised" License
 
-fsnotify-fsnotify v1.5.1 : BSD 3-clause "New" or "Revised" License
+github.com/go-logr/zapr v1.2.3 : Apache License 2.0
 
-github.com/go-logr/zapr v1.2.0 : Apache License 2.0
+github.com/golang-jwt/jwt v4.2.0 : MIT License
 
 github.com/kubernetes-csi/csi-lib-utils v0.11.0 : Apache License 2.0
 
@@ -64,9 +68,9 @@ github.com/moby/spdystream v0.2.0 : Apache License 2.0
 
 github.com/munnerz/goautoneg 20191010-snapshot-a7dc8b61 : BSD 3-clause "New" or "Revised" License
 
-Go programming language 1.17.13 : BSD 3-clause "New" or "Revised" License
+Go programming language 1.18.7 : (BSD 3-clause "New" or "Revised" License AND Public Domain)
 
-Go Testify v1.7.0 : MIT License
+Go Testify 1.8.0 : MIT License
 
 go-autorest v14.2.0 : Apache License 2.0
 
@@ -74,21 +78,21 @@ go-check-check 20200227-snapshot-8fa46927 : BSD 2-clause "Simplified" License
 
 go-inf-inf v0.9.1 : BSD 3-clause "New" or "Revised" License
 
-go-ini-ini v1.66.6 : Apache License 2.0
+go-ini-ini v1.67.0 : Apache License 2.0
 
 go-logr/logr v1.2.3 : Apache License 2.0
 
 go-openapi/jsonpointer v0.19.5 : Apache License 2.0
 
-go-restful v2.16.0 : MIT License
+go-restful v3.8.0 : MIT License
 
 go-spew v1.1.1 : ISC License
 
 go-tomb-tomb 20150422-snapshot-dd632973 : BSD 3-clause "New" or "Revised" License
 
-go-zap v1.19.1 : MIT License
+go-zap v1.21.0 : MIT License
 
-go.uber.org/goleak v1.1.12 : MIT License
+go.uber.org/goleak v1.2.0 : MIT License
 
 go.uber.org/multierr v1.6.0 : MIT License
 
@@ -100,33 +104,37 @@ golang protobuf v1.5.2 : BSD 3-clause "New" or "Revised" License
 
 golang-github-spf13-pflag-dev v1.0.5 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/net 20220708-snapshot-1185a901 : BSD 3-clause "New" or "Revised" License
+golang.org/x/crypto v0.1.0 : BSD 3-clause "New" or "Revised" License
+
+golang.org/x/net v0.2.0 : BSD 3-clause "New" or "Revised" License
 
 golang.org/x/oauth2 20211104-snapshot-d3ed0bb2 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/term 20210927-snapshot-03fcf44c : BSD 3-clause "New" or "Revised" License
+golang.org/x/sys v0.2.0 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/text v0.3.7 : BSD 3-clause "New" or "Revised" License
+golang.org/x/term v0.2.0 : BSD 3-clause "New" or "Revised" License
 
-golang.org/x/time 20220204-snapshot-90d013bb : BSD 3-clause "New" or "Revised" License
-
-golang.org/x/xerrors 20200804-snapshot-5ec99f83 : BSD 3-clause "New" or "Revised" License
+golang.org/x/time 20220608-snapshot-579cf78f : BSD 3-clause "New" or "Revised" License
 
 golang/appengine v1.6.7 : Apache License 2.0
 
-gomega v1.19.0 : MIT License
+golang/text v0.4.0 : BSD 3-clause "New" or "Revised" License
+
+gomega v1.24.0 : MIT License
 
 gomodules/jsonpatch v2.2.0 : Apache License 2.0
 
-Google Cloud Client Libraries for Go v0.81.0 : Apache License 2.0
+Google Cloud Client Libraries for Go v0.97.0 : Apache License 2.0
 
 google-gofuzz v1.1.0 : Apache License 2.0
 
-google.golang.org/protobuf v1.27.1 : BSD 3-clause "New" or "Revised" License
+google.golang.org/protobuf v1.28.0 : BSD 3-clause "New" or "Revised" License
 
 google/gnostic v0.5.7-v3refs : Apache License 2.0
 
-google/go-cmp v0.5.6 : BSD 3-clause "New" or "Revised" License
+google/go-cmp v0.5.9 : BSD 3-clause "New" or "Revised" License
+
+google/go-genproto 20220502-snapshot-c8bf987b : Apache License 2.0
 
 google/uuid v1.3.0 : BSD 3-clause "New" or "Revised" License
 
@@ -136,7 +144,7 @@ groupcache 20210331-snapshot-41bb18bf : Apache License 2.0
 
 grpc-gateway v1.16.0 : BSD 3-clause "New" or "Revised" License
 
-grpc-go v1.45.0 : Apache License 2.0
+grpc-go v1.50.1 : Apache License 2.0
 
 inconshreveable/mousetrap 1.0.0 : Apache License 2.0
 
@@ -148,31 +156,23 @@ jsoniter-go v1.1.12 : MIT License
 
 jsonreference v0.19.5 : Apache License 2.0
 
-k8s.io/cloud-provider v0.24.2 : Apache License 2.0
+k8s.io/kubelet v0.25.3 : Apache License 2.0
 
-k8s.io/component-helpers v0.24.2 : Apache License 2.0
-
-k8s.io/kubelet v0.24.2 : Apache License 2.0
+k8s.io/utils 20220728-snapshot-ee6ede2d : Apache License 2.0
 
 kr/pretty v0.2.0 : MIT License
 
-kubectl v0.24.2 : Apache License 2.0
+kubernetes/api v0.25.3 : Apache License 2.0
 
-kubernetes/api v0.24.2 : Apache License 2.0
+kubernetes/apiextensions-apiserver v0.25.3 : Apache License 2.0
 
-kubernetes/apiextensions-apiserver v0.24.2 : Apache License 2.0
+kubernetes/apimachinery v0.25.3 : Apache License 2.0
 
-kubernetes/apimachinery v0.24.2 : Apache License 2.0
+kubernetes/component-base v0.25.3 : Apache License 2.0
 
-kubernetes/apiserver v0.24.2 : Apache License 2.0
+kubernetes/mount-utils v0.25.3 : Apache License 2.0
 
-kubernetes/component-base v0.24.2 : Apache License 2.0
-
-kubernetes/csi-translation-lib v0.24.2 : Apache License 2.0
-
-kubernetes/mount-utils v0.24.2 : Apache License 2.0
-
-kubernetes/pod-security-admission v0.24.2 : Apache License 2.0
+kubernetes/pod-security-admission v0.25.3 : Apache License 2.0
 
 mailru/easyjson v0.7.6 : MIT License
 
@@ -190,15 +190,13 @@ nxadm/tail v1.4.8 : MIT License
 
 onsi/ginkgo 1.16.5 : MIT License
 
-onsi/ginkgo v2.1.3 : MIT License
-
-open-telemetry/opentelemetry-go 0.20.0 : Apache License 2.0
+onsi/ginkgo v2.4.0 : MIT License
 
 open-telemetry/opentelemetry-go-contrib 0.20.0 : Apache License 2.0
 
 opencontainers/go-digest 1.0.0 : Apache License 2.0
 
-opencontainers/selinux 1.10.1 : Apache License 2.0
+opencontainers/selinux v1.10.2 : Apache License 2.0
 
 pkg/errors v0.9.1 : BSD 2-clause "Simplified" License
 
@@ -212,7 +210,9 @@ prometheus-procfs v0.7.3 : Apache License 2.0
 
 purell v1.1.1 : BSD 3-clause "New" or "Revised" License
 
-sigs.k8s.io/controller-runtime v0.12.3 : Apache License 2.0
+sigs.k8s.io/controller-runtime v0.13.1 : Apache License 2.0
+
+sigs.k8s.io/json 20220713-snapshot-f223a00b : (Apache License 2.0 AND BSD 3-clause "New" or "Revised" License)
 
 sigs.k8s.io/yaml v1.3.0 : Apache License 2.0
 
@@ -230,13 +230,15 @@ urlesc 20170810-snapshot-de5bf2ad : BSD 3-clause "New" or "Revised" License
 
 yaml for Go v2.4.0 : Apache License 2.0
 
+yaml for Go v3.0.1 : (MIT License AND Apache License 2.0)
+
 
 Licenses: 
 
 
 Apache License 2.0
 
-(AWS SDK for Go 1.38.49, client-go v0.24.2, client_golang v1.12.1, container-storage-interface/spec v1.6.0, docker-registry 2.8.1, github.com/go-logr/zapr v1.2.0, github.com/kubernetes-csi/csi-lib-utils v0.11.0, github.com/moby/spdystream v0.2.0, go-autorest v14.2.0, go-ini-ini v1.66.6, go-logr/logr v1.2.3, go-openapi/jsonpointer v0.19.5, golang/appengine v1.6.7, gomodules/jsonpatch v2.2.0, Google Cloud Client Libraries for Go v0.81.0, google-gofuzz v1.1.0, google/gnostic v0.5.7-v3refs, groupcache 20210331-snapshot-41bb18bf, grpc-go v1.45.0, inconshreveable/mousetrap 1.0.0, jmespath-go-jmespath v0.4.0, jsonreference v0.19.5, k8s.io/cloud-provider v0.24.2, k8s.io/component-helpers v0.24.2, k8s.io/kubelet v0.24.2, kubectl v0.24.2, kubernetes/api v0.24.2, kubernetes/apiextensions-apiserver v0.24.2, kubernetes/apimachinery v0.24.2, kubernetes/apiserver v0.24.2, kubernetes/component-base v0.24.2, kubernetes/csi-translation-lib v0.24.2, kubernetes/mount-utils v0.24.2, kubernetes/pod-security-admission v0.24.2, matttproud-golang_protobuf_extensions v1.0.1, modern-go/concurrent 20180305-snapshot-bacd9c7e, modern-go/reflect2 v1.0.2, open-telemetry/opentelemetry-go 0.20.0, open-telemetry/opentelemetry-go-contrib 0.20.0, opencontainers/go-digest 1.0.0, opencontainers/selinux 1.10.1, prometheus-client_model v0.2.0, prometheus-common v0.32.1, prometheus-procfs v0.7.3, sigs.k8s.io/controller-runtime v0.12.3, sigs.k8s.io/yaml v1.3.0, spf13-afero v1.9.2, spf13-cobra v1.4.0, swag v0.19.14, yaml for Go v2.4.0)
+(AWS SDK for Go 1.38.49, client-go v0.25.3, client_golang v1.12.2, container-storage-interface/spec v1.7.0, docker-registry 2.8.1, github.com/go-logr/zapr v1.2.3, github.com/kubernetes-csi/csi-lib-utils v0.11.0, github.com/moby/spdystream v0.2.0, go-autorest v14.2.0, go-ini-ini v1.67.0, go-logr/logr v1.2.3, go-openapi/jsonpointer v0.19.5, golang/appengine v1.6.7, gomodules/jsonpatch v2.2.0, Google Cloud Client Libraries for Go v0.97.0, google-gofuzz v1.1.0, google/gnostic v0.5.7-v3refs, google/go-genproto 20220502-snapshot-c8bf987b, groupcache 20210331-snapshot-41bb18bf, grpc-go v1.50.1, inconshreveable/mousetrap 1.0.0, jmespath-go-jmespath v0.4.0, jsonreference v0.19.5, k8s.io/kubelet v0.25.3, k8s.io/utils 20220728-snapshot-ee6ede2d, kubernetes/api v0.25.3, kubernetes/apiextensions-apiserver v0.25.3, kubernetes/apimachinery v0.25.3, kubernetes/component-base v0.25.3, kubernetes/mount-utils v0.25.3, kubernetes/pod-security-admission v0.25.3, matttproud-golang_protobuf_extensions v1.0.1, modern-go/concurrent 20180305-snapshot-bacd9c7e, modern-go/reflect2 v1.0.2, open-telemetry/opentelemetry-go-contrib 0.20.0, opencontainers/go-digest 1.0.0, opencontainers/selinux v1.10.2, prometheus-client_model v0.2.0, prometheus-common v0.32.1, prometheus-procfs v0.7.3, sigs.k8s.io/controller-runtime v0.13.1, sigs.k8s.io/json 20220713-snapshot-f223a00b, sigs.k8s.io/yaml v1.3.0, spf13-afero v1.9.2, spf13-cobra v1.4.0, swag v0.19.14, yaml for Go v2.4.0, yaml for Go v3.0.1)
 
 Apache License
 
@@ -708,7 +710,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(AWS SDK for Go 1.38.49, golang.org/x/text v0.3.7)
+(AWS SDK for Go 1.38.49)
 
 Copyright (c) 2009 The Go Authors. All rights reserved.
 
@@ -1072,68 +1074,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(fsnotify-fsnotify v1.5.1)
-
-Copyright (c) 2012 The Go Authors. All rights reserved.
-
-Copyright (c) 2012-2019 fsnotify Authors. All rights reserved.
-
-
-
-Redistribution and use in source and binary forms, with or without
-
-modification, are permitted provided that the following conditions are
-
-met:
-
-
-
-   * Redistributions of source code must retain the above copyright
-
-notice, this list of conditions and the following disclaimer.
-
-   * Redistributions in binary form must reproduce the above
-
-copyright notice, this list of conditions and the following disclaimer
-
-in the documentation and/or other materials provided with the
-
-distribution.
-
-   * Neither the name of Google Inc. nor the names of its
-
-contributors may be used to endorse or promote products derived from
-
-this software without specific prior written permission.
-
-
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
----
-
-BSD 3-clause "New" or "Revised" License
-
 (purell v1.1.1)
 
 Copyright (c) 2012, Martin Angers
@@ -1226,7 +1166,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(evanphx/json-patch v4.12.0)
+(evanphx/json-patch v4.12.0, evanphx/json-patch v5.6.0)
 
 Copyright (c) 2014, Evan Phoenix
 
@@ -1342,127 +1282,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 BSD 3-clause "New" or "Revised" License
 
-(google/go-cmp v0.5.6)
-
-Copyright (c) 2017 The Go Authors. All rights reserved.
-
-
-
-Redistribution and use in source and binary forms, with or without
-
-modification, are permitted provided that the following conditions are
-
-met:
-
-
-
-   * Redistributions of source code must retain the above copyright
-
-notice, this list of conditions and the following disclaimer.
-
-   * Redistributions in binary form must reproduce the above
-
-copyright notice, this list of conditions and the following disclaimer
-
-in the documentation and/or other materials provided with the
-
-distribution.
-
-   * Neither the name of Google Inc. nor the names of its
-
-contributors may be used to endorse or promote products derived from
-
-this software without specific prior written permission.
-
-
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
----
-
-BSD 3-clause "New" or "Revised" License
-
-(google.golang.org/protobuf v1.27.1)
-
-Copyright (c) 2018 The Go Authors. All rights reserved.
-
-
-
-Redistribution and use in source and binary forms, with or without
-
-modification, are permitted provided that the following conditions are
-
-met:
-
-
-
-   * Redistributions of source code must retain the above copyright
-
-notice, this list of conditions and the following disclaimer.
-
-   * Redistributions in binary form must reproduce the above
-
-copyright notice, this list of conditions and the following disclaimer
-
-in the documentation and/or other materials provided with the
-
-distribution.
-
-   * Neither the name of Google Inc. nor the names of its
-
-contributors may be used to endorse or promote products derived from
-
-this software without specific prior written permission.
-
-
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
-
----
-
-BSD 3-clause "New" or "Revised" License
-
-(github.com/munnerz/goautoneg 20191010-snapshot-a7dc8b61, Go programming language 1.17.13, golang.org/x/net 20220708-snapshot-1185a901, golang.org/x/oauth2 20211104-snapshot-d3ed0bb2, golang.org/x/term 20210927-snapshot-03fcf44c, golang.org/x/time 20220204-snapshot-90d013bb, golang.org/x/xerrors 20200804-snapshot-5ec99f83, goproxy 20180725-snapshot-947c36da)
+(fsnotify-fsnotify 1.5.4, github.com/munnerz/goautoneg 20191010-snapshot-a7dc8b61, Go programming language 1.18.7, golang.org/x/crypto v0.1.0, golang.org/x/net v0.2.0, golang.org/x/oauth2 20211104-snapshot-d3ed0bb2, golang.org/x/sys v0.2.0, golang.org/x/term v0.2.0, golang.org/x/time 20220608-snapshot-579cf78f, golang/text v0.4.0, google.golang.org/protobuf v1.28.0, google/go-cmp v0.5.9, goproxy 20180725-snapshot-947c36da, sigs.k8s.io/json 20220713-snapshot-f223a00b)
 
 Copyright (c) <YEAR>, <OWNER>
 
@@ -2518,9 +2338,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
 
 MIT License
 
-(form3tech-oss/jwt-go v3.2.3)
+(github.com/golang-jwt/jwt v4.2.0)
 
 Copyright (c) 2012 Dave Grijalva
+
+Copyright (c) 2021 golang-jwt maintainers
 
 
 
@@ -2538,9 +2360,59 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 MIT License
 
-(onsi/ginkgo 1.16.5, onsi/ginkgo v2.1.3)
+(onsi/ginkgo 1.16.5)
 
 Copyright (c) 2013-2014 Onsi Fakhouri
+
+
+
+Permission is hereby granted, free of charge, to any person obtaining
+
+a copy of this software and associated documentation files (the
+
+"Software"), to deal in the Software without restriction, including
+
+without limitation the rights to use, copy, modify, merge, publish,
+
+distribute, sublicense, and/or sell copies of the Software, and to
+
+permit persons to whom the Software is furnished to do so, subject to
+
+the following conditions:
+
+
+
+The above copyright notice and this permission notice shall be
+
+included in all copies or substantial portions of the Software.
+
+
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
+
+---
+
+MIT License
+
+(cespare/xxhash v2.1.2)
+
+Copyright (c) 2016 Caleb Spare
+
+
+
+MIT License
 
 
 
@@ -2692,7 +2564,7 @@ THE SOFTWARE
 
 MIT License
 
-(go-zap v1.19.1)
+(go-zap v1.21.0)
 
 Copyright (c) 2016-2017 Uber Technologies, Inc.
 
@@ -2916,54 +2788,6 @@ Permission is hereby granted, free of charge, to any person obtaining a copy
 
 MIT License
 
-(Go Testify v1.7.0)
-
-MIT License
-
-
-
-Copyright (c) 2012-2020 Mat Ryer, Tyler Bunnell and contributors.
-
-
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-
-of this software and associated documentation files (the "Software"), to deal
-
-in the Software without restriction, including without limitation the rights
-
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-
-copies of the Software, and to permit persons to whom the Software is
-
-furnished to do so, subject to the following conditions:
-
-
-
-The above copyright notice and this permission notice shall be included in all
-
-copies or substantial portions of the Software.
-
-
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-
-SOFTWARE
-
----
-
-MIT License
-
 (jsoniter-go v1.1.12)
 
 MIT License
@@ -3108,7 +2932,7 @@ THE SOFTWARE
 
 MIT License
 
-(AWS SDK for Go 1.38.49, go-restful v2.16.0, gomega v1.19.0)
+(AWS SDK for Go 1.38.49, Go Testify 1.8.0, go-restful v3.8.0, go.uber.org/goleak v1.2.0, gomega v1.24.0, onsi/ginkgo v2.4.0, yaml for Go v3.0.1)
 
 The MIT License
 
@@ -3248,57 +3072,9 @@ SOFTWARE
 
 ---
 
-MIT License
-
-(go.uber.org/goleak v1.1.12)
-
-The MIT License (MIT)
-
-
-
-Copyright (c) 2018 Uber Technologies, Inc.
-
-
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-
-of this software and associated documentation files (the "Software"), to deal
-
-in the Software without restriction, including without limitation the rights
-
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-
-copies of the Software, and to permit persons to whom the Software is
-
-furnished to do so, subject to the following conditions:
-
-
-
-The above copyright notice and this permission notice shall be included in
-
-all copies or substantial portions of the Software.
-
-
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-
-THE SOFTWARE
-
----
-
 Public Domain
 
-(Time Zone Database 2021a)
+(Go programming language 1.18.7, Time Zone Database 2021a)
 
 Public domain code is not subject to any license.
 
