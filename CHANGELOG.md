@@ -2,7 +2,7 @@
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
 
-[1.4.0] - TBD
+[1.4.0] - 2022-12-12
 --------------------
 ### Added
 - Support for RedHat OpenShift v4.11.
