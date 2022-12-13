@@ -97,7 +97,7 @@ instead of the example tag and digest.
 
 Validate the image by digest using the certificate file. 
 ```
-cosign verify --cert beegfs-csi-signer.crt docker.io/netapp/beegfs-csi-driver@sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
+cosign verify --cert beegfs-csi-signer.crt --cert-chain beegfs-csi-signer-ca-chain.crt docker.io/netapp/beegfs-csi-driver@sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
 ```
 or
 
