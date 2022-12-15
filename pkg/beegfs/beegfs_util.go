@@ -121,7 +121,9 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 	}
 
 	if len(vol.config.ConnAuth) != 0 {
-		connAuthFileContents := vol.config.ConnAuth + "\n"
+		// We don't add a newline here (as we do for the other files) because its important to maintain the exact contents
+		// of connAuthFile. For raw (not base64) encoded connAuth secrets, see additional behavior in parseConnAuthFromFile.
+		connAuthFileContents := vol.config.ConnAuth
 		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", connAuthFilePath); err != nil {
 			return err
 		}

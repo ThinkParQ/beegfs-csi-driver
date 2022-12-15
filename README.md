@@ -196,6 +196,7 @@ deployment guide](operator/README.md).
      ```yaml
      - sysMgmtdHost: <sysMgmtdHost>
        connAuth: <connAuthSecret>
+       encoding: <encodingType> # raw or base64
      ```
 4. Run `kubectl apply -k deploy/k8s/overlays/default`. Note by default the
    beegfs-csi-driver image will be pulled from

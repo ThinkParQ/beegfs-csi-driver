@@ -158,7 +158,7 @@ func TestWriteClientFiles(t *testing.T) {
 			},
 		},
 	}
-	wantConnAuthFile := "secret1\n"            // desired connAuthFile contents
+	wantConnAuthFile := "secret1"              // desired connAuthFile contents
 	wantConnInterfacesFile := "ib0\n"          // desired connInterfacesFile contents
 	wantConnNetFilterFile := "127.0.0.0/24\n"  // desired connNetFilterFile contents
 	wantConnTcpOnlyFilterFile := "127.0.0.0\n" // desired connTcpOnlyFilterFile contents

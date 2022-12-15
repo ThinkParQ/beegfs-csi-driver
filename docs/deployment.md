@@ -575,10 +575,23 @@ manifests handle this automatically.
 <a name="connauth-configuration"></a>
 #### ConnAuth Configuration
 
-As of BeeGFS v7.3.1+ and v7.2.7+, connection based authentication is enabled by
+As of BeeGFS `v7.3.1+` and `v7.2.7+`, connection based authentication is enabled by
 default unless explicitly disabled. See the [BeeGFS
 docs](https://doc.beegfs.io/latest/advanced_topics/authentication.html) for more
 details.
+
+Version `v1.5.0` introduced the acceptance of base64 encoded connAuthFile secrets.
+See [Base64 Encoded Secrets](#base64-encoded-secrets) for more details.
+
+NOTE: When using raw string secrets, the driver will function as previously expected.
+Care should be taken when creating raw string secrets as different text editors 
+behave differently. Specifically, some editors add newlines to the end of files.
+This may produce mis-match connAuthFile secrets between the client and BeeGFS 
+services causing the driver to fail. To ensure your secret is correct, it is 
+recommended to use base64 encoded secrets.
+
+NOTE: Utilizing raw string secrets does not require an `encoding` field, but can
+be explicitly set using `encoding: raw`.
 
 ##### Option 1: Use Connection Authentication
 
@@ -589,8 +602,10 @@ connAuthFile configuration option is used on a file system's other services.
 ```yaml
 - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.1
   connAuth: <some_secret_value>
+  encoding: <encoding_type> # raw or base64
 - sysMgmtdHost: <sysMgmtdHost>  # e.g. 10.10.10.100
   connAuth: <some_secret_value>
+  encoding: <encoding_type> # raw or base64
 ```
 
 NOTE: Unlike general configuration, connAuth configuration is only applied at a 
@@ -621,6 +636,50 @@ config:
 
 NOTE: This parameter does not exist in previous BeeGFS versions and BeeGFS will 
 fail to mount if it is provided for a file system that does not support it.
+
+<a name="base64-encoded-secrets"></a>
+##### Base64 Encoded Secrets
+
+It is recommended to use binary connAuthFile secrets utilizing base64 encoding
+as this aligns with
+[BeeGFS's](https://doc.beegfs.io/latest/advanced_topics/authentication.html?highlight=authentication)
+recommended format. The following are steps to implement base64 encoded secrets.
+
+Follow the 
+[BeeGFS Authentication](https://doc.beegfs.io/latest/advanced_topics/authentication.html?highlight=authentication)
+steps to create a connAuthFile that contains a binary secret.
+
+Once created, navigate to the location of your connAuthFile and encode the 
+file utilizing base64 encoding.
+```
+-> cd /etc/beegfs/
+-> base64 connAuthFile 
+DbQqb8py78SrmHfpLBR1E0/eEJ5kQBXy9wPtY7umL46s3X0ILlrTednZQOMb+/9/gBIxFqNpyzOn
+tHyiNQNMEVNjXsihw11S5G4UbFw3Olcx8ehhnGTjWo0OoGKqM0TEL2FR8p3t1An0l1LUwYj1lrIG
+PQ== 
+```
+Copy and paste the output into `csi-beegfs-connauth.yaml`.
+Include the `encoding: base64` key-value pair inside `csi-beegfs-connauth.yaml` to 
+ensure decoding of your secret.
+
+The `csi-beegfs-connauth.yaml` should look similar to the following.
+
+```yaml
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Use this file as instructed in the ConnAuth Configuration section of /docs/deployment.md. See
+# /deploy/k8s/examples/csi-beegfs-connauth.yaml for an example of what to put in this file. Kustomize will
+# automatically transform this file into a correct Secret readable by the deployed driver. If this file is left
+# unmodified, the driver will deploy correctly with no custom configuration.
+
+- sysMgmtdHost: 10.10.10.10
+  connAuth: |+
+    DbQqb8py78SrmHfpLBR1E0/eEJ5kQBXy9wPtY7umL46s3X0ILlrTednZQOMb+/9/gBIxFqNpyzOn
+    tHyiNQNMEVNjXsihw11S5G4UbFw3Olcx8ehhnGTjWo0OoGKqM0TEL2FR8p3t1An0l1LUwYj1lrIG
+    PQ==
+  encoding: base64
+```
 
 <a name="beegfs-helperd-configuration"></a>
 #### BeeGFS Helperd Configuration

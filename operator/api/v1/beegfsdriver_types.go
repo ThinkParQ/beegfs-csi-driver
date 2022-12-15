@@ -274,6 +274,9 @@ type PluginConfigFromFile struct {
 type ConnAuthConfig struct {
 	SysMgmtdHost string `json:"sysMgmtdHost"`
 	ConnAuth     string `json:"connAuth"`
+	// Allows for raw string or base64 secrets. Encoding only needs to be set for base64 encoding since the driver
+	// defaults to raw string secrets. This is to allow for the original behavior of the driver pre-v1.5.0 release.
+	Encoding string `json:"encoding"`
 }
 
 // MarshalJSON overrides the default JSON encoding for the ConnAuthConfig struct. klogr uses JSON encoding to log

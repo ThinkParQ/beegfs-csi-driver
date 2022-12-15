@@ -1,0 +1,13 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+- sysMgmtdHost: 127.0.0.0
+  # base64 encoded "secret1\n"
+  connAuth: c2VjcmV0MQo=
+  encoding: base64
+- sysMgmtdHost: 127.0.0.1
+  # base64 encoded binary file like ThinkParQ recommends
+  connAuth: |+ 
+    kI7N/B8t1T4z5ts9I2PDuZTQoJvuNo4dpt8HECZV3EoRXdxK6HUUvW+NEb0pd9u11+Ov8oUHYXa6
+    z0gsccXgK+dZWFm8SZhP+nK2jgC6JHn/hqgvW7Dz5p8MDEts4NwGIF5dnmAHhBkxnRE9jGMeXkSy
+    5w==
+  encoding: base64

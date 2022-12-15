@@ -9,5 +9,10 @@
 
 - sysMgmtdHost: some.specific.file.system
   connAuth: some-secret
+  encoding: raw
 - sysMgmtdHost: some.other.specific.file.system
-  connAuth: some-other-secret
+  connAuth: |+
+    X+b8w4DwknxmFgkvjDrNYEPrfID80qQHBIoKAHXWKP0bh6tOaORtamJVWH9lvdZSbjk0sdbq5F1R
+    7sgRETcDpkzZC/kD+YYaMy5M+J49+JoJz9N9OxpzfyYbpzM0qpDqSpGSo7pCl67E5F6YHZzs8U4i
+    Vw==
+  encoding: base64

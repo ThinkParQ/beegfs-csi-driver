@@ -273,8 +273,10 @@ data:
   csi-beegfs-connauth.yaml: |
     - sysMgmtdHost: some.specific.file.system
       connAuth: some-secret
+      encoding: encoding-type # raw or base64
     - sysMgmtdHost: some.other.specific.file.system
       connAuth: some-other-secret
+      encoding: encoding-type # raw or base64
 ```
 
 ### Verify the BeeGFS CSI Driver Image Signature
