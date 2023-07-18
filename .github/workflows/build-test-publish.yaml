@@ -1,0 +1,248 @@
+name: Build, Test, and Publish Container Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "master"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "master"
+
+env:
+  # Container image registry to publish images to.
+  REGISTRY: ghcr.io
+  # The name of the image without a specific tag.
+  IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
+
+jobs:
+  build-and-unit-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Work around for how release-tools verify-subtree.sh verifies release-tools has not been modified.
+          fetch-depth: "0"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.4
+      # Dependencies are cached by default: https://github.com/actions/setup-go#v4
+      # This can be explicitly disabled if it ever causes problems.
+
+      - name: Build the container image
+        run: |
+          export SHELL=/bin/bash
+          make container
+          echo -n "verifying images:"
+          docker images
+
+      - name: Install test dependencies
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
+        timeout-minutes: 5
+
+      - name: Run unit tests
+        run: |
+          ACK_GINKGO_DEPRECATIONS=1.16.5 TESTARGS="-v -ginkgo.v" make test
+      # TODO: Consider if we should write the results to a file and keep it as an artifact.
+      # For example using: https://github.com/marketplace/actions/junit-report-action
+      # TODO: Can we cache anything here? test-vendor downloads a lot of stuff.
+      # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # For now just tag with the commit ID to ensure subsequent jobs in this workflow run use the correct image.
+      - name: Extract metadata for container image ${{ env.IMAGE_NAME }}
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=,format=long
+
+      # We already built the image but this allows us to easily apply the appropriate labels and export the image.
+      # It'll end up just reusing the local cache so it will complete very fast anyway.
+      - name: Build and export image ${{ env.IMAGE_NAME }}
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=docker,dest=/tmp/beegfs-csi-driver.tar
+
+      - name: Upload the exported container image as an artifact for reuse in subsequent jobs
+        uses: actions/upload-artifact@v3
+        with:
+          name: beegfs-csi-driver-image
+          path: /tmp/beegfs-csi-driver.tar
+
+  e2e-tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    needs: build-and-unit-test
+    strategy:
+      fail-fast: true
+      matrix:
+        k8s-version: [1.24.15, 1.25.11, 1.26.3, 1.27.3]
+        beegfs-version: [7.3.3] # TODO: Expand tested versions
+    permissions:
+      packages: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download the container image artifact built in the previous job
+        uses: actions/download-artifact@v3
+        with:
+          name: beegfs-csi-driver-image
+          path: /tmp
+
+      - name: Load the downloaded container image into the local Docker cache
+        run: |
+          docker load --input /tmp/beegfs-csi-driver.tar
+          docker image ls -a
+
+      - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
+        uses: medyagh/setup-minikube@latest
+        with:
+          driver: none
+          kubernetes-version: ${{ matrix.k8s-version }}
+
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing
+        run: |
+          export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
+          kubectl get pods -A
+
+      # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
+          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
+          sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
+          sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
+
+      - name: Deploy the BeeGFS CSI driver
+        run: |
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          envsubst < test/env/beegfs-ubuntu/csi-beegfs-connauth.yaml > deploy/k8s/overlays/default/csi-beegfs-connauth.yaml
+          # TODO: Enable once the K8s versions in the matrix are added to versions/
+          # sed -i 's?/versions/latest?/versions/v${{ matrix.k8s-version }}?g' deploy/k8s/overlays/default/kustomization.yaml
+          echo -e "\nimages:\n  - name: ${{ env.IMAGE_NAME }}\n    newTag: ${{ github.sha }}" >> deploy/k8s/overlays/default/kustomization.yaml
+          kubectl apply -k deploy/k8s/overlays/default
+
+      # TODO (BCSI-7): Actually run e2e tests using Ginko with an appropriate timeout.
+
+      - name: Deploy all examples to verify the driver is available
+        run: |
+          echo "${{ secrets.CONN_AUTH_SECRET }}" | sudo tee /etc/beegfs/connAuth
+          sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf
+          sudo sed -i '0,/sysMgmtdHost[[:space:]]*=[[:space:]]*/s//sysMgmtdHost = localhost/' /etc/beegfs/beegfs-client.conf
+          sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s
+          sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all
+          sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static
+          sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static-ro
+          kubectl apply -f examples/k8s/all
+
+      # If the controller or node service failed to start, our test pod would still be in phase pending.
+      # We'll check periodically if the pod has started and if we reach the max number of attempts fail with debug output.
+      - name: Wait and verify the test pod is running
+        run: |
+          MAX_ATTEMPTS=36
+          SLEEP_TIME=5
+          COUNTER=0
+
+          while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
+            POD_STATUS=$(kubectl get pods csi-beegfs-all-app -o jsonpath='{.status.phase}')
+            echo "Pod status: ${POD_STATUS}"
+            if [ "${POD_STATUS}" == "Running" ]; then
+              echo "Verified test pod is running."
+              break
+            else
+              echo "Pod is not running, waiting for ${SLEEP_TIME} seconds..."
+              sleep ${SLEEP_TIME}
+              COUNTER=$((COUNTER+1))
+            fi
+          done
+
+          if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
+            echo "Test pod did not reach 'Running' status within the maximum allowed time. Outputting debug information and exiting with error..."
+            kubectl get pods -A
+            kubectl describe pod -n beegfs-csi csi-beegfs-controller-0
+            POD_NAME=$(kubectl get pods -n beegfs-csi -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep 'csi-beegfs-node-')
+            kubectl describe pod -n beegfs-csi $POD_NAME
+            kubectl describe pod csi-beegfs-all-app
+            docker images
+            exit 1
+          fi
+
+  publish-images:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    needs: e2e-tests
+    # TODO: Reenable after verifying packages are created correctly.
+    # if: github.event_name != 'pull_request' # Don't publish the image if the workflow runs for a pull request.
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Download BeeGFS CSI driver image artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: beegfs-csi-driver-image
+          path: /tmp
+
+      - name: Load image
+        run: |
+          docker load --input /tmp/beegfs-csi-driver.tar
+          docker image ls -a
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # This uses the semantic versioning option for https://github.com/docker/metadata-action#semver
+      - name: Extract metadata for container image
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+
+      - name: Tag and push the image to GitHub Container Registry
+        run: |
+          tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
+          for tag in $tags; do
+            docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} $tag
+            docker push $tag
+          done
