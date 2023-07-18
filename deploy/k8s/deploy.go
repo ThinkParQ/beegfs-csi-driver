@@ -55,7 +55,7 @@ const (
 
 // These are expected Config Map and Secret keys within the manifests. Some operator logic is based off the expectation
 // that keys have these names. deploy_test.go attempts to ensure that a developer can not change these names
-//without understanding that operator code must be refactored.
+// without understanding that operator code must be refactored.
 const (
 	KeyNameConfigMap = "csi-beegfs-config.yaml"
 	KeyNameSecret    = "csi-beegfs-connauth.yaml"
