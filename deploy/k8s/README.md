@@ -1,14 +1,13 @@
-# Kustomize Specific Deployment Details
+# Kustomize Specific Deployment Details <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-- [Kustomize Specific Deployment Details](#kustomize-specific-deployment-details)
-  - [Contents](#contents)
-  - [Basics](#basics)
-    - [Upgrading to v1.2.0](#upgrading-to-v120)
-    - [Upgrading to v1.4.0](#upgrading-to-v140)
-    - [Upgrading to v1.5.0](#upgrading-to-v150)
+- [Basics](#basics)
+- [Upgrade Notes](#upgrade-notes)
+  - [Upgrading to v1.2.0](#upgrading-to-v120)
+  - [Upgrading to v1.4.0](#upgrading-to-v140)
+  - [Upgrading to v1.5.0](#upgrading-to-v150)
 
 <a name="basics"></a>
 ## Basics
@@ -48,6 +47,8 @@ Modifications made to this overlay are completely protected. Any changes made
 by the development team to the base manifests or version patches will be picked 
 up when you pull a new version of the project and your custom modifications will 
 continue to work unless otherwise noted.
+
+## Upgrade Notes
 
 <a name="upgrade-1.2.0-kubernetes-deployment"></a>
 ### Upgrading to v1.2.0

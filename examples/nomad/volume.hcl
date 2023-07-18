@@ -11,11 +11,11 @@ type = "csi"
 plugin_id = "beegfs-csi-plugin"
 
 # Passed by Nomad to the BeeGFS CSI driver, but ignored (see
-# https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#capacity for details).
+# https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/docs/usage.md#capacity for details).
 capacity_min = "1MB"
 
 # Passed by Nomad to the BeeGFS CSI driver, but ignored (see
-# https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#capacity for details).
+# https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/docs/usage.md#capacity for details).
 capacity_max = "1GB"
 
 # Any number of capabilities can be passed to the BeeGFS CSI driver by Nomad.
@@ -30,7 +30,7 @@ capability {
 }
 
 # BeeGFS CSI driver-specific parameters passed by Nomad during volume creation. See
-# https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/usage.md#create-a-storage-class for allowed parameters.
+# https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/docs/usage.md#create-a-storage-class for allowed parameters.
 # sysMgmtdHost and volDirBasePath are required.
 parameters {
   # Change this to the IP address or FQDN of the BeeGFS management service for an accessible BeeGFS file system.

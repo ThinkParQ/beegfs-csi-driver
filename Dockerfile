@@ -5,7 +5,7 @@
 # https://github.com/GoogleContainerTools/distroless for more details.
 FROM gcr.io/distroless/static:latest
 
-LABEL maintainers="NetApp"
+LABEL maintainers="ThinkParQ"
 LABEL description="BeeGFS CSI Driver"
 
 # Copy all built binaries to netapp/ directory.

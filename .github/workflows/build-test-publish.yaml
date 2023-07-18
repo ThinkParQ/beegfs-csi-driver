@@ -197,8 +197,8 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     needs: e2e-tests
-    # TODO: Reenable after verifying packages are created correctly.
-    # if: github.event_name != 'pull_request' # Don't publish the image if the workflow runs for a pull request.
+    # TODO: Consider if we want to continue publishing images on pull requests.
+    # if: github.event_name != 'pull_request'
     permissions:
       packages: write
       contents: read

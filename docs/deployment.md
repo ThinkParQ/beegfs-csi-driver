@@ -1,32 +1,43 @@
-# BeeGFS CSI Driver Deployment
+# BeeGFS CSI Driver Deployment <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
-  * [Manual Image Verification](#manual-image-verification)
-    * [Download Certificates and Tools](#download-certificates-and-tools)
-    * [Verify the Signing Certificate is Trusted](#verify-the-signing-certificate-is-trusted)
-    * [Extract the Public Key From the Certificate](#extract-the-public-key-from-the-certificate)
-    * [Validate the BeeGFS CSI Driver Image Signatures](#validate-the-beegfs-csi-driver-image-signatures)
-  * [Automating Image Verification with Admission Controllers](#automating-image-verification)
-* [Deploying to Kubernetes](#deploying-to-kubernetes)
-  * [Kubernetes Node Preparation](#kubernetes-node-preparation)
-  * [Kubernetes Deployment](#kubernetes-deployment)
-  * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
-  * [Deployment to Kubernetes Clusters with Mixed Nodes](#mixed-kubernetes-deployment)
-  * [Deployment to Kubernetes Using the Operator](#operator-deployment)
-* [Example Application Deployment](#example-application-deployment)
-* [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
-  * [General Configuration](#general-configuration)
-    * [ConnAuth Configuration](#connauth-configuration)
-    * [BeeGFS Helperd Configuration](#beegfs-helperd)
-  * [Kubernetes Configuration](#kubernetes-configuration)
-  * [BeeGFS Client Parameters](#beegfs-client-parameters)
-* [Notes for Kubernetes Administrators](#kubernetes-administrator-notes)
-  * [Security and Networking Considerations](#security-considerations)
-  * [Resource and Performance Considerations](#resource-and-performance-considerations)
-* [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
+- [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
+  - [Manual Image Verification](#manual-image-verification)
+    - [Download Certificates and Tools](#download-certificates-and-tools)
+    - [Verify the Signing Certificate is Trusted](#verify-the-signing-certificate-is-trusted)
+    - [Extract the Public Key From the Certificate](#extract-the-public-key-from-the-certificate)
+    - [Validate the BeeGFS CSI Driver Image Signatures](#validate-the-beegfs-csi-driver-image-signatures)
+  - [Automating Image Verification with Admission Controllers](#automating-image-verification-with-admission-controllers)
+- [Deploying to Kubernetes](#deploying-to-kubernetes)
+  - [Kubernetes Node Preparation](#kubernetes-node-preparation)
+  - [Kubernetes Deployment](#kubernetes-deployment)
+  - [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
+  - [Deployment to Kubernetes Clusters With Mixed Nodes](#deployment-to-kubernetes-clusters-with-mixed-nodes)
+  - [Deployment to Kubernetes Using the Operator](#deployment-to-kubernetes-using-the-operator)
+- [Example Application Deployment](#example-application-deployment)
+- [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
+  - [General Configuration](#general-configuration)
+    - [ConnAuth Configuration](#connauth-configuration)
+      - [Option 1: Use Connection Authentication](#option-1-use-connection-authentication)
+      - [Option 2: Disable Connection Authentication](#option-2-disable-connection-authentication)
+    - [BeeGFS Helperd Configuration](#beegfs-helperd-configuration)
+  - [Kubernetes Configuration](#kubernetes-configuration)
+  - [BeeGFS Client Parameters (beegfsClientConf)](#beegfs-client-parameters-beegfsclientconf)
+    - [Notable](#notable)
+    - [No Effect](#no-effect)
+    - [Unsupported](#unsupported)
+    - [Tested](#tested)
+    - [Untested](#untested)
+    - [BeeGFS Client Parameter Compatibility](#beegfs-client-parameter-compatibility)
+      - [BeeGFS 7.3 Client](#beegfs-73-client)
+- [Notes for Kubernetes Administrators](#notes-for-kubernetes-administrators)
+  - [Security and Networking Considerations](#security-and-networking-considerations)
+  - [Resource and Performance Considerations](#resource-and-performance-considerations)
+    - [Limit the number of in-flight requests.](#limit-the-number-of-in-flight-requests)
+    - [Managing CPU and Memory Requests and Limits](#managing-cpu-and-memory-requests-and-limits)
+- [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 ***
 
@@ -52,7 +63,7 @@ The following tools and files should be available on a Linux host.
   * The [cosign](https://github.com/sigstore/cosign/releases) utility.
   * The certificate and CA chain file used to generate the image signatures.
     * Download the files from the [BeeGFS CSI driver
-      releases](https://github.com/NetApp/beegfs-csi-driver/releases) page.
+      releases](https://github.com/ThinkParQ/beegfs-csi-driver/releases) page.
 
 <a name="verify-the-signing-certificate-is-trusted"></a>
 #### Verify the Signing Certificate is Trusted
@@ -88,7 +99,7 @@ openssl x509 -in beegfs-csi-signer.crt -inform PEM -pubkey -noout > beegfs-csi-s
 Identify the image you want to validate. You can validate the image with either
 the version tag or the image digest. Starting with v1.40 of the BeeGFS CSI
 driver the image digests will be documented on the [BeeGFS CSI Driver GitHub
-Releases](https://github.com/NetApp/beegfs-csi-driver/releases) page for
+Releases](https://github.com/ThinkParQ/beegfs-csi-driver/releases) page for
 reference.
 
 Use the cosign command to validate the signature of the BeeGFS CSI driver
@@ -164,7 +175,7 @@ README](../deploy/k8s/README.md).
 Steps:
 * On a machine with kubectl and access to the Kubernetes cluster where you want
   to deploy the BeeGFS CSI driver clone this repository: `git clone
-  https://github.com/NetApp/beegfs-csi-driver.git`.
+  https://github.com/ThinkParQ/beegfs-csi-driver.git`.
 * Create a new kustomize overlay (changes made to the default overlay will be 
   overwritten in subsequent driver versions): `cp -r deploy/k8s/overlays/default 
   deploy/k8s/overlays/my-overlay`.
@@ -982,7 +993,7 @@ configuration.
 
 If you're experiencing any issues, find functionality lacking, or our
 documentation is unclear, we'd appreciate if you let us know:
-https://github.com/NetApp/beegfs-csi-driver/issues. 
+https://github.com/ThinkParQ/beegfs-csi-driver/issues. 
 
 The driver can be removed using `kubectl delete -k` (kustomize) and the original
 deployment manifests. On a machine with kubectl and access to the Kubernetes
