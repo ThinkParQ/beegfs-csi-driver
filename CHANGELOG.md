@@ -1,6 +1,11 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.5.0] - PRERELEASE
+--------------------
+
+### Changed
+- Migrated container images from DockerHub to GitHub Container Registry.
 
 [1.4.0] - 2022-12-12
 --------------------

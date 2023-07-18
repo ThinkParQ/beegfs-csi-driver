@@ -33,12 +33,12 @@ spec:
             - --volume-name-uuid-length=8
             - -v=$(LOG_LEVEL)
           securityContext:
-            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket 
-            # created by the privileged driver container. 
+            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket
+            # created by the privileged driver container.
             privileged: true
           env:
             - name: LOG_LEVEL
-              value: '3'
+              value: "3"
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -49,7 +49,7 @@ spec:
               cpu: 80m
               memory: 24Mi
         - name: beegfs
-          image: docker.io/netapp/beegfs-csi-driver:v1.4.0
+          image: ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
@@ -70,7 +70,7 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: LOG_LEVEL
-              value: '3'
+              value: "3"
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -82,7 +82,7 @@ spec:
               # Because we chwrap mount/umount, we must propagate the container's /host mounts to the node.
               mountPropagation: Bidirectional
               name: host-dir
-              readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+              readOnly: true # We should NOT write arbitrarily to the host filesystem.
             - mountPath: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
               # We must know whether a directory is a mount point in order to decide how to handle it.
               mountPropagation: HostToContainer
@@ -105,11 +105,11 @@ spec:
             path: /var/lib/kubelet/plugins/beegfs.csi.netapp.com
             type: DirectoryOrCreate
           name: plugin-dir
-        - emptyDir: { }
+        - emptyDir: {}
           name: socket-dir
         - configMap:
-            name: csi-beegfs-config  # kustomized
+            name: csi-beegfs-config # kustomized
           name: config-dir
         - secret:
-            secretName: csi-beegfs-connauth  # kustomized
+            secretName: csi-beegfs-connauth # kustomized
           name: connauth-dir

@@ -5,7 +5,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: default
 bases:
-  - ../../versions/latest  # Modify this to select a specific Kubernetes version.
+  - ../../versions/latest # Modify this to select a specific Kubernetes version.
 patchesStrategicMerge:
   # See ../examples/patches for additional patch ideas.
   - patches/image-pull-policy.yaml
@@ -29,7 +29,7 @@ secretGenerator:
     files:
       - csi-beegfs-connauth.yaml
 
-# The images section is used to transform the image name to specify the specific image to use in the deployment 
+# The images section is used to transform the image name to specify the specific image to use in the deployment
 # manifests. This section can be used to adjust the registry and image names and tags for air-gapped environments
 # or other scenarios where custom containers names are used. You can adjust the registry and/or location within
 # a registry with the newName field. You can change the tag being used with the NewTag field. You can also
@@ -37,9 +37,9 @@ secretGenerator:
 # See https://kubectl.docs.kubernetes.io/references/kustomize/builtins/#_imagetagtransformer_
 # for more information on how to use this section.
 images:
-  - name: docker.io/netapp/beegfs-csi-driver
-    newName: docker.repo.eng.netapp.com/globalcicd/apheleia/beegfs-csi-driver
-    newTag: master
+  - name: ghcr.io/thinkparq/beegfs-csi-driver
+    newName: beegfs-csi-driver
+    newTag: latest
     # digest:
   - name: k8s.gcr.io/sig-storage/csi-provisioner
     newName: docker.repo.eng.netapp.com/sig-storage/csi-provisioner

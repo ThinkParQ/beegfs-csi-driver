@@ -3,9 +3,12 @@
 <a name="contents"></a>
 ## Contents
 
-* [Basics](#basics)
-* [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
-* [Upgrading to v1.4.0](#upgrade-1.4.0-kubernetes-deployment)
+- [Kustomize Specific Deployment Details](#kustomize-specific-deployment-details)
+  - [Contents](#contents)
+  - [Basics](#basics)
+    - [Upgrading to v1.2.0](#upgrading-to-v120)
+    - [Upgrading to v1.4.0](#upgrading-to-v140)
+    - [Upgrading to v1.5.0](#upgrading-to-v150)
 
 <a name="basics"></a>
 ## Basics
@@ -93,6 +96,35 @@ Becomes this kustomization stanza:
 ```
 images:
   - name: docker.io/netapp/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+```
+
+Note: Overriding driver container image name is not common and most overlays
+will not need to be modified.
+
+<a name="upgrade-1.5.0-kubernetes-deployment"></a>
+### Upgrading to v1.5.0
+
+v1.5.0 changes the default driver container image name from
+`docker.io/netapp/beegfs-csi-driver` to `ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0` as
+part of migrating the BeeGFS CSI driver to a new GitHub organization. 
+
+If you were previously using an overlay to override this image name, you must
+update your overlay with the new default name.
+
+This kustomization stanza:
+```
+images:
+  - name: docker.io/netapp/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+```
+
+Becomes this kustomization stanza:
+```
+images:
+  - name: ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0
     newName: some.location/beegfs-csi-driver
     newTag: some-tag
 ```
