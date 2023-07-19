@@ -5,10 +5,8 @@
 
 - [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
   - [Manual Image Verification](#manual-image-verification)
-    - [Download Certificates and Tools](#download-certificates-and-tools)
-    - [Verify the Signing Certificate is Trusted](#verify-the-signing-certificate-is-trusted)
-    - [Extract the Public Key From the Certificate](#extract-the-public-key-from-the-certificate)
-    - [Validate the BeeGFS CSI Driver Image Signatures](#validate-the-beegfs-csi-driver-image-signatures)
+    - [Prerequisites: Download the public key and tools](#prerequisites-download-the-public-key-and-tools)
+    - [Steps: Validate the BeeGFS CSI Driver image signatures](#steps-validate-the-beegfs-csi-driver-image-signatures)
   - [Automating Image Verification with Admission Controllers](#automating-image-verification-with-admission-controllers)
 - [Deploying to Kubernetes](#deploying-to-kubernetes)
   - [Kubernetes Node Preparation](#kubernetes-node-preparation)
@@ -54,68 +52,39 @@ is optional.
 <a name="manual-image-verification"></a>
 ### Manual Image Verification
 
-<a name="download-certificates-and-tools"></a>
-#### Download Certificates and Tools
+#### Prerequisites: Download the public key and tools
 
 The following tools and files should be available on a Linux host.
 
-  * The openssl command.
   * The [cosign](https://github.com/sigstore/cosign/releases) utility.
-  * The certificate and CA chain file used to generate the image signatures.
-    * Download the files from the [BeeGFS CSI driver
-      releases](https://github.com/ThinkParQ/beegfs-csi-driver/releases) page.
+  * The Cosign public key versioned in the repository at
+    [release/cosign.pub](../release/cosign.pub).
 
-<a name="verify-the-signing-certificate-is-trusted"></a>
-#### Verify the Signing Certificate is Trusted
 
-Use the following openssl command to validate that the certificate used for
-signing the images was signed by a trusted Certificate Authority.
-
-```
-openssl verify -show_chain -CAfile beegfs-csi-signer-ca-chain.crt beegfs-csi-signer.crt
-```
-
-If this command returns Ok then the certificate in the beegfs-csi-signer.crt was
-signed by a trusted CA.
-
-<a name="extract-the-public-key-from-the-certificate"></a>
-#### Extract the Public Key From the Certificate
-
-This step is optional.
-
-The cosign command can use either the certificate or the public key to validate
-the image signatures. If you just want to manually validate the images you can
-skip the step of extracting the public key. If you want to automate image
-verification in Kubernetes you may need the public key instead of the
-certificate.
-
-```
-openssl x509 -in beegfs-csi-signer.crt -inform PEM -pubkey -noout > beegfs-csi-signer-pubkey.pem
-```
-
-<a name="validate-the-beegfs-csi-driver-image-signatures"></a>
-#### Validate the BeeGFS CSI Driver Image Signatures
+#### Steps: Validate the BeeGFS CSI Driver image signatures
 
 Identify the image you want to validate. You can validate the image with either
-the version tag or the image digest. Starting with v1.40 of the BeeGFS CSI
-driver the image digests will be documented on the [BeeGFS CSI Driver GitHub
-Releases](https://github.com/ThinkParQ/beegfs-csi-driver/releases) page for
-reference.
+the version tag or the image digest. Starting with v1.5.0 of the BeeGFS CSI
+driver the public key used to sign each release will be maintained at
+[release/cosign.pub](../release/cosign.pub).
 
 Use the cosign command to validate the signature of the BeeGFS CSI driver
-container. Make sure to use the appropriate tag or digest that you want to use
-instead of the example tag and digest.
+container. Make sure to use the appropriate key file name and tag or digest that
+you want to use instead of the placeholders.
 
-Validate the image by digest using the certificate file. 
-```
-cosign verify --cert beegfs-csi-signer.crt --cert-chain beegfs-csi-signer-ca-chain.crt docker.io/netapp/beegfs-csi-driver@sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
-```
-or
+OPTION 1: Validate the image using the version tag:
 
-Validate the image by tag using the extracted public key.
 ```
-cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver:v1.4.0
+cosign verify --key <PUBLIC_KEY_FILE>> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>
 ```
+Example: `cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0`
+
+OPTION 2: Validate the image using the version tag and digest:
+
+```
+cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>@SHA256:<DIGEST>
+```
+Example: `cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0@SHA256:a6efb4f870003f28a2ee421690f4f9d0e5b8eed0e24b3881fb816a760eb6dfea`
 
 <a name="automating-image-verification"></a>
 ### Automating Image Verification with Admission Controllers
