@@ -323,10 +323,7 @@ Steps:
 
 1. In a terminal, navigate to the *operator/* directory.
 2. Set the IMAGE_TAG_BASE environment variable so that it refers to a
-   container registry namespace you have access to. For example, ThinkParQ
-   developers should execute `export
-   IMAGE_TAG_BASE=ghcr.io/thinkparq/test-beegfs-csi-driver-operator`.
-   External developers might execute `export
+   container registry namespace you have access to. For example, `export
    IMAGE_TAG_BASE=ghcr.io/thinkparq/test-beegfs-csi-driver-operator`.
 3. Set the VERSION environment variable. For example, execute
    `export VERSION=1.5.0`. The version MUST be semantic (e.g. 0.1.0) and

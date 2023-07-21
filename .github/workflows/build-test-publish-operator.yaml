@@ -1,34 +1,30 @@
-name: Build, Test, and Publish Operator Bundle
+name: "Test and Publish BeeGFS CSI Driver Operator"
 
+# Adapted from:
+# https://docs.github.com/en/actions/using-workflows/triggering-a-workflow
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#on
+# https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#workflow_run
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - "master"
-    tags:
-      - "v*"
-  pull_request:
-    branches:
-      - "master"
-
+  # This workflow should run after we've built the CSI driver container image and it is available as test package.
   workflow_run:
-    workflows: ["Build, Test, and Publish Container Images"]
+    workflows: [Test and Publish BeeGFS CSI Driver]
     types:
       - completed
 
 env:
-  # Container image registry to publish images to.
+  # Container image registry to publish images to:
   REGISTRY: ghcr.io
-  # Where to push an image of the operator that will be retained (for master builds or releases):
+  # Where to push an image of the operator that will be retained (for master builds or releases) without a specific tag:
   IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver-operator
   # Where to push an image of the operator for testing without a specific tag:
   TEST_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-operator
   # Where to push an image of the bundle for testing without a specific tag:
   TEST_BUNDLE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-bundle
   # What container image should be deployed by the operator for testing the BeeGFS CSI driver deployment:
-  CSI_IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
-  # TODO: Determine what tag we want to actually use for testing (latest or potentially the github.sha).
-  CSI_IMAGE_TAG: pr-2
+  TEST_CSI_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver
+
+  # Note for all test images the github.sha will be used as the tag.
 
 jobs:
   build-and-unit-test:
@@ -104,7 +100,7 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.26.3] # TODO: Expand tested versions (1.24.15, 1.25.11, 1.26.3, 1.27.3)
-        beegfs-version: [7.3.3] # TODO: Expand tested versions
+        beegfs-version: [7.3.4] # TODO: Expand tested versions
     permissions:
       packages: read
       contents: read
@@ -213,8 +209,8 @@ jobs:
 
       - name: Deploy a BeeGFSDriver object
         run: |
-          export CSI_IMAGE_NAME=$(echo ${{ env.CSI_IMAGE_NAME }})
-          export CSI_IMAGE_TAG=$(echo ${{ env.CSI_IMAGE_TAG }})
+          export CSI_IMAGE_NAME=$(echo ${{ env.TEST_CSI_IMAGE_NAME }})
+          export CSI_IMAGE_TAG=$(echo ${{ github.sha }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
           export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           envsubst < test/env/beegfs-ubuntu/csi-beegfs-cr.yaml | kubectl apply -f -
@@ -268,16 +264,12 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     needs: e2e-tests
-    # TODO: Consider if we want to continue publishing images on pull requests.
-    # if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     permissions:
       packages: write
       contents: read
     steps:
       - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.1.1
@@ -286,7 +278,7 @@ jobs:
 
       - name: Pull tested operator image from ghcr.io
         run: |
-          docker tag ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
+          docker pull ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
 
       - name: Log into the GitHub Container Registry
         uses: docker/login-action@v2
@@ -308,6 +300,7 @@ jobs:
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
 
+      # TODO: Consider adding labels available as steps.meta.output.labels.
       - name: Tag and push the operator image to GitHub Container Registry
         run: |
           tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
@@ -333,16 +326,12 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-  # Test commands:
-  # make -e IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-operator:master build docker-build docker-push
-  # make -e IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-operator:master BUNDLE_IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-bundle:master bundle bundle-build bundle-push
-  # operator-sdk run bundle ghcr.io/thinkparq/test-beegfs-csi-driver-bundle:master
 
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 3
     needs: publish-images
     if: always()
     steps:

@@ -7,6 +7,9 @@ FROM gcr.io/distroless/static:latest
 
 LABEL maintainers="ThinkParQ"
 LABEL description="BeeGFS CSI Driver"
+LABEL org.opencontainers.image.description="BeeGFS CSI Driver"
+LABEL org.opencontainers.image.source="https://github.com/ThinkParQ/beegfs-csi-driver"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Copy all built binaries to netapp/ directory.
 COPY bin/beegfs-csi-driver bin/chwrap netapp/

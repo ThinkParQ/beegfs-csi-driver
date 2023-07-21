@@ -1,4 +1,4 @@
-name: Build, Test, and Publish Container Images
+name: "Test and Publish BeeGFS CSI Driver"
 
 on:
   workflow_dispatch:
@@ -12,10 +12,14 @@ on:
       - "master"
 
 env:
-  # Container image registry to publish images to.
+  # Container image registry to publish images to:
   REGISTRY: ghcr.io
-  # The name of the image without a specific tag.
+  # Where to push an image of the CSI driver that will be retained (for master builds or releases) without a specific tag:
   IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
+  # Where to push an image of the CSI driver for testing (including the operator) without a specific tag:
+  TEST_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver
+
+  # Note for all test images the github.sha will be used as the tag.
 
 jobs:
   build-and-unit-test:
@@ -57,35 +61,19 @@ jobs:
       # TODO: Can we cache anything here? test-vendor downloads a lot of stuff.
       # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Log into the GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Push the image for reuse in subsequent steps, jobs, and workflows.
       # For now just tag with the commit ID to ensure subsequent jobs in this workflow run use the correct image.
-      - name: Extract metadata for container image ${{ env.IMAGE_NAME }}
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: |
-            ${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=,format=long
-
-      # We already built the image but this allows us to easily apply the appropriate labels and export the image.
-      # It'll end up just reusing the local cache so it will complete very fast anyway.
-      - name: Build and export image ${{ env.IMAGE_NAME }}
-        uses: docker/build-push-action@v4
-        with:
-          context: .
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=docker,dest=/tmp/beegfs-csi-driver.tar
-
-      - name: Upload the exported container image as an artifact for reuse in subsequent jobs
-        uses: actions/upload-artifact@v3
-        with:
-          name: beegfs-csi-driver-image
-          path: /tmp/beegfs-csi-driver.tar
+      - name: Tag and push the CSI driver as a test package
+        run: |
+          docker tag beegfs-csi-driver:latest ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
 
   e2e-tests:
     runs-on: ubuntu-22.04
@@ -95,7 +83,7 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.24.15, 1.25.11, 1.26.3, 1.27.3]
-        beegfs-version: [7.3.3] # TODO: Expand tested versions
+        beegfs-version: [7.3.4]
     permissions:
       packages: read
       contents: read
@@ -104,17 +92,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Download the container image artifact built in the previous job
-        uses: actions/download-artifact@v3
-        with:
-          name: beegfs-csi-driver-image
-          path: /tmp
-
-      - name: Load the downloaded container image into the local Docker cache
-        run: |
-          docker load --input /tmp/beegfs-csi-driver.tar
-          docker image ls -a
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -145,7 +122,7 @@ jobs:
           envsubst < test/env/beegfs-ubuntu/csi-beegfs-connauth.yaml > deploy/k8s/overlays/default/csi-beegfs-connauth.yaml
           # TODO: Enable once the K8s versions in the matrix are added to versions/
           # sed -i 's?/versions/latest?/versions/v${{ matrix.k8s-version }}?g' deploy/k8s/overlays/default/kustomization.yaml
-          echo -e "\nimages:\n  - name: ${{ env.IMAGE_NAME }}\n    newTag: ${{ github.sha }}" >> deploy/k8s/overlays/default/kustomization.yaml
+          echo -e "\nimages:\n  - name: ${{ env.IMAGE_NAME }}\n    newName: ${{ env.TEST_IMAGE_NAME }}\n    newTag: ${{ github.sha }}" >> deploy/k8s/overlays/default/kustomization.yaml
           kubectl apply -k deploy/k8s/overlays/default
 
       # TODO (BCSI-7): Actually run e2e tests using Ginko with an appropriate timeout.
@@ -197,7 +174,6 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
     needs: e2e-tests
-    # TODO: Consider if we want to continue publishing images on pull requests.
     if: github.event_name != 'pull_request'
     permissions:
       packages: write
@@ -213,16 +189,9 @@ jobs:
         with:
           cosign-release: "v2.1.1"
 
-      - name: Download BeeGFS CSI driver image artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: beegfs-csi-driver-image
-          path: /tmp
-
-      - name: Load image
+      - name: Pull tested CSI driver image from ghcr.io
         run: |
-          docker load --input /tmp/beegfs-csi-driver.tar
-          docker image ls -a
+          docker pull ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
 
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@v2
@@ -244,11 +213,12 @@ jobs:
             type=semver,pattern={{version}},prefix=v
             type=semver,pattern={{major}}.{{minor}},prefix=v
 
+      # TODO: Consider adding labels available as steps.meta.output.labels.
       - name: Tag and push the image to GitHub Container Registry
         run: |
           tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
           for tag in $tags; do
-            docker tag ${{ env.IMAGE_NAME }}:${{ github.sha }} $tag
+            docker tag ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} $tag
             docker push $tag
           done
 
@@ -269,3 +239,24 @@ jobs:
         env:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
+  # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
+  # and (b) it may be useful to pull a package to troubleshoot workflow failures.
+  cleanup-test-images:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3
+    needs: publish-images
+    if: always()
+    steps:
+      - name: Extract package names
+        run: |
+          test_image_name="${{ env.TEST_IMAGE_NAME }}"
+          test_image_pkg=${test_image_name##*/}
+          echo "TEST_IMAGE_PKG=$test_image_pkg" >> $GITHUB_ENV
+
+      - name: Cleanup old ${{ env.TEST_IMAGE_PKG }} packages
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: "${{ env.TEST_IMAGE_PKG }}"
+          package-type: "container"
+          min-versions-to-keep: 5
