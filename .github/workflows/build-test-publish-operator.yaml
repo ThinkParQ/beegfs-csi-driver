@@ -1,0 +1,371 @@
+name: Build, Test, and Publish Operator Bundle
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "master"
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "master"
+
+  workflow_run:
+    workflows: ["Build, Test, and Publish Container Images"]
+    types:
+      - completed
+
+env:
+  # Container image registry to publish images to.
+  REGISTRY: ghcr.io
+  # Where to push an image of the operator that will be retained (for master builds or releases):
+  IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver-operator
+  # Where to push an image of the operator for testing without a specific tag:
+  TEST_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-operator
+  # Where to push an image of the bundle for testing without a specific tag:
+  TEST_BUNDLE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-bundle
+  # What container image should be deployed by the operator for testing the BeeGFS CSI driver deployment:
+  CSI_IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
+  # TODO: Determine what tag we want to actually use for testing (latest or potentially the github.sha).
+  CSI_IMAGE_TAG: pr-2
+
+jobs:
+  build-and-unit-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          # Work around for how release-tools verify-subtree.sh verifies release-tools has not been modified.
+          fetch-depth: "0"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.4
+      # Dependencies are cached by default: https://github.com/actions/setup-go#v4
+      # This can be explicitly disabled if it ever causes problems.
+
+      # TODO: Cache this dependency for reuse here and in e2e tests.
+      # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
+      # Adapted from https://sdk.operatorframework.io/docs/installation/#install-from-github-release
+      - name: Install the Operator SDK
+        run: |
+          export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
+          export OS=$(uname | awk '{print tolower($0)}')
+          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/v1.25.0
+          curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
+          chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
+
+      - name: Log into GitHub container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # For now just tag the image with the commit ID and publish as a test package.
+      # This ensures subsequent jobs in this workflow run use the correct image.
+      # If the operator passes all tests, it can be retagged as a master or release build.
+      - name: Build, test, and push operator as a test package
+        run: |
+          cd operator
+          make -e IMG=${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} build docker-build
+          # Build bundle without modification to verify that generated code and manifests are up to date.
+          make bundle
+          if ! git diff --exit-code > /dev/null; then
+              # The above make steps have run all generators. The developer making changes should also 
+              # have run all generators and committed the result. Do not proceed if the generators run 
+              # here produce different output than the developer committed.
+              echo "ERROR: Generated code and/or manifests are not up to date"
+              git diff
+              exit 1
+          fi
+
+          make -e IMG=${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} docker-push
+
+      # The bundle container built in this step can only be used for testing.
+      # This is because it references an operator image tag that will be cleaned up after this workflow completes.
+      # This is fine because a bundle container is not actually used to release the operator (the pristine bundle directory is used instead).
+      - name: Build and push the operator bundle as a test package
+        run: |
+          cd operator
+          make -e IMG=${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
+
+  e2e-tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    needs: build-and-unit-test
+    strategy:
+      fail-fast: true
+      matrix:
+        k8s-version: [1.26.3] # TODO: Expand tested versions (1.24.15, 1.25.11, 1.26.3, 1.27.3)
+        beegfs-version: [7.3.3] # TODO: Expand tested versions
+    permissions:
+      packages: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
+        uses: medyagh/setup-minikube@latest
+        with:
+          #driver: none
+          # Cannot use "none" driver with OLM.
+          kubernetes-version: ${{ matrix.k8s-version }}
+          mount-path: "/etc/beegfs:/etc/beegfs"
+
+      # TODO: Cache this dependency for reuse here and above.
+      # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
+      # Adapted from https://sdk.operatorframework.io/docs/installation/#install-from-github-release
+      - name: Install the Operator SDK
+        run: |
+          export ARCH=$(case $(uname -m) in x86_64) echo -n amd64 ;; aarch64) echo -n arm64 ;; *) echo -n $(uname -m) ;; esac)
+          export OS=$(uname | awk '{print tolower($0)}')
+          export OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/v1.25.0
+          curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
+          chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
+
+      - name: Run Operator Scorecard
+        run: |
+          operator-sdk scorecard ./operator/bundle -w 180s > /tmp/scorecard.txt 2>&1 || (echo "SCORECARD FAILURE!" && exit 1)
+
+      - name: Save the Operator Scorecard results as an artifact
+        uses: actions/upload-artifact@v3
+        if: ${{ always() }}
+        with:
+          name: operator-scorecard-k8s-${{ matrix.k8s-version }}
+          path: /tmp/scorecard.txt
+
+      - name: Install Operator Lifecycle Manager (OLM)
+        run: |
+          curl -L https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.25.0/install.sh -o install.sh
+          chmod +x install.sh
+          ./install.sh v0.25.0
+
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing and expose as a service to the host OS
+        run: |
+          export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
+
+          MAX_ATTEMPTS=36
+          SLEEP_TIME=5
+          COUNTER=0
+
+          # If we try to expose the service to the host OS before the pod is ready we'll get an error.
+          # Make sure the BeeGFS FS started before we continue.
+          while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
+            POD_STATUS=$(kubectl get pods beegfs-fs-1-0 -o jsonpath='{.status.phase}')
+            echo "Pod status: ${POD_STATUS}"
+            if [ "${POD_STATUS}" == "Running" ]; then
+              echo "Verified BeeGFS FS pod is running."
+              break
+            else
+              echo "Pod is not running, waiting for ${SLEEP_TIME} seconds..."
+              sleep ${SLEEP_TIME}
+              COUNTER=$((COUNTER+1))
+            fi
+          done
+
+          if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
+            echo "BeeGFS FS pod did not reach 'Running' status within the maximum allowed time. Outputting debug information and exiting with error..."
+            kubectl get pods -A
+            kubectl describe pod beegfs-fs-1-0
+            docker images
+            exit 1
+          fi
+
+          # Adapted from https://minikube.sigs.k8s.io/docs/handbook/accessing/
+          # Exposes the service directly to the host operating system. 
+          # This is required to mount BeeGFS since the kernel module is outside the container.
+          # For some reason we don't need to override the ephemeral port and can use the actual 800* ports.
+          minikube service beegfs-fs-1-svc
+
+      # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
+          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
+          sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
+          sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
+
+      - name: Install BeeGFS ${{ matrix.beegfs-version }} beegfs-ctl tool into the Minikube container
+        run: |
+          minikube ssh "sudo apt-get update"
+          minikube ssh "sudo apt-get install wget -y"
+          minikube ssh "sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -"
+          minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list"
+          minikube ssh "sudo apt-get update"
+          minikube ssh "sudo apt-get install beegfs-utils -y"
+
+      - name: Use operator-sdk to create a pod to serve the bundle to OLM via subscription
+        run: |
+          operator-sdk run bundle ${{ env.TEST_BUNDLE_NAME }}:${{ github.sha }}
+
+      # TODO (BCSI-7): Actually run e2e tests using Ginko with an appropriate timeout.
+
+      - name: Deploy a BeeGFSDriver object
+        run: |
+          export CSI_IMAGE_NAME=$(echo ${{ env.CSI_IMAGE_NAME }})
+          export CSI_IMAGE_TAG=$(echo ${{ env.CSI_IMAGE_TAG }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          envsubst < test/env/beegfs-ubuntu/csi-beegfs-cr.yaml | kubectl apply -f -
+
+      - name: Deploy all examples to verify the driver is available
+        run: |
+          minikube ssh "sudo echo ${{ secrets.CONN_AUTH_SECRET }} | sudo tee /etc/beegfs/connAuth"
+          minikube ssh "sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf"
+          minikube ssh "sudo sed -i '0,/sysMgmtdHost[[:space:]]*=[[:space:]]*/s//sysMgmtdHost = localhost/' /etc/beegfs/beegfs-client.conf"
+          minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s"
+          minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all"
+          minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static"
+          minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static-ro"
+          export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          for file in examples/k8s/all/*; do sed -i 's/localhost/'"${BEEGFS_MGMTD}"'/g' "$file"; done
+          kubectl apply -f examples/k8s/all
+
+      # If the controller or node service failed to start, our test pod would still be in phase pending.
+      # We'll check periodically if the pod has started and if we reach the max number of attempts fail with debug output.
+      - name: Wait and verify the test pod is running
+        run: |
+          MAX_ATTEMPTS=36
+          SLEEP_TIME=5
+          COUNTER=0
+
+          while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
+            POD_STATUS=$(kubectl get pods csi-beegfs-all-app -o jsonpath='{.status.phase}')
+            echo "Pod status: ${POD_STATUS}"
+            if [ "${POD_STATUS}" == "Running" ]; then
+              echo "Verified test pod is running."
+              break
+            else
+              echo "Pod is not running, waiting for ${SLEEP_TIME} seconds..."
+              sleep ${SLEEP_TIME}
+              COUNTER=$((COUNTER+1))
+            fi
+          done
+
+          if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
+            echo "Test pod did not reach 'Running' status within the maximum allowed time. Outputting debug information and exiting with error..."
+            kubectl get pods -A
+            kubectl describe pod csi-beegfs-controller-0
+            POD_NAME=$(kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | grep 'csi-beegfs-node-')
+            kubectl describe pod $POD_NAME
+            kubectl describe pod csi-beegfs-all-app
+            docker images
+            exit 1
+          fi
+
+  publish-images:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    needs: e2e-tests
+    # TODO: Consider if we want to continue publishing images on pull requests.
+    # if: github.event_name != 'pull_request'
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.1.1
+        with:
+          cosign-release: "v2.1.1"
+
+      - name: Pull tested operator image from ghcr.io
+        run: |
+          docker tag ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Log into the GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # This uses the semantic versioning option for https://github.com/docker/metadata-action#semver
+      - name: Extract metadata for published operator container image
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+
+      - name: Tag and push the operator image to GitHub Container Registry
+        run: |
+          tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
+          for tag in $tags; do
+            docker tag ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} $tag
+            docker push $tag
+          done
+
+      # Adapted from:
+      # https://github.blog/2021-12-06-safeguard-container-signing-capability-actions/
+      # https://github.com/sigstore/cosign-installer#usage
+      - name: Sign operator image with Cosign
+        run: |
+          tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
+          for tag in $tags; do
+            DIGEST=$(docker image inspect $tag --format '{{index .RepoDigests 0}}')
+            cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+            -a "repo=${{ github.repository }}" \
+            -a "run=${{ github.run_id }}" \
+            -a "ref=${{ github.sha }}" \
+            $DIGEST
+          done
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+  # Test commands:
+  # make -e IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-operator:master build docker-build docker-push
+  # make -e IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-operator:master BUNDLE_IMG=ghcr.io/thinkparq/test-beegfs-csi-driver-bundle:master bundle bundle-build bundle-push
+  # operator-sdk run bundle ghcr.io/thinkparq/test-beegfs-csi-driver-bundle:master
+
+  # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
+  # and (b) it may be useful to pull a package to troubleshoot workflow failures.
+  cleanup-test-images:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    needs: publish-images
+    if: always()
+    steps:
+      - name: Extract package names
+        run: |
+          test_image_name="${{ env.TEST_IMAGE_NAME }}"
+          test_image_pkg=${test_image_name##*/}
+          echo "TEST_IMAGE_PKG=$test_image_pkg" >> $GITHUB_ENV
+
+          test_bundle_name="${{ env.TEST_BUNDLE_NAME }}"
+          test_bundle_pkg=${test_bundle_name##*/}
+          echo "TEST_BUNDLE_PKG=$test_bundle_pkg" >> $GITHUB_ENV
+
+      - name: Cleanup old ${{ env.TEST_IMAGE_PKG }} packages
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: "${{ env.TEST_IMAGE_PKG }}"
+          package-type: "container"
+          min-versions-to-keep: 5
+
+      - name: Cleanup old ${{ env.TEST_BUNDLE_PKG }} packages
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: "${{ env.TEST_BUNDLE_PKG }}"
+          package-type: "container"
+          min-versions-to-keep: 5

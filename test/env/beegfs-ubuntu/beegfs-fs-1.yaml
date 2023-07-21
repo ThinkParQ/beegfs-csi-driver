@@ -51,3 +51,40 @@ spec:
               value: beegfs-setup-storage -C -p /mnt/stor_01_tgt_102 -s 1 -S stor_01_tgt_101 -i 102
             - name: CONN_AUTH_FILE_DATA
               value: "${BEEGFS_SECRET}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beegfs-fs-1-svc
+spec:
+  type: NodePort
+  selector:
+    app: beegfs-fs-1
+  ports:
+    # Mgmt ports
+    - name: mgmt-tcp
+      protocol: TCP
+      port: 8008
+      targetPort: 8008
+    - name: mgmt-udp
+      protocol: UDP
+      port: 8008
+      targetPort: 8008
+    # Meta ports
+    - name: meta-tcp
+      protocol: TCP
+      port: 8005
+      targetPort: 8005
+    - name: meta-udp
+      protocol: UDP
+      port: 8005
+      targetPort: 8005
+    # Storage ports
+    - name: storage-tcp
+      protocol: TCP
+      port: 8003
+      targetPort: 8003
+    - name: storage-udp
+      protocol: UDP
+      port: 8003
+      targetPort: 8003
