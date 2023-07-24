@@ -83,7 +83,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.24.15, 1.25.11, 1.26.3, 1.27.3]
+        k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
         beegfs-version: [7.3.4]
     permissions:
       packages: read
