@@ -1,0 +1,35 @@
+# Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# In a typical deployment with the operator, an administrator would pre-create this secret or edit it after it was
+# created. For testing purposes it is easiest to simply deploy it here.
+
+kind: Secret
+apiVersion: v1
+metadata:
+  name: csi-beegfs-connauth
+stringData:
+  csi-beegfs-connauth.yaml: |
+    - sysMgmtdHost: "${BEEGFS_MGMTD}"
+      connAuth: "${BEEGFS_SECRET}"
+
+---
+kind: BeegfsDriver
+apiVersion: beegfs.csi.netapp.com/v1
+metadata:
+  name: csi-beegfs-cr # CR must have this name.
+spec:
+  containerImageOverrides:
+    beegfsCsiDriver:
+      image: "${CSI_IMAGE_NAME}"
+      tag: "${CSI_IMAGE_TAG}"
+  nodeAffinityControllerService:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 50
+        preference:
+          matchExpressions:
+            - key: node-role.kubernetes.io/master
+              operator: Exists
+  pluginConfig:
+    # config:
+    # fileSystemSpecificConfigs:

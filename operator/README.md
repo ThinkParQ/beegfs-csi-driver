@@ -1,25 +1,26 @@
-# BeeGFS CSI Driver Operator
+# BeeGFS CSI Driver Operator <!-- omit in toc -->
 
-## Contents
+## Contents <!-- omit in toc -->
 <a name="contents"></a>
 
-* [Overview](#overview)
-* [Requirements](#requirements)
-* [Verify the Operator Signature](#verify-operator-signature)
-  * [Verify Trust in the Signing Certificate](#verify-trust-in-the-signing-certificate)
-  * [Validate the BeeGFS CSI Driver Operator Image Signature](#validate-the-beegfs-csi-driver-operator-image-signature)
-* [Install the Operator](#install-operator)
-  * [Install from the Openshift Console](#install-operator-openshift-console)
-  * [Install the Operator from OperatorHub](#install-operator-operator-hub)
-  * [Install from Manifests](#install-operator-manifests)
-* [Install the Driver](#install-driver)
-  * [BeegfsDriver Custom Resource Fields](#crd-fields)
-  * [ConnAuth Configuration](#connauth-configuration)
-  * [Install from the OpenShift Console](#install-driver-openshift-console)
-  * [Install Using kubectl or oc](#install-driver-kubectl-oc)
-* [Modify the Driver Configuration](#modify-driver-configuration)
-* [Upgrade the Driver](#upgrade-driver)
-* [Uninstall the Driver and/or Operator](#uninstall)
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Verify the Operator Image Signature](#verify-the-operator-image-signature)
+  - [Verify Trust in the Signing Certificate](#verify-trust-in-the-signing-certificate)
+  - [Validate the BeeGFS CSI Driver Operator Image Signature](#validate-the-beegfs-csi-driver-operator-image-signature)
+- [Install the Operator](#install-the-operator)
+  - [Install from OperatorHub](#install-from-operatorhub)
+  - [Install from the OpenShift Console (deprecated)](#install-from-the-openshift-console-deprecated)
+  - [Install from Manifests](#install-from-manifests)
+- [Install the Driver](#install-the-driver)
+  - [BeegfsDriver Custom Resource Fields](#beegfsdriver-custom-resource-fields)
+  - [ConnAuth Configuration](#connauth-configuration)
+  - [Verify the BeeGFS CSI Driver Image Signature](#verify-the-beegfs-csi-driver-image-signature)
+  - [Install from the OpenShift Console (deprecated)](#install-from-the-openshift-console-deprecated-1)
+  - [Install Using kubectl](#install-using-kubectl)
+- [Modify the Driver Configuration](#modify-the-driver-configuration)
+- [Upgrade the Driver](#upgrade-the-driver)
+- [Uninstall the Driver and/or Operator](#uninstall-the-driver-andor-operator)
 
 ## Overview
 <a name="overview"></a>
@@ -112,17 +113,6 @@ operator.
 ## Install the Operator
 <a name="install-operator"></a>
 
-### Install from the OpenShift Console
-<a name="install-operator-openshift-console"></a>
-
-Operators are first-class citizens in OpenShift and are easy to install from 
-the OpenShift console. As a user with administrative permissions:
-
-1. Navigate to the OperatorHub pane of the console.
-1. Search for and click on the BeeGFS CSI driver operator. It is a "community" 
-   operator tagged for "storage".
-1. Click "Install", verify the defaults, and click "Install" again.
-
 ### Install from OperatorHub
 <a name="install-operator-operator-hub"></a>
 
@@ -144,6 +134,17 @@ It is also possible to install an operator listed on OperatorHub in a more
 manual way by creating a Subscription that references a Catalog Source. See the 
 [OLM documentation](https://olm.operatorframework.io/docs/tasks/install-operator-with-olm/) 
 for details.
+
+### Install from the OpenShift Console (deprecated)
+<a name="install-operator-openshift-console"></a>
+
+Operators are first-class citizens in OpenShift and are easy to install from 
+the OpenShift console. As a user with administrative permissions:
+
+1. Navigate to the OperatorHub pane of the console.
+1. Search for and click on the BeeGFS CSI driver operator. It is a "community" 
+   operator tagged for "storage".
+1. Click "Install", verify the defaults, and click "Install" again.
 
 ### Install from Manifests
 <a name="install-operator-manifests"></a>
@@ -313,7 +314,7 @@ would deploy the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0```. In this
 case the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0``` would be the
 image to use with for the signature verification.
 
-### Install from the OpenShift Console
+### Install from the OpenShift Console (deprecated)
 <a name="install-driver-openshift-console"></a>
 
 Operator "operands" are first-class citizens in OpenShift and are easy to 
@@ -331,7 +332,7 @@ install from the OpenShift console. As a user with administrative permissions:
      figure out what fields exist for configuration.
 1. Click "Create".
 
-### Install Using kubectl or oc
+### Install Using kubectl
 <a name="install-driver-kubectl-oc"></a>
 
 Use this method if you have installed the operator either from OperatorHub or 

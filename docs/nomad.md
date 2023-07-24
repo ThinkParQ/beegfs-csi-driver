@@ -1,17 +1,17 @@
-# BeeGFS CSI Driver on Hashicorp Nomad
+# BeeGFS CSI Driver on Hashicorp Nomad <!-- omit in toc -->
 
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Overview](#overview)
-* [Maturity and Compatibility](#maturity-compatibility)
-* [Deployment](#deployment)
-* [Usage](#usage)
-* [Known Issues](#known-issues)
-  * [Driver Logs Appear Empty](#empty-logs)
-  * [Podman Task Driver Unsupported](#podman-unsupported)
-  * [Error Listing Nomad Volumes (Verbose)](#list-verbose-error)
-* [Troubleshooting](#troubleshooting)
-  * [Failed to Load a Map File](#map-file-fail)
+- [Overview](#overview)
+- [Maturity and Compatiblity](#maturity-and-compatiblity)
+- [Deployment](#deployment)
+- [Usage](#usage)
+- [Known Issues](#known-issues)
+  - [Driver Logs Appear Empty](#driver-logs-appear-empty)
+  - [Podman Task Driver Unsupported](#podman-task-driver-unsupported)
+  - [Error Listing Nomad Volumes (Verbose)](#error-listing-nomad-volumes-verbose)
+- [Troubleshooting](#troubleshooting)
+  - [Failed to Load a Map File](#failed-to-load-a-map-file)
 
 <a name="overview"></a>
 ## Overview
@@ -40,12 +40,12 @@ an ALPHA level of maturity.
 The current BeeGFS CSI driver release is tested with the following Nomad and 
 Nomad task driver versions:
 
-| Component                 | Version  | Status | Notes                                                          |
-| ------------------------- | -------- | ------ | -------------------------------------------------------------- |
-| Nomad                     | 1.4.2    | pass   | Other versions 1.3.3+ MAY work. Versions 1.3.2- will NOT work. |
-| Docker Task Driver        | 1.4.2    | pass   | Can consume driver volumes and deploy the driver.              |
-| Isolated Exec Task Driver | 1.4.2    | pass   | Can consume driver volumes.                                    |
-| Podman Task Driver        | 0.4.0    | fail   | See known issues.                                              |
+| Component                 | Version | Status | Notes                                                          |
+| ------------------------- | ------- | ------ | -------------------------------------------------------------- |
+| Nomad                     | 1.4.2   | pass   | Other versions 1.3.3+ MAY work. Versions 1.3.2- will NOT work. |
+| Docker Task Driver        | 1.4.2   | pass   | Can consume driver volumes and deploy the driver.              |
+| Isolated Exec Task Driver | 1.4.2   | pass   | Can consume driver volumes.                                    |
+| Podman Task Driver        | 0.4.0   | fail   | See known issues.                                              |
 
 <a name="deployment"></a>
 ## Deployment

@@ -1,12 +1,15 @@
-# Using BeeGFS Quotas with the CSI Driver
+# Using BeeGFS Quotas with the CSI Driver <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Overview](#overview)
-* [Prerequisites](#prerequisites)
-* [Enabling Quotas](#enabling-quotas)
-* [Tracking BeeGFS Consumption by Storage Class](#tracking-beegfs-consumption-by-sc)
+- [Overview](#overview)
+- [Prerequisites](#prerequisites)
+- [Enabling Quotas](#enabling-quotas)
+- [Tracking BeeGFS Consumption by Storage Class](#tracking-beegfs-consumption-by-storage-class)
+  - [Introduction](#introduction)
+  - [Linux User/Group IDs and Containers](#linux-usergroup-ids-and-containers)
+  - [Example Steps to setup a Storage Class that use setgid to set a specific group](#example-steps-to-setup-a-storage-class-that-use-setgid-to-set-a-specific-group)
 
 ***
 
@@ -234,8 +237,8 @@ spec:
     Quota information for storage pool Default (ID: 1):
 
           user/group     ||           size          ||    chunk files    
-         name     |  id  ||    used    |    hard    ||  used   |  hard   
-    --------------|------||------------|------------||---------|---------
+         | name | id  |  | used | hard |  | used | hard |
+         | ---- | --- ||------------|------------||---------|---------
             k8s-sc|  1000||      0 Byte|   unlimited||        0|unlimited
     ```
     Note: As verified in the `ls -l` output the file we created takes 0 bytes so

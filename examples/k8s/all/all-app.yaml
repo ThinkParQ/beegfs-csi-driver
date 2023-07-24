@@ -9,14 +9,14 @@ spec:
     - name: csi-beegfs-all-app
       image: alpine:latest
       volumeMounts:
-      - mountPath: /mnt/dyn
-        name: csi-beegfs-dyn-volume
-      - mountPath: /mnt/ge
-        name: csi-beegfs-ge-volume
-      - mountPath: /mnt/static
-        name: csi-beegfs-static-volume 
-      - mountPath: /mnt/static-ro
-        name: csi-beegfs-static-ro-volume 
+        - mountPath: /mnt/dyn
+          name: csi-beegfs-dyn-volume
+        - mountPath: /mnt/ge
+          name: csi-beegfs-ge-volume
+        - mountPath: /mnt/static
+          name: csi-beegfs-static-volume
+        - mountPath: /mnt/static-ro
+          name: csi-beegfs-static-ro-volume
       # Replace "name" with a unique k8s cluster name to disambiguate files touched by pods with UUIDs that collide among separate k8s clusters.
       # The "command":
       #   - Creates a file with the pod's UUID as its name to demonstrate the ability to write to BeeGFS.
@@ -25,12 +25,17 @@ spec:
       #   -> kubectl exec -it csi-beegfs-all-app -- ash
       #   -> ls /mnt/dyn
       #   -> ls /mnt/ge
-      #   -> ls /mnt/static 
+      #   -> ls /mnt/static
       # Confirm that the pod has read-only access to BeeGFS:
       #   -> kubectl exec -it csi-beegfs-all-app -- ash
       #   -> touch /mnt/static-ro/file # This should fail to write the file
       #   -> ls /mnt/static-ro
-      command: [ "ash", "-c", 'touch "/mnt/dyn/touched-by-${POD_UUID}" "/mnt/ge/touched-by-${POD_UUID}" "/mnt/static/touched-by-k8s-name-${POD_UUID}" && sleep 7d']
+      command:
+        [
+          "ash",
+          "-c",
+          'touch "/mnt/dyn/touched-by-${POD_UUID}" "/mnt/ge/touched-by-${POD_UUID}" "/mnt/static/touched-by-k8s-name-${POD_UUID}" && sleep 7d',
+        ]
       env:
         - name: POD_UUID
           valueFrom:
@@ -40,13 +45,12 @@ spec:
     - name: csi-beegfs-dyn-volume
       persistentVolumeClaim:
         claimName: csi-beegfs-dyn-pvc # defined in dyn-pvc.yaml
-      volumes:
     - name: csi-beegfs-ge-volume
       ephemeral:
         volumeClaimTemplate: # similar to ../dyn/dyn-pvc.yaml
           spec:
             accessModes:
-            - ReadWriteMany
+              - ReadWriteMany
             resources:
               requests:
                 storage: 100Gi

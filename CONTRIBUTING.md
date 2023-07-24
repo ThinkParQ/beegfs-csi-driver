@@ -1,16 +1,63 @@
-# Contributing
+# Contributing <!-- omit in toc -->
 Thank you for your interest in contributing to the BeeGFS CSI driver project! 🎉
 
 We appreciate that you want to take the time to contribute! Please follow these
 steps before submitting your PR.
 
+# Contents <!-- omit in toc -->
+
+- [Developer Certificate of Origin (DCO)](#developer-certificate-of-origin-dco)
+- [Creating a Pull Request](#creating-a-pull-request)
+- [BeeGFS CSI Driver Team's Commitment](#beegfs-csi-driver-teams-commitment)
+
+# Developer Certificate of Origin (DCO)
+
+At this time signing a formal Contributor License Agreement is not required, but this requirement may be instated in the future. By contributing to this project, you agree to v1.1 of the [Developer Certificate of Origin (DCO)](https://developercertificate.org/), a copy of which is included before. This document was created by the Linux Kernel community and is a simple statement that you, as a contributor, have the legal right to make the contribution. 
+
+```text
+Developer Certificate of Origin
+Version 1.1
+
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+
+Developer's Certificate of Origin 1.1
+
+By making a contribution to this project, I certify that:
+
+(a) The contribution was created in whole or in part by me and I
+    have the right to submit it under the open source license
+    indicated in the file; or
+
+(b) The contribution is based upon previous work that, to the best
+    of my knowledge, is covered under an appropriate open source
+    license and I have the right under that license to submit that
+    work with modifications, whether created in whole or in part
+    by me, under the same open source license (unless I am
+    permitted to submit under a different license), as indicated
+    in the file; or
+
+(c) The contribution was provided directly to me by some other
+    person who certified (a), (b) or (c) and I have not modified
+    it.
+
+(d) I understand and agree that this project and the contribution
+    are public and that a record of the contribution (including all
+    personal information I submit with it, including my sign-off) is
+    maintained indefinitely and may be redistributed consistent with
+    this project or the open source license(s) involved.
+```
+
 # Creating a Pull Request
 
 1. Please search [existing
-   issues](https://github.com/NetApp/beegfs-csi-driver/issues) to determine if
+   issues](https://github.com/ThinkParQ/beegfs-csi-driver/issues) to determine if
    an issue already exists for what you intend to contribute.
 2. If the issue does not exist, [create a new
-   one](https://github.com/NetApp/beegfs-csi-driver/issues/new) that explains
+   one](https://github.com/ThinkParQ/beegfs-csi-driver/issues/new) that explains
    the bug or feature request.
    * Let us know in the issue that you plan on creating a pull request for it.
    This helps us to keep track of the pull request and avoid any duplicate
@@ -18,21 +65,10 @@ steps before submitting your PR.
 3. Before creating a pull request, write up a brief proposal in the issue
    describing what your change would be and how it would work so that others can
    comment.
-    * It's better to wait for feedback from someone on NetApp's BeeGFS CSI
-      driver development team before writing code. We don't have an SLA for our
-      feedback, but we will do our best to respond in a timely manner (at a
-      minimum, to give you an idea if you're on the right track and that you
-      should proceed, or not).
-4. Sign and submit [NetApp's Corporate Contributor License Agreement
-   (CCLA)](https://netapp.tap.thinksmart.com/prod/Portal/ShowWorkFlow/AnonymousEmbed/3d2f3aa5-9161-4970-997d-e482b0b033fa).
-    * From the **Project Name** dropdown select `BeeGFS CSI Driver`.
-    * For the **Project Website** specify
-      `https://github.com/NetApp/beegfs-csi-driver`
-5. If you've made it this far, have written the code that solves your issue, and
-   addressed the review comments, then feel free to create your pull request.
-
-Important: **NetApp will NOT look at the PR or any of the code submitted in the
-PR if the CCLA is not on file with NetApp Legal.**
+    * It's better to wait for feedback from the maintainers before writing code.
+      We don't have an SLA for our feedback, but we will do our best to respond
+      in a timely manner (at a minimum, to give you an idea if you're on the
+      right track and that you should proceed, or not).
 
 # BeeGFS CSI Driver Team's Commitment
 While we truly appreciate your efforts on pull requests, we **cannot** commit to
@@ -42,7 +78,7 @@ including your PR in the BeeGFS CSI driver project. Here are a few reasons why:
   including:
   * Adding appropriate unit and end-to-end test coverage for new/changed
     functionality. 
-  * Ensuring adherence with NetApp and industry standards around security and
+  * Ensuring adherence with ThinkParQ and industry standards around security and
     licensing. 
   * Validating new functionality doesn't raise long-term maintainability and/or
     supportability concerns.    

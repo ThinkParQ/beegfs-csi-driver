@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1 contains API Schema definitions for the beegfs v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=beegfs.csi.netapp.com
+// +kubebuilder:object:generate=true
+// +groupName=beegfs.csi.netapp.com
 package v1
 
 import (

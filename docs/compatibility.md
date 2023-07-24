@@ -1,4 +1,4 @@
-# BeeGFS CSI Driver Compatibility
+# BeeGFS CSI Driver Compatibility <!-- omit in toc -->
 
 The goal for the BeeGFS CSI driver is to maintain compatibility with relevant
 versions of Kubernetes as well as relevant version of BeeGFS. With this goal in
@@ -7,12 +7,15 @@ version compatibility and testing.
 
 ***
 
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Kubernetes](#kubernetes)
-* [BeeGFS](#beegfs)
-* [OpenShift](#openshift)
-* [Nomad](#nomad)
+- [Kubernetes](#kubernetes)
+  - [Supporting New Kubernetes Releases](#supporting-new-kubernetes-releases)
+  - [Dropping Compatibility Support For Old Kubernetes Releases](#dropping-compatibility-support-for-old-kubernetes-releases)
+- [BeeGFS](#beegfs)
+  - [BeeGFS Version Support](#beegfs-version-support)
+- [OpenShift](#openshift)
+- [Nomad](#nomad)
 
 ***
 
@@ -79,9 +82,14 @@ the BeeGFS driver.
 
 ## OpenShift
 
-A new version of the driver and the operator that can be used to deploy 
-and/or upgrade the driver will be tested on the latest supported version of 
-OpenShift.
+Starting from version v1.5.0, the BeeGFS CSI driver will no longer be tested
+with RedHat OpenShift. While we expect that the driver will continue to function
+with RedHat OpenShift, we have decided to suspend direct testing against this
+platform due to the associated licensing and other costs of maintaining the
+necessary test environments. If this change impacts your use of the driver, we
+encourage you to open an issue so we can understand your specific use case and
+discuss potential avenues to resume testing with OpenShift, or alternatively,
+with the community version, OKD.
 
 ***
 

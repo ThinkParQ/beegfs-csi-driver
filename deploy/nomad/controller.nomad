@@ -22,7 +22,7 @@ job "beegfs-csi-plugin-controller" {
       driver = "docker"
 
       config {
-        image = "docker.io/netapp/beegfs-csi-driver:v1.4.0"
+        image = "ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0"
 
         # chwrap is used to execute the beegfs-ctl binary already installed on the host. We also read the 
         # beegfs-client.conf template already installed on the host.
@@ -83,7 +83,7 @@ job "beegfs-csi-plugin-controller" {
       
       # LIKELY TO REQUIRE MODIFICATION.
       # csi-beegfs-config.yaml is the primary means of configuring the BeeGFS CSI driver. See 
-      # https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/deployment.md#managing-beegfs-client-configuration 
+      # https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/docs/deployment.md#managing-beegfs-client-configuration 
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {
@@ -95,7 +95,7 @@ EOH
 
       # LIKELY TO REQUIRE MODIFICATION.
       # csi-beegfs-connauth.yaml container connauth information required by the BeeGFS client to mount secured file 
-      # systems. See https://github.com/NetApp/beegfs-csi-driver/blob/master/docs/deployment.md#connauth-configuration 
+      # systems. See https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/docs/deployment.md#connauth-configuration 
       # for details.
       # This stanza must be kept in sync with its partner in node.nomad.
       template {

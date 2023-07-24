@@ -65,30 +65,32 @@ type beegfs struct {
 // Path variables rooted from BeeGFS have the suffix PathBeegfsRoot.
 //
 // From the host's perspective (file or directory names in "") (all variable names represent absolute paths):
-//    /
-//    |-- ...
-//        |-- mountDirPath
-//            |-- "beegfs-client.conf" (clientConfPath)
-//            |-- "connInterfacesFile"
-//            |-- "connNetFilterFile"
-//            |-- "connRDMAInterfacesFile"
-//            |-- "connTcpOnlyFilterFile"
-//            |-- "mount" (mountPath)
-//                |-- ...
-//                    |-- ".csi"
-//                        |-- volumes
-//                            |-- csiDirPath
-//                    |-- volDirBasePath
-//                        |-- volDirPath (same as volDirPathBeegfsRoot)
+//
+//	/
+//	|-- ...
+//	    |-- mountDirPath
+//	        |-- "beegfs-client.conf" (clientConfPath)
+//	        |-- "connInterfacesFile"
+//	        |-- "connNetFilterFile"
+//	        |-- "connRDMAInterfacesFile"
+//	        |-- "connTcpOnlyFilterFile"
+//	        |-- "mount" (mountPath)
+//	            |-- ...
+//	                |-- ".csi"
+//	                    |-- volumes
+//	                        |-- csiDirPath
+//	                |-- volDirBasePath
+//	                    |-- volDirPath (same as volDirPathBeegfsRoot)
 //
 // From the perspective of the BeeGFS file system (all variable names represent absolute paths):
-//    /
-//    |-- ...
-//        |-- volDirBasePathBeegfsRoot (same as volDirBasePath)
-//            |-- ".csi"
-//                |-- volumes
-//                    |-- csiDirPathBeegfsRoot (same as csiDirPath)
-//            |-- volDirPathBeegfsRoot (same as volDirPath)
+//
+//	/
+//	|-- ...
+//	    |-- volDirBasePathBeegfsRoot (same as volDirBasePath)
+//	        |-- ".csi"
+//	            |-- volumes
+//	                |-- csiDirPathBeegfsRoot (same as csiDirPath)
+//	        |-- volDirPathBeegfsRoot (same as volDirPath)
 type beegfsVolume struct {
 	config                   beegfsv1.BeegfsConfig
 	clientConfPath           string // absolute path to beegfs-client.conf from host root (e.g. /.../mountDirPath/beegfs-client.conf)

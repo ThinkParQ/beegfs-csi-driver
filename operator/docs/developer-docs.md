@@ -1,27 +1,28 @@
-# BeeGFS CSI Driver Operator Developer Documentation
+# BeeGFS CSI Driver Operator Developer Documentation <!-- omit in toc -->
 
-## Contents
+## Contents <!-- omit in toc -->
 <a name="contents"></a>
 
-* [Overview](#overview)
-* [Important Links](#important-links)
-* [Development Environment](#development-environment)
-* [Directory Structure](#directory-structure)
-* [General Workflows](#general-workflows)
-  * [Build and Test the Operator Controller Manager](#build-and-test-the-operator-controller-manager)
-  * [Change the BeegfsDrivers API](#change-the-beegfsdrivers-api)
-  * [Change the Behavior of the Controller](#change-the-behavior-of-the-controller)
-  * [Change the Way OLM Displays or Installs the Operator](#change-the-way-olm-displays-or-installs-the-operator)
-  * [Prepare Changes For a Pull Request](#prepare-changes-for-a-pull-request)
-  * [Update the operator-sdk version](#update-the-operator-sdk-version)
-* [Testing](#testing)
-  * [Bundle Validation](#bundle-validation)
-  * [Unit Testing](#unit-testing)
-  * [Integration Testing with EnvTest](#envtest)
-  * [Functional Testing](#functional-testing)
-    * [Run Operator Locally Against Any Cluster](#functional-testing-run-local)
-    * [Run Operator With OLM Integration Using OpenShift Console](#functional-testing-install-bundle)
-    * [Install Operator as if From OperatorHub in OpenShift Console](#functional-testing-install-openshift)
+- [Overview](#overview)
+- [Important Links](#important-links)
+- [Development Environment](#development-environment)
+- [Directory Structure](#directory-structure)
+- [General Workflows](#general-workflows)
+  - [Build and Test the Operator Controller Manager](#build-and-test-the-operator-controller-manager)
+  - [Change the BeegfsDrivers API](#change-the-beegfsdrivers-api)
+  - [Change the Behavior of the Controller](#change-the-behavior-of-the-controller)
+  - [Change the Way OLM Displays or Installs the Operator](#change-the-way-olm-displays-or-installs-the-operator)
+  - [Prepare Changes For a Pull Request](#prepare-changes-for-a-pull-request)
+  - [Update the operator-sdk version](#update-the-operator-sdk-version)
+- [Testing](#testing)
+  - [Bundle Validation](#bundle-validation)
+  - [Unit Testing](#unit-testing)
+  - [Integration Testing with EnvTest](#integration-testing-with-envtest)
+  - [Functional Testing](#functional-testing)
+    - [Run Operator Locally Against Any Cluster](#run-operator-locally-against-any-cluster)
+    - [Run Operator With OLM Integration Using kubectl](#run-operator-with-olm-integration-using-kubectl)
+    - [Run Operator With OLM Integration Using OpenShift Console (Deprecated)](#run-operator-with-olm-integration-using-openshift-console-deprecated)
+    - [Install Operator as if From OperatorHub in OpenShift Console (Deprecated)](#install-operator-as-if-from-operatorhub-in-openshift-console-deprecated)
 
 ## Overview
 <a name="overview"></a>
@@ -305,7 +306,49 @@ In a separate terminal window (the first is consumed by the running operator):
 As commands are executed, logs in the first terminal window show the
 actions the operator is taking.
 
-#### Run Operator With OLM Integration Using OpenShift Console
+#### Run Operator With OLM Integration Using kubectl
+
+Prerequisites:
+
+* You have `kubectl` access to Kubernetes cluster with the Operator Life Cycle
+  Manager (OLM) already installed.
+  * Refer to the OLM documentation for how to [get
+    started](https://olm.operatorframework.io/docs/getting-started/.)
+* The Kubernetes cluster does NOT have a running BeeGFS CSI driver operator or
+  BeeGFS CSI driver deployment.
+* The go.mod referenced Go version is installed on the path.
+* operator-sdk is installed on the path.
+
+Steps:
+
+1. In a terminal, navigate to the *operator/* directory.
+2. Set the IMAGE_TAG_BASE environment variable so that it refers to a
+   container registry namespace you have access to. For example, `export
+   IMAGE_TAG_BASE=ghcr.io/thinkparq/test-beegfs-csi-driver-operator`.
+3. Set the VERSION environment variable. For example, execute
+   `export VERSION=1.5.0`. The version MUST be semantic (e.g. 0.1.0) and
+   consistent through all operator related make commands. It is easiest to
+   simply use the VERSION already specified in *operator/Makefile* if there
+   is no compelling reason not to.
+4. Execute `make build docker-build docker-push` to build the operator and
+   push it to the configured registry namespace.
+5. Execute `make manifests bundle bundle-build bundle-push` to build and push a
+   bundle image operator-sdk can understand.
+6. Execute `operator-sdk run bundle $IMAGE_TAG_BASE-bundle:v$VERSION` to cause
+   operator-sdk to create a pod that serves the bundle to OLM via subscription
+   (as well as other OLM objects).
+7. To verify the operator is deployed run `kubectl get operators -A`
+8. Experiment with creating/modifying/deleting BeegfsDriver objects.  
+   NOTE: For many test cases, you will want to set the
+   `containerImageOverrides.beegfsCsiDriver.image` and/or
+   `containerImageOverrides.beegfsCsiDriver.tag` fields before deploying a CR 
+   to ensure the default driver image (usually the last released version) is not 
+   used.
+9. In the terminal, execute `operator-sdk cleanup beegfs-csi-driver-operator`
+   to undo the above steps.
+
+
+#### Run Operator With OLM Integration Using OpenShift Console (Deprecated)
 <a name="functional-testing-install-bundle"></a>
 
 Much of the reason we created the operator was for installation of the driver
@@ -369,7 +412,7 @@ Steps:
 1. In the terminal, execute `operator-sdk cleanup beegfs-csi-driver-operator`
    to undo the above steps.
 
-#### Install Operator as if From OperatorHub in OpenShift Console
+#### Install Operator as if From OperatorHub in OpenShift Console (Deprecated)
 <a name="functional-testing-install-openshift"></a>
 
 This test method simulates the entire OpenShift deployment workflow. It adds to
