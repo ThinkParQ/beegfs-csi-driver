@@ -35,7 +35,7 @@ Guide](docs/troubleshooting.md) for known issues.
 The criteria for including a new Kubernetes release, meaning a new Kubernetes
 minor version, for compatibility testing is the following: It is able to be set
 up via a released version of
-[Kubespray](https://github.com/kubernetes-sigs/kubespray) (used to maintain
+[Minikube](https://minikube.sigs.k8s.io/docs/) (used to maintain
 BeeGFS CSI driver test environments).
 
 ### Dropping Compatibility Support For Old Kubernetes Releases
