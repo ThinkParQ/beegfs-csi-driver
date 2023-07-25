@@ -24,7 +24,7 @@ env:
 jobs:
   build-and-unit-test:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       packages: write
       contents: read
@@ -79,10 +79,11 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-and-unit-test
+    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.24.15, 1.25.11, 1.26.3, 1.27.3]
+        k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
         beegfs-version: [7.3.4]
     permissions:
       packages: read

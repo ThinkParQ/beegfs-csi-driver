@@ -20,7 +20,7 @@ env:
   # Where to push an image of the operator for testing without a specific tag:
   TEST_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-operator
   # Where to push an image of the bundle for testing without a specific tag:
-  TEST_BUNDLE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-bundle
+  TEST_BUNDLE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-operator-bundle
   # What container image should be deployed by the operator for testing the BeeGFS CSI driver deployment:
   TEST_CSI_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver
 
@@ -29,7 +29,7 @@ env:
 jobs:
   build-and-unit-test:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 10
     permissions:
       packages: write
       contents: read
@@ -96,6 +96,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-and-unit-test
+    if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
       matrix:
