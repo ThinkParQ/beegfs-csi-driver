@@ -3,8 +3,7 @@
 <!-- TODO: Reenable after updating the go get path. -->
 <!-- [![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver) -->
 [![License](https://img.shields.io/github/license/thinkparq/beegfs-csi-driver)](LICENSE)
-[![Test and Publish BeeGFS CSI Driver](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml)
-[![Test and Publish BeeGFS CSI Driver Operator](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish-operator.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish-operator.yaml)
+[![Build, Test, and Publish](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml)
 
 ## Contents <!-- omit in toc -->
 
