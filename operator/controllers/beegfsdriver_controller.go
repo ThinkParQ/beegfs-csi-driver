@@ -736,7 +736,7 @@ func setControllerResources(log logr.Logger, overrides beegfsv1.ContainerResourc
 	}
 }
 
-// getImageStringWithOverride takes an imageString (e.g. k8s.gcr.io/some-image:some-tag) and a ContainerImageOverride
+// getImageStringWithOverride takes an imageString (e.g. registry.k8s.io/some-image:some-tag) and a ContainerImageOverride
 // (consisting of an image and a tag). The image string it returns includes any non-empty information from the override
 // and information from imageString as required.
 func getImageStringWithOverride(imageWithTag string, override beegfsv1.ContainerImageOverride) string {

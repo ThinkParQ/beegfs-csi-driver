@@ -104,23 +104,23 @@ func init() {
 // networks with private registry mirrors, or to pin a particular container version. Unless otherwise noted, versions
 // other than the default are not supported.
 type ContainerImageOverrides struct {
-	// Defaults to docker.io/netapp/beegfs-csi-driver:<the operator version>.
+	// Defaults to ghcr.io/thinkparq/beegfs-csi-driver:<the operator version>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="BeeGFS CSI Driver"
 	BeegfsCsiDriver ContainerImageOverride `json:"beegfsCsiDriver"`
-	// Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the most current version at operator release>.
+	// Defaults to registry.k8s.io/sig-storage/csi-node-driver-registrar:<the most current version at operator release>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Node Driver Registrar"
 	CsiNodeDriverRegistrar ContainerImageOverride `json:"csiNodeDriverRegistrar"`
-	// Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the most current version at operator release>.
+	// Defaults to registry.k8s.io/sig-storage/csi-provisioner:<the most current version at operator release>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Provisioner"
 	CsiProvisioner ContainerImageOverride `json:"csiProvisioner"`
-	// Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the most current version at operator release>.
+	// Defaults to registry.k8s.io/sig-storage/livenessprobe:<the most current version at operator release>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	LivenessProbe ContainerImageOverride `json:"livenessProbe"`
 }
 
 // ContainerImageOverride allows for a default container image and tag to be overridden.
 type ContainerImageOverride struct {
-	// A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner or docker.io/netapp/beegfs-csi-driver).
+	// A combination of registry and image (e.g. registry.k8s.io/csi-provisioner or ghcr.io/thinkparq/beegfs-csi-driver).
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	Image string `json:"image"`
 	// A tag (e.g. v2.2.2 or latest).
