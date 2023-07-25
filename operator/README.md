@@ -6,7 +6,6 @@
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Verify the Operator Image Signature](#verify-the-operator-image-signature)
-  - [Verify Trust in the Signing Certificate](#verify-trust-in-the-signing-certificate)
   - [Validate the BeeGFS CSI Driver Operator Image Signature](#validate-the-beegfs-csi-driver-operator-image-signature)
 - [Install the Operator](#install-the-operator)
   - [Install from OperatorHub](#install-from-operatorhub)
@@ -64,14 +63,6 @@ Driver container images. You can choose to manually verify the signature
 associated with the BeeGFS CSI Driver Operator image starting with version 1.4.0
 of the driver and operator.
 
-### Verify Trust in the Signing Certificate
-<a name="verify-trust-in-the-signing-certificate"></a>
-
-Follow the first two steps from [verifying the driver image
-signatures](../docs/deployment.md#verifying-beegfs-csi-driver-image-signatures)
-to download the necessary image verification tools and to verify the trust in
-the signing certificates.
-
 ### Validate the BeeGFS CSI Driver Operator Image Signature
 <a name="validate-the-beegfs-csi-driver-operator-image-signature"></a>
 
@@ -90,20 +81,13 @@ If you are installing from OperatorHub:
   * Within the details for the BeeGFS CSI driver operator find the container
     image. Note this image reference.
 
-On a host with the cosign command installed and the BeeGFS signing certificate
+On a host with the cosign command installed and the BeeGFS signing key file
 available, verify the image signature using the cosign command. Remember to use
 the image reference of the version you want to install.
 
 Example validation using the certificate file.
 ```
-cosign verify --cert beegfs-csi-signer.crt docker.io/netapp/beegfs-csi-driver-operator:v1.4.0
-```
-
-or
-
-Example validation using the extracted public key.
-```
-cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver-operator:v1.4.0
+cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver-operator:<TAG>
 ```
 
 If the image signature is properly validated then continue installing the
@@ -306,12 +290,12 @@ tag as is used by the operator.
 For example, if you have the following operator version installed.
 
 ```
-beegfs-csi-driver-operator.v1.4.0
+beegfs-csi-driver-operator.v1.5.0
 ```
 
-The version of the driver that would be deployed would match ```v1.4.0``` and
-would deploy the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0```. In this
-case the image ```docker.io/netapp/beegfs-csi-driver:v1.4.0``` would be the
+The version of the driver that would be deployed would match ```v1.5.0``` and
+would deploy the image ```ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0```. In this
+case the image ```ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0``` would be the
 image to use with for the signature verification.
 
 ### Install from the OpenShift Console (deprecated)

@@ -314,10 +314,19 @@ Prerequisites:
   Manager (OLM) already installed.
   * Refer to the OLM documentation for how to [get
     started](https://olm.operatorframework.io/docs/getting-started/.)
+  * For example you might run:
+```
+curl -L https://github.com/operator-framework/operator-lifecycle-manager/releases/download/v0.25.0/install.sh -o install.sh
+chmod +x install.sh
+./install.sh v0.25.0
+```
 * The Kubernetes cluster does NOT have a running BeeGFS CSI driver operator or
   BeeGFS CSI driver deployment.
 * The go.mod referenced Go version is installed on the path.
 * operator-sdk is installed on the path.
+* All prerequisites for the BeeGFS CSI driver must be installed on your
+  Kubernetes nodes. If you are using Minikube there is a script to do this at
+  `hack/minikube_install_driver_prerequisites.sh`.
 
 Steps:
 
@@ -338,13 +347,18 @@ Steps:
    operator-sdk to create a pod that serves the bundle to OLM via subscription
    (as well as other OLM objects).
 7. To verify the operator is deployed run `kubectl get operators -A`
-8. Experiment with creating/modifying/deleting BeegfsDriver objects.  
-   NOTE: For many test cases, you will want to set the
-   `containerImageOverrides.beegfsCsiDriver.image` and/or
-   `containerImageOverrides.beegfsCsiDriver.tag` fields before deploying a CR 
-   to ensure the default driver image (usually the last released version) is not 
+8. Experiment with creating/modifying/deleting BeegfsDriver objects. For example
+   to deploy with the default minimal configuration run `kubectl apply -f
+   config/samples/beegfs_v1_beegfsdriver.yaml`. NOTE: For many test cases, you
+   will want to set the `containerImageOverrides.beegfsCsiDriver.image` and/or
+   `containerImageOverrides.beegfsCsiDriver.tag` fields before deploying a CR to
+   ensure the default driver image (usually the last released version) is not
    used.
-9. In the terminal, execute `operator-sdk cleanup beegfs-csi-driver-operator`
+9. OPTIONAL: Deploy one or more examples to verify the driver is working
+   correctly. If you are using Minikube there is a script at
+   `hack/minikube_deploy_all_examples.sh` that handles deploying a BeeGFS file
+   system into Kubernetes and deploying all examples.
+10.  In the terminal, execute `operator-sdk cleanup beegfs-csi-driver-operator`
    to undo the above steps.
 
 
@@ -384,11 +398,8 @@ Steps:
 
 1. In a terminal, navigate to the *operator/* directory.
 1. Set the IMAGE_TAG_BASE environment variable so that it refers to a
-   container registry namespace you have access to. For example, NetApp
-   developers should execute `export
-   IMAGE_TAG_BASE=docker.repo.eng.netapp.com/<sso>/beegfs-csi-driver-operator`.
-   External developers might execute `export
-   IMAGE_TAG_BASE=docker.io/<Docker ID>/beegfs-csi-driver-operator`.
+   container registry namespace you have access to. For example, `export
+   IMAGE_TAG_BASE=ghcr.io/thinkparq/test-beegfs-csi-driver-operator`.
 1. Set the VERSION environment variable. For example, execute
    `export VERSION=1.2.0`. The version MUST be semantic (e.g. 0.1.0) and
    consistent through all operator related make commands. It is easiest to

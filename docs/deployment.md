@@ -75,7 +75,7 @@ you want to use instead of the placeholders.
 OPTION 1: Validate the image using the version tag:
 
 ```
-cosign verify --key <PUBLIC_KEY_FILE>> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>
+cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>
 ```
 Example: `cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0`
 

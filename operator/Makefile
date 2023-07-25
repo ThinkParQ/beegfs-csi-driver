@@ -30,8 +30,8 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # This variable is used to construct full image tags for bundle and catalog images.
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
-# ghcr.io/thinkparq/beegfs-csi-driver-bundle:$VERSION and 
-# ghcr.io/thinkparq/beegfs-csi-driver-catalog:$VERSION.
+# ghcr.io/thinkparq/beegfs-csi-driver-operator-bundle:$VERSION and 
+# ghcr.io/thinkparq/beegfs-csi-driver-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= ghcr.io/thinkparq/beegfs-csi-driver-operator
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
