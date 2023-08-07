@@ -6,7 +6,7 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
 
 ### Added
 - Support for Kubernetes 1.26 and 1.27.
-- Support for BeeGFS v7.3.4.
+- Support for BeeGFS v7.3.4 and v7.4.0.
 
 ### Changed
 - Migrated project to the ThinkParQ GitHub organization.
@@ -29,12 +29,9 @@ Notable changes to the BeeGFS CSI driver will be documented in this file.
   policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
 
 ### Removed
-- Testing with RedHat OpenShift.
-- Support for Kubernetes v1.22.
-
-### Security
-- Mitigated [CVE-2019-11255](https://nvd.nist.gov/vuln/detail/CVE-2019-11255) by
-  updating Kubernetes CSI external-provisioner to v3.5.0.
+- Testing/support for RedHat OpenShift. 
+  - [See the compatibility documentation](docs/compatibility.md#openshift) for more information about this change.
+- Testing/support for Kubernetes v1.22 and BeeGFS v7.2.x. 
 
 [1.4.0] - 2022-12-12
 --------------------

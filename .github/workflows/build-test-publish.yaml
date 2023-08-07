@@ -130,7 +130,7 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
-        beegfs-version: [7.3.4]
+        beegfs-version: [7.3.4, 7.4.0]
     permissions:
       packages: read
       contents: read
@@ -225,8 +225,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.26.3] # TODO: Expand tested versions (1.24.15, 1.25.11, 1.26.3, 1.27.3)
-        beegfs-version: [7.3.4] # TODO: Expand tested versions
+        k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
+        beegfs-version: [7.3.4, 7.4.0]
     permissions:
       packages: read
       contents: read
@@ -389,7 +389,9 @@ jobs:
   publish-images:
     runs-on: ubuntu-22.04
     timeout-minutes: 5
-    needs: [e2e-tests, operator-e2e-tests]
+    # We only run e2e tests for PRs and we only publish-images when we aren't on a PR. 
+    # This means publish-images has to be wired to build-and-unit-test otherwise it will always get skipped.
+    needs: [build-and-unit-test]
     if: github.event_name != 'pull_request'
     permissions:
       packages: write
