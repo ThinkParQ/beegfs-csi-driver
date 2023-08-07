@@ -77,16 +77,16 @@ table describes the versions of each component used in testing each release of
 the BeeGFS CSI driver. These configurations should be considered compatible and
 supported.
 
-| beegfs.csi.netapp.com | K8s Versions                              | Red Hat OpenShift Versions                 | BeeGFS Client Versions | CSI Version |
-| --------------------- | ----------------------------------------- | ------------------------------------------ | ---------------------- | ----------- |
-| v1.5.0 (prerelease)   | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | [No longer tested.](docs/compatibility.md) | 7.3.4                  | v1.7.0      |
-| v1.4.0                | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 4.11 (RHEL only; RHCOS experimental)       | 7.3.2, 7.2.8           | v1.7.0      |
-| v1.3.0                | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 4.10 (RHEL only; RHCOS experimental)       | 7.3.1, 7.2.7           | v1.6.0      |
-| v1.2.2                | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 4.10 (RHEL only; RHCOS experimental)       | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
-| v1.2.1                | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 4.9  (RHEL only)                           | 7.2.5 [^1]             | v1.5.0      |
-| v1.2.0                | 1.18, 1.19, 1.20, 1.21                    | 4.8  (RHEL only)                           | 7.2.4 [^1]             | v1.5.0      |
-| v1.1.0                | 1.18, 1.19, 1.20                          |                                            | 7.2.1 [^1]             | v1.3.0      |
-| v1.0.0                | 1.19                                      |                                            | 7.2 [^1]               | v1.3.0      |
+| beegfs.csi.netapp.com | K8s Versions                              | Red Hat OpenShift Versions                           | BeeGFS Client Versions | CSI Version |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------- | ---------------------- | ----------- |
+| v1.5.0 (prerelease)   | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | [No longer tested.](docs/compatibility.md#openshift) | 7.3.4, v7.4.0          | v1.7.0      |
+| v1.4.0                | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 4.11 (RHEL only; RHCOS experimental)                 | 7.3.2, 7.2.8           | v1.7.0      |
+| v1.3.0                | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.1, 7.2.7           | v1.6.0      |
+| v1.2.2                | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
+| v1.2.1                | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 4.9  (RHEL only)                                     | 7.2.5 [^1]             | v1.5.0      |
+| v1.2.0                | 1.18, 1.19, 1.20, 1.21                    | 4.8  (RHEL only)                                     | 7.2.4 [^1]             | v1.5.0      |
+| v1.1.0                | 1.18, 1.19, 1.20                          |                                                      | 7.2.1 [^1]             | v1.3.0      |
+| v1.0.0                | 1.19                                      |                                                      | 7.2 [^1]               | v1.3.0      |
 
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.

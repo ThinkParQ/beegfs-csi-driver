@@ -715,7 +715,7 @@ spec:
   - name: BeeGFS blog posts
     url: https://www.beegfs.io/c/blog/
   maintainers:
-  - email: support@beegfs.io
+  - email: csi-driver@beegfs.io
     name: ThinkParQ
   maturity: stable
   minKubeVersion: 1.19.0
