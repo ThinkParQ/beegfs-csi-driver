@@ -1,15 +1,46 @@
-# BeeGFS CSI Driver Usage
+# BeeGFS CSI Driver Usage <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Important Concepts](#important-concepts)
-* [Dynamic Provisioning Workflow](#dynamic-provisioning-workflow)
-* [Static Provisioning Workflow](#static-provisioning-workflow)
-* [Best Practices](#best-practices)
-* [Managing ReadOnly Volumes](#managing-readonly-volumes)
-* [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
-* [Limitations and Known Issues](#limitations-and-known-issues)
+- [Important Concepts](#important-concepts)
+  - [Definition of a "Volume"](#definition-of-a-volume)
+  - [Capacity](#capacity)
+  - [Static vs Dynamic Provisioning](#static-vs-dynamic-provisioning)
+    - [Dynamic Provisioning Use Case](#dynamic-provisioning-use-case)
+    - [Static Provisioning Use Case](#static-provisioning-use-case)
+  - [Client Configuration and Tuning](#client-configuration-and-tuning)
+- [Dynamic Provisioning Workflow](#dynamic-provisioning-workflow)
+  - [Assumptions](#assumptions)
+  - [High Level](#high-level)
+  - [Create a Storage Class](#create-a-storage-class)
+  - [Create a Persistent Volume Claim](#create-a-persistent-volume-claim)
+  - [Create a Pod, Deployment, Stateful Set, etc.](#create-a-pod-deployment-stateful-set-etc)
+- [Static Provisioning Workflow](#static-provisioning-workflow)
+  - [Assumptions](#assumptions-1)
+  - [High Level](#high-level-1)
+  - [Create a Persistent Volume](#create-a-persistent-volume)
+  - [Create a Persistent Volume Claim](#create-a-persistent-volume-claim-1)
+  - [Create a Pod, Deployment, Stateful Set, etc.](#create-a-pod-deployment-stateful-set-etc-1)
+- [Best Practices](#best-practices)
+- [Managing ReadOnly Volumes](#managing-readonly-volumes)
+  - [Configuring ReadOnly Volumes Within a Pod Specification](#configuring-readonly-volumes-within-a-pod-specification)
+    - [Using The Container VolumeMount Method](#using-the-container-volumemount-method)
+    - [Using the Volumes PersistentVolumeClaim Method](#using-the-volumes-persistentvolumeclaim-method)
+    - [Additional Considerations](#additional-considerations)
+  - [Configuring ReadOnly Volumes With MountOptions](#configuring-readonly-volumes-with-mountoptions)
+    - [Configuring ReadOnly on a PersistentVolume](#configuring-readonly-on-a-persistentvolume)
+    - [Configuring ReadOnly on a StorageClass](#configuring-readonly-on-a-storageclass)
+- [Notes for BeeGFS Administrators](#notes-for-beegfs-administrators)
+  - [General](#general)
+  - [BeeGFS Mount Options](#beegfs-mount-options)
+  - [Memory Consumption with RDMA](#memory-consumption-with-rdma)
+  - [Permissions](#permissions)
+    - [fsGroup Behavior](#fsgroup-behavior)
+- [Limitations and Known Issues](#limitations-and-known-issues)
+  - [General](#general-1)
+  - [Read Only and Access Modes in Kubernetes](#read-only-and-access-modes-in-kubernetes)
+  - [Long paths may cause errors](#long-paths-may-cause-errors)
 
 ***
 
@@ -126,11 +157,11 @@ utility in the `--setpattern` mode can be passed with the prefix
 the newly created subdirectory has the same striping configuration as its
 parent. The following `stripePattern/` parameters work with the driver:
 
-| Prefix         | Parameter     | Required | Accepted patterns                       | Example    | Default
-| ------         | ---------     | -------- | -----------------                       | -------    | -------
-| stripePattern/ | storagePoolID | no       | unsigned integer                        | 1          | file system default
-| stripePattern/ | chunkSize     | no       | unsigned integer + k (kilo) or m (mega) | 512k<br>1m | file system default
-| stripePattern/ | numTargets    | no       | unsigned integer                        | 4          | file system default
+| Prefix         | Parameter     | Required | Accepted patterns                       | Example    | Default             |
+| -------------- | ------------- | -------- | --------------------------------------- | ---------- | ------------------- |
+| stripePattern/ | storagePoolID | no       | unsigned integer                        | 1          | file system default |
+| stripePattern/ | chunkSize     | no       | unsigned integer + k (kilo) or m (mega) | 512k<br>1m | file system default |
+| stripePattern/ | numTargets    | no       | unsigned integer                        | 4          | file system default |
 
 NOTE: While the driver expects values with certain patterns (e.g. unsigned
 integer), Kubernetes only accepts string values in Storage Classes. These
@@ -149,11 +180,11 @@ administrators may want to [change the default permissions](#permissions) on a
 per-Storage-Class basis, in particular if [integration with BeeGFS quotas is desired](quotas.md). 
 The following `permissions/` parameters allow this fine-grained control:
 
-| Prefix       | Parameter | Required | Accepted patterns                  | Example     | Default 
-| ------       | --------- | -------- | -----------------                  | -------     | -------
-| permissions/ | uid       | no       | unsigned integer                   | 1000        | 0 (root)
-| permissions/ | gid       | no       | unsigned integer                   | 1000        | 0 (root)
-| permissions/ | mode      | no       | three or four digit octal notation | 755<br>0755 | 0777
+| Prefix       | Parameter | Required | Accepted patterns                  | Example     | Default  |
+| ------------ | --------- | -------- | ---------------------------------- | ----------- | -------- |
+| permissions/ | uid       | no       | unsigned integer                   | 1000        | 0 (root) |
+| permissions/ | gid       | no       | unsigned integer                   | 1000        | 0 (root) |
+| permissions/ | mode      | no       | three or four digit octal notation | 755<br>0755 | 0777     |
 
 NOTE: While the driver expects values with certain patterns (e.g. unsigned 
 integer), Kubernetes only accepts string values in Storage Classes. These 

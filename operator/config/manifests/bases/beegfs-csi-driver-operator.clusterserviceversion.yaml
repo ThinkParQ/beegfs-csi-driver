@@ -5,12 +5,12 @@ metadata:
     alm-examples: '[]'
     capabilities: Seamless Upgrades
     categories: Storage
-    containerImage: docker.io/netapp/beegfs-csi-driver-operator:v1.4.0
+    containerImage: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.5.0
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
-    repository: https://github.com/netapp/beegfs-csi-driver
-    support: NetApp
+    repository: https://github.com/ThinkParQ/beegfs-csi-driver
+    support: ThinkParQ
   name: beegfs-csi-driver-operator.v0.0.0
   namespace: placeholder
 spec:
@@ -35,45 +35,45 @@ spec:
         name: ""
         version: v1
       specDescriptors:
-      - description: Defaults to docker.io/netapp/beegfs-csi-driver:<the operator
+      - description: Defaults to ghcr.io/thinkparq/beegfs-csi-driver:<the operator
           version>.
         displayName: BeeGFS CSI Driver
         path: containerImageOverrides.beegfsCsiDriver
-      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-          or docker.io/netapp/beegfs-csi-driver).
+      - description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+          or ghcr.io/thinkparq/beegfs-csi-driver).
         displayName: Image
         path: containerImageOverrides.beegfsCsiDriver.image
       - description: A tag (e.g. v2.2.2 or latest).
         displayName: Tag
         path: containerImageOverrides.beegfsCsiDriver.tag
-      - description: Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the
+      - description: Defaults to registry.k8s.io/sig-storage/csi-node-driver-registrar:<the
           most current version at operator release>.
         displayName: CSI Node Driver Registrar
         path: containerImageOverrides.csiNodeDriverRegistrar
-      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-          or docker.io/netapp/beegfs-csi-driver).
+      - description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+          or ghcr.io/thinkparq/beegfs-csi-driver).
         displayName: Image
         path: containerImageOverrides.csiNodeDriverRegistrar.image
       - description: A tag (e.g. v2.2.2 or latest).
         displayName: Tag
         path: containerImageOverrides.csiNodeDriverRegistrar.tag
-      - description: Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the most
-          current version at operator release>.
+      - description: Defaults to registry.k8s.io/sig-storage/csi-provisioner:<the
+          most current version at operator release>.
         displayName: CSI Provisioner
         path: containerImageOverrides.csiProvisioner
-      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-          or docker.io/netapp/beegfs-csi-driver).
+      - description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+          or ghcr.io/thinkparq/beegfs-csi-driver).
         displayName: Image
         path: containerImageOverrides.csiProvisioner.image
       - description: A tag (e.g. v2.2.2 or latest).
         displayName: Tag
         path: containerImageOverrides.csiProvisioner.tag
-      - description: Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the most current
-          version at operator release>.
+      - description: Defaults to registry.k8s.io/sig-storage/livenessprobe:<the most
+          current version at operator release>.
         displayName: Liveness Probe
         path: containerImageOverrides.livenessProbe
-      - description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-          or docker.io/netapp/beegfs-csi-driver).
+      - description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+          or ghcr.io/thinkparq/beegfs-csi-driver).
         displayName: Image
         path: containerImageOverrides.livenessProbe.image
       - description: A tag (e.g. v2.2.2 or latest).
@@ -289,15 +289,15 @@ spec:
     ### Documentation
 
     Compatibility information and a quick start guide for the BeeGFS CSI driver itself are available on our [main GitHub
-    page](https://www.github.com/netapp/beegfs-csi-driver). Additional detailed documentation for the driver is
-    available in the [docs directory](https://www.github.com/netapp/beegfs-csi-driver/tree/master/docs) and for the
+    page](https://www.github.com/ThinkParQ/beegfs-csi-driver). Additional detailed documentation for the driver is
+    available in the [docs directory](https://www.github.com/ThinkParQ/beegfs-csi-driver/tree/master/docs) and for the
     operator is available in the [operator
-    README](https://www.github.com/netapp/beegfs-csi-driver/tree/master/operator/README.md).
+    README](https://www.github.com/ThinkParQ/beegfs-csi-driver/tree/master/operator/README.md).
 
     ### Important Notes
 
     The BeeGFS client packages and kernel module must be pre-installed on all nodes that will run the driver. See the
-    driver ["Getting Started" guide](https://github.com/netapp/beegfs-csi-driver/blob/master/README.md#getting-started)
+    driver ["Getting Started" guide](https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/README.md#getting-started)
     for additional information.
 
     The BeeGFS CSI driver is only supported on nodes running a [BeeGFS supported Linux
@@ -306,23 +306,23 @@ spec:
     Linux (RHEL) nodes can be added to an OpenShift cluster and RHEL is supported for running BeeGFS. By default, the
     operator will install the driver with a node affinity that ensures it does not run on RHCOS nodes. See the driver
     [compatibility
-    matrix](https://github.com/netapp/beegfs-csi-driver/blob/master/README.md#interoperability-and-csi-feature-matrix)
+    matrix](https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/README.md#interoperability-and-csi-feature-matrix)
     for additional information.
 
     We have recently published experimental manifests that enable the BeeGFS CSI driver on OpenShift nodes running
     RHCOS. These manifests are not intended for production use. See [this
-    README](https://github.com/netapp/beegfs-csi-driver/blob/master/deploy/openshift-beegfs-client/README.md) for more
+    README](https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/deploy/openshift-beegfs-client/README.md) for more
     details.
 
     All driver configuration can be specified through the BeegfsDrivers API (in a BeegfsDriver Custom Resource)
     except for BeeGFS connAuth information, which must be placed separately into a Kubernetes Secret. See the [ConnAuth
     Configuration
-    section](https://github.com/netapp/beegfs-csi-driver/blob/master/operator/README.md#connauth-configuration) of the
+    section](https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/operator/README.md#connauth-configuration) of the
     operator documentation for additional information.
 
     Starting with version 1.4.0 of the BeeGFS CSI driver the driver and operator images will be signed using the Cosign
     tool. Refer to the [BeeGFS CSI driver operator
-    README](https://www.github.com/netapp/beegfs-csi-driver/tree/master/operator/README.md)
+    README](https://www.github.com/ThinkParQ/beegfs-csi-driver/tree/master/operator/README.md)
     for details on how to verify the operator and driver image signatures.
   displayName: BeeGFS CSI Driver
   icon:
@@ -344,30 +344,25 @@ spec:
   keywords:
   - CSI
   - BeeGFS
-  - NetApp
+  - ThinkParQ
+  - HPC
+  - AI
+  - High-Performance Computing
   links:
   - name: BeeGFS introduction
     url: https://www.beegfs.io/c/
   - name: BeeGFS documentation
     url: https://doc.beegfs.io/latest/index.html
   - name: BeeGFS CSI driver source code
-    url: https://github.com/netapp/beegfs-csi-driver
-  - name: BeeGFS CSI driver technical blog posts
-    url: https://netapp.io/?s=beegfs+csi
-  - name: BeeGFS CSI driver marketing blog posts
-    url: https://www.netapp.com/blog/#q=beegfs%20csi
+    url: https://github.com/ThinkParQ/beegfs-csi-driver
+  - name: BeeGFS blog posts
+    url: https://www.beegfs.io/c/blog/
   maintainers:
-  - email: joe.mccormick@netapp.com
-    name: Joe McCormick
-  - email: eric.weber2@netapp.com
-    name: Eric Weber
-  - email: garrett.marks@netapp.com
-    name: Garrett Marks
-  - email: cole.krizek@netapp.com
-    name: Cole Krizek
+  - email: csi-driver@beegfs.io
+    name: ThinkParQ
   maturity: stable
   minKubeVersion: 1.19.0
   provider:
-    name: NetApp
-    url: https://www.netapp.com
+    name: ThinkParQ
+    url: https://www.thinkparq.com
   version: 0.0.0

@@ -1,6 +1,37 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
+[1.5.0] - PRERELEASE
+--------------------
+
+### Added
+- Support for Kubernetes 1.26 and 1.27.
+- Support for BeeGFS v7.3.4 and v7.4.0.
+
+### Changed
+- Migrated project to the ThinkParQ GitHub organization.
+- Updated deployment manifests to accommodate new container registries. See the
+  [upgrade instructions](deploy/k8s/README.md##upgrading-to-v150) if you were
+  previously overriding image names or tags with a Kustomize overlay.
+  - BeeGFS CSI driver container images have been migrated from DockerHub to
+  GitHub Container Registry. This changes the default driver container name from
+  `docker.io/netapp/beegfs-csi-driver` to
+  `ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0`.
+  - [Kubernetes CSI sidecar
+  containers](https://kubernetes-csi.github.io/docs/sidecar-containers.html)
+  have been migrated from `k8s.gcr.io` to `registry.k8s.io` since the former has
+  been
+  [deprecated](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/).
+
+### Deprecated
+- Kubernetes v1.23 and v1.24 support will be dropped in the next driver release according
+  to our [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+
+### Removed
+- Testing/support for RedHat OpenShift. 
+  - [See the compatibility documentation](docs/compatibility.md#openshift) for more information about this change.
+- Testing/support for Kubernetes v1.22 and BeeGFS v7.2.x. 
 
 [1.4.0] - 2022-12-12
 --------------------

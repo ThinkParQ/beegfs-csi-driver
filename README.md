@@ -1,22 +1,29 @@
-# BeeGFS CSI Driver
+# BeeGFS CSI Driver <!-- omit in toc -->
 
-[![License](https://img.shields.io/github/license/netapp/beegfs-csi-driver)](LICENSE)
-[![Docker pulls](https://img.shields.io/docker/pulls/netapp/beegfs-csi-driver)](https://hub.docker.com/r/netapp/beegfs-csi-driver)
-[![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver)
+<!-- TODO: Reenable after updating the go get path. -->
+<!-- [![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver) -->
+[![License](https://img.shields.io/github/license/thinkparq/beegfs-csi-driver)](LICENSE)
+[![Build, Test, and Publish](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml)
 
-<a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Overview](#overview)
-* [Compatibility](#compatibility)
-* [Support](#support)
-* [Getting Started](#getting-started)
-* [Basic Use and Examples](#basic-use)
-* [Contributing](#contributing-to-the-project)
-* [Releases](#releases)
-* [Versioning](#versioning)
-* [License](#license)
-* [Maintainers](#maintainers)
+- [Overview](#overview)
+  - [Notable Features](#notable-features)
+- [Compatibility](#compatibility)
+  - [Known Incompatibilities](#known-incompatibilities)
+    - [BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+](#beegfs-csi-driver-compatibility-with-beegfs-727-and-731)
+- [Support](#support)
+- [Getting Started](#getting-started)
+  - [Prerequisite(s)](#prerequisites)
+  - [Quick Start](#quick-start)
+- [Basic Use](#basic-use)
+  - [Dynamic Storage Provisioning:](#dynamic-storage-provisioning)
+  - [Static Provisioning:](#static-provisioning)
+  - [Examples](#examples)
+- [Contributing to the Project](#contributing-to-the-project)
+- [Releases](#releases)
+- [Versioning](#versioning)
+- [License](#license)
 
 ***
 
@@ -33,7 +40,7 @@ The driver can be easily deployed using the provided Kubernetes manifests.
 Optionally the [BeeGFS CSI Driver Operator](operator/README.md) can be used to
 automate day-1 (install/ configure) and day-2 (reconfigure/update) tasks for the
 driver. This especially simplifies discovery and installation from Operator
-Lifecycle Manger (OLM) enabled clusters like Red Hat OpenShift. 
+Lifecycle Manger (OLM) enabled clusters.
 
 <a name="notable-features"></a>
 ### Notable Features
@@ -70,15 +77,16 @@ table describes the versions of each component used in testing each release of
 the BeeGFS CSI driver. These configurations should be considered compatible and
 supported.
 
-| beegfs.csi.netapp.com  | K8s Versions                     | Red Hat OpenShift Versions           | BeeGFS Client Versions | CSI Version  |
-| ---------------------- | -------------------------------- | ------------------------------------ | ---------------------- | ------------ |
-| v1.4.0                 | 1.22.6, 1.23.5, 1.24.1, 1.25.2   | 4.11 (RHEL only; RHCOS experimental) | 7.3.2, 7.2.8           | v1.7.0       |
-| v1.3.0                 | 1.21.4, 1.22.3, 1.23.1, 1.24.1   | 4.10 (RHEL only; RHCOS experimental) | 7.3.1, 7.2.7           | v1.6.0       |
-| v1.2.2                 | 1.20.11, 1.21.4, 1.22.3, 1.23.1  | 4.10 (RHEL only; RHCOS experimental) | 7.3.0, 7.2.6 [^1]      | v1.5.0       |
-| v1.2.1                 | 1.19.15, 1.20.11, 1.21.4, 1.22.3 | 4.9  (RHEL only)                     | 7.2.5 [^1]             | v1.5.0       |
-| v1.2.0                 | 1.18, 1.19, 1.20, 1.21           | 4.8  (RHEL only)                     | 7.2.4 [^1]             | v1.5.0       |
-| v1.1.0                 | 1.18, 1.19, 1.20                 |                                      | 7.2.1 [^1]             | v1.3.0       |
-| v1.0.0                 | 1.19                             |                                      | 7.2 [^1]               | v1.3.0       |
+| beegfs.csi.netapp.com | K8s Versions                              | Red Hat OpenShift Versions                           | BeeGFS Client Versions | CSI Version |
+| --------------------- | ----------------------------------------- | ---------------------------------------------------- | ---------------------- | ----------- |
+| v1.5.0 (prerelease)   | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | [No longer tested.](docs/compatibility.md#openshift) | 7.3.4, v7.4.0          | v1.7.0      |
+| v1.4.0                | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 4.11 (RHEL only; RHCOS experimental)                 | 7.3.2, 7.2.8           | v1.7.0      |
+| v1.3.0                | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.1, 7.2.7           | v1.6.0      |
+| v1.2.2                | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
+| v1.2.1                | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 4.9  (RHEL only)                                     | 7.2.5 [^1]             | v1.5.0      |
+| v1.2.0                | 1.18, 1.19, 1.20, 1.21                    | 4.8  (RHEL only)                                     | 7.2.4 [^1]             | v1.5.0      |
+| v1.1.0                | 1.18, 1.19, 1.20                          |                                                      | 7.2.1 [^1]             | v1.3.0      |
+| v1.0.0                | 1.19                                      |                                                      | 7.2 [^1]               | v1.3.0      |
 
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.
@@ -125,7 +133,7 @@ issues with components outside of the compatibility matrix will depend on the
 details of the issue.
 
 If you have any questions, feature requests, or would like to report an issue
-please submit them at https://github.com/NetApp/beegfs-csi-driver/issues. 
+please submit them at https://github.com/ThinkParQ/beegfs-csi-driver/issues. 
 
 ***
 
@@ -171,7 +179,7 @@ deployment guide](operator/README.md).
 
 1. On a machine with kubectl and access to the Kubernetes cluster where you want
    to deploy the BeeGFS CSI driver clone this repository: `git clone
-   https://github.com/NetApp/beegfs-csi-driver.git`.
+   https://github.com/ThinkParQ/beegfs-csi-driver.git`.
 2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`).
 3. In BeeGFS versions 7.3.1+ or 7.2.7+, explicit connAuth configuration is
    required. Do one of the following or see [ConnAuth
@@ -273,6 +281,13 @@ given a version number MAJOR.MINOR.PATCH, we increment the:
   * PATCH version when: small bug or security fixes are needed in a more timely
     manner.
 
+When upgrading the driver using default Kustomize (`kubectl`) deployment option,
+it is recommended to reference the [upgrade
+notes](deploy/k8s/README.md#upgrade-notes) for your particular upgrade path.
+While the driver itself may be backwards compatible, if you used a non-standard
+file layout or customized the Kubernetes manifests used to deploy the driver,
+you may need to make adjustments to your manifests.
+
 ***
 
 <a name="license"></a>
@@ -282,10 +297,3 @@ Apache License 2.0
 
 ***
 
-<a name="maintainers"></a>
-## Maintainers 
-
-* Joe McCormick (@iamjoemccormick).
-* Eric Weber (@ejweber).
-* Garrett Marks (@gmarks-ntap).
-* Cole Krizek (@ckrizek).

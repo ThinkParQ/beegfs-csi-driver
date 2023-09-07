@@ -48,48 +48,48 @@ spec:
                   are not supported.
                 properties:
                   beegfsCsiDriver:
-                    description: Defaults to docker.io/netapp/beegfs-csi-driver:<the
+                    description: Defaults to ghcr.io/thinkparq/beegfs-csi-driver:<the
                       operator version>.
                     properties:
                       image:
-                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-                          or docker.io/netapp/beegfs-csi-driver).
+                        description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+                          or ghcr.io/thinkparq/beegfs-csi-driver).
                         type: string
                       tag:
                         description: A tag (e.g. v2.2.2 or latest).
                         type: string
                     type: object
                   csiNodeDriverRegistrar:
-                    description: Defaults to k8s.gcr.io/sig-storage/csi-node-driver-registrar:<the
+                    description: Defaults to registry.k8s.io/sig-storage/csi-node-driver-registrar:<the
                       most current version at operator release>.
                     properties:
                       image:
-                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-                          or docker.io/netapp/beegfs-csi-driver).
+                        description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+                          or ghcr.io/thinkparq/beegfs-csi-driver).
                         type: string
                       tag:
                         description: A tag (e.g. v2.2.2 or latest).
                         type: string
                     type: object
                   csiProvisioner:
-                    description: Defaults to k8s.gcr.io/sig-storage/csi-provisioner:<the
+                    description: Defaults to registry.k8s.io/sig-storage/csi-provisioner:<the
                       most current version at operator release>.
                     properties:
                       image:
-                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-                          or docker.io/netapp/beegfs-csi-driver).
+                        description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+                          or ghcr.io/thinkparq/beegfs-csi-driver).
                         type: string
                       tag:
                         description: A tag (e.g. v2.2.2 or latest).
                         type: string
                     type: object
                   livenessProbe:
-                    description: Defaults to k8s.gcr.io/sig-storage/livenessprobe:<the
+                    description: Defaults to registry.k8s.io/sig-storage/livenessprobe:<the
                       most current version at operator release>.
                     properties:
                       image:
-                        description: A combination of registry and image (e.g. k8s.gcr.io/csi-provisioner
-                          or docker.io/netapp/beegfs-csi-driver).
+                        description: A combination of registry and image (e.g. registry.k8s.io/csi-provisioner
+                          or ghcr.io/thinkparq/beegfs-csi-driver).
                         type: string
                       tag:
                         description: A tag (e.g. v2.2.2 or latest).

@@ -494,7 +494,7 @@ func getPermissionsConfigFromParams(reqParams map[string]string) (permissionsCon
 
 // (*controllerServer) newBeegfsVolume is a wrapper around newBeegfsVolume that makes it easier to call in the context
 // of the controller service. (*controllerServer) newBeegfsVolume selects the mountDirPath and passes the controller
-//service's PluginConfig.
+// service's PluginConfig.
 func (cs *controllerServer) newBeegfsVolume(sysMgmtdHost, volDirBasePathBeegfsRoot, volName string) beegfsVolume {
 	volDirPathBeegfsRoot := path.Join(volDirBasePathBeegfsRoot, volName)
 	// This volumeID construction duplicates the one further down in the stack. We do it anyway to generate an

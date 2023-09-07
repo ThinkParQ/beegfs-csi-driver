@@ -26,9 +26,10 @@ import (
 var beegfsDriverResource = schema.GroupVersionResource{Group: "beegfs.csi.netapp.com", Version: "v1", Resource: "beegfsdrivers"}
 
 // GetBeegfsDriverInUse returns a pointer to a BeegfsDriver if one and only one exists on the cluster. Consuming tests fail if:
-//   * The cluster knows about the BeegfsDriver resource but has non.
-//   * The cluster has more than one BeegfsDriver.
-//   * The attempt to list BeegfsDrivers fails for an unknown reason.
+//   - The cluster knows about the BeegfsDriver resource but has non.
+//   - The cluster has more than one BeegfsDriver.
+//   - The attempt to list BeegfsDrivers fails for an unknown reason.
+//
 // GetBeegfsDriverInUse returns nil if the cluster doesn't know about BeegfsDriver resources.
 func GetBeegfsDriverInUse(dc dynamic.Interface) *beegfsv1.BeegfsDriver {
 	// Use the client-go dynamic client to get a list of unstructured objects that match the BeegfsDriver schema.
@@ -49,8 +50,8 @@ func GetBeegfsDriverInUse(dc dynamic.Interface) *beegfsv1.BeegfsDriver {
 }
 
 // GetConfigMapInUse returns the ConfigMap being used to configure the BeeGFS CSI driver. Consuming tests fail if:
-//   * The BeeGFS CSI driver controller service isn't using a ConfigMap (this is virtually impossible).
-//   * The ConfigMap can't be retrieved.
+//   - The BeeGFS CSI driver controller service isn't using a ConfigMap (this is virtually impossible).
+//   - The ConfigMap can't be retrieved.
 func GetConfigMapInUse(cs clientset.Interface) corev1.ConfigMap {
 	// There may be many old ConfigMaps on the cluster. We need to get the one actually being used.
 	controllerPod := GetRunningControllerPodOrFail(cs)

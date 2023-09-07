@@ -1,16 +1,21 @@
-# Troubleshooting Guide
+# Troubleshooting Guide <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Overview](#overview)
-* [Kubernetes](#kubernetes)
-  * [Determining the BeeGFS Client Configuration for a PVC](#k8s-determining-the-beegfs-client-conf-for-a-pvc)
-  * [Orphaned BeeGFS Mounts Remain on Nodes](#orphan-mounts)
-* [Access Denied Issues](#access-denied-issues)
-   * [Discretionary Access Control](#discretionary-access-control)
-   * [SELinux](#selinux)
-* [Frequent Slow Operations and/or gRPC ABORTED Response Codes](#frequent-slow-operations--grpc-aborted-response-codes)
+- [Overview](#overview)
+- [Kubernetes](#kubernetes)
+  - [Determining the BeeGFS Client Configuration for a PVC](#determining-the-beegfs-client-configuration-for-a-pvc)
+  - [Orphaned Mounts Remain on Nodes](#orphaned-mounts-remain-on-nodes)
+    - [General Symptoms](#general-symptoms)
+    - [Outdated Driver or Node Unstage Timeout Exceeded](#outdated-driver-or-node-unstage-timeout-exceeded)
+    - [Missing vol\_data.json](#missing-vol_datajson)
+    - [Cleanup](#cleanup)
+- [Access Denied Issues](#access-denied-issues)
+  - [Discretionary Access Control](#discretionary-access-control)
+  - [SELinux](#selinux)
+- [Frequent Slow Operations and/or gRPC ABORTED Response Codes](#frequent-slow-operations-andor-grpc-aborted-response-codes)
+- [Pod Stuck In Terminating after Subpath Deletion](#pod-stuck-in-terminating-after-subpath-deletion)
 
 ***
 
@@ -19,7 +24,7 @@
 
 This section provides guidance and tips around troubleshooting issues that
 come up using the driver. For anything not covered here, please [submit an
-issue](https://github.com/NetApp/beegfs-csi-driver/issues) using the label
+issue](https://github.com/ThinkParQ/beegfs-csi-driver/issues) using the label
 "question". Suspected bugs should be submitted with the label "bug". 
 
 ***
@@ -303,7 +308,7 @@ also alleviate this issue. It is not recommended to take this action on a produc
 ***
 
 <a name="#frequent-slow-operations-grpc-aborted-response-codes"></a>
-## Freqeunt Slow Operations and/or gRPC ABORTED Response Codes
+## Frequent Slow Operations and/or gRPC ABORTED Response Codes
 
 The controller service must execute multiple beegfs-ctl commands to fulfill a CreateVolume request. In an optimal
 networking environment, each command takes milliseconds to complete and CreateVolume returns quickly. However, each

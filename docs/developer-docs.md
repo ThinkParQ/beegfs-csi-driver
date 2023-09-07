@@ -1,13 +1,19 @@
-# BeeGFS CSI Driver Developer Documentation
+# BeeGFS CSI Driver Developer Documentation <!-- omit in toc -->
 
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Overview](#overview)
-* [Building the Project](#building-the-project)
-* [Developer Kubernetes Deployment](#developer-kubernetes-deployment)
-* [Style Guidelines](#style-guidelines)
-  * [YAML Files](#style-guidelines-yaml)
-* [Frequently Asked Questions](#frequently-asked-questions)
+- [Overview](#overview)
+- [Building the Project](#building-the-project)
+  - [Building the binaries](#building-the-binaries)
+  - [Building the containers](#building-the-containers)
+  - [Building and pushing the containers](#building-and-pushing-the-containers)
+- [Developer Kubernetes Deployment](#developer-kubernetes-deployment)
+- [Style Guidelines](#style-guidelines)
+  - [YAML Files](#yaml-files)
+- [Frequently Asked Questions](#frequently-asked-questions)
+  - [Why do we use sigs.k8s.io/yaml instead of gopkg.in/yaml?](#why-do-we-use-sigsk8sioyaml-instead-of-gopkginyaml)
+  - [Why do we use JSON tags instead of YAML tags on our Go structs?](#why-do-we-use-json-tags-instead-of-yaml-tags-on-our-go-structs)
+  - [Why must beegfsClientConf values be strings in the driver configuration file?](#why-must-beegfsclientconf-values-be-strings-in-the-driver-configuration-file)
 
 ***
 

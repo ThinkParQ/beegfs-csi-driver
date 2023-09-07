@@ -7,6 +7,9 @@
 # Use distroless as minimal base image to package the manager binary. Refer to
 # https://github.com/GoogleContainerTools/distroless for more details.
 FROM gcr.io/distroless/static:nonroot
+LABEL org.opencontainers.image.description="BeeGFS CSI Driver Operator"
+LABEL org.opencontainers.image.source="https://github.com/ThinkParQ/beegfs-csi-driver/operator"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 WORKDIR /
 COPY bin/manager .
 USER 65532:65532

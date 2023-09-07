@@ -1,32 +1,41 @@
-# BeeGFS CSI Driver Deployment
+# BeeGFS CSI Driver Deployment <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
-  * [Manual Image Verification](#manual-image-verification)
-    * [Download Certificates and Tools](#download-certificates-and-tools)
-    * [Verify the Signing Certificate is Trusted](#verify-the-signing-certificate-is-trusted)
-    * [Extract the Public Key From the Certificate](#extract-the-public-key-from-the-certificate)
-    * [Validate the BeeGFS CSI Driver Image Signatures](#validate-the-beegfs-csi-driver-image-signatures)
-  * [Automating Image Verification with Admission Controllers](#automating-image-verification)
-* [Deploying to Kubernetes](#deploying-to-kubernetes)
-  * [Kubernetes Node Preparation](#kubernetes-node-preparation)
-  * [Kubernetes Deployment](#kubernetes-deployment)
-  * [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
-  * [Deployment to Kubernetes Clusters with Mixed Nodes](#mixed-kubernetes-deployment)
-  * [Deployment to Kubernetes Using the Operator](#operator-deployment)
-* [Example Application Deployment](#example-application-deployment)
-* [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
-  * [General Configuration](#general-configuration)
-    * [ConnAuth Configuration](#connauth-configuration)
-    * [BeeGFS Helperd Configuration](#beegfs-helperd)
-  * [Kubernetes Configuration](#kubernetes-configuration)
-  * [BeeGFS Client Parameters](#beegfs-client-parameters)
-* [Notes for Kubernetes Administrators](#kubernetes-administrator-notes)
-  * [Security and Networking Considerations](#security-considerations)
-  * [Resource and Performance Considerations](#resource-and-performance-considerations)
-* [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
+- [Verifying BeeGFS CSI Driver Image Signatures](#verifying-beegfs-csi-driver-image-signatures)
+  - [Manual Image Verification](#manual-image-verification)
+    - [Prerequisites: Download the public key and tools](#prerequisites-download-the-public-key-and-tools)
+    - [Steps: Validate the BeeGFS CSI Driver image signatures](#steps-validate-the-beegfs-csi-driver-image-signatures)
+  - [Automating Image Verification with Admission Controllers](#automating-image-verification-with-admission-controllers)
+- [Deploying to Kubernetes](#deploying-to-kubernetes)
+  - [Kubernetes Node Preparation](#kubernetes-node-preparation)
+  - [Kubernetes Deployment](#kubernetes-deployment)
+  - [Air-Gapped Kubernetes Deployment](#air-gapped-kubernetes-deployment)
+  - [Deployment to Kubernetes Clusters With Mixed Nodes](#deployment-to-kubernetes-clusters-with-mixed-nodes)
+  - [Deployment to Kubernetes Using the Operator](#deployment-to-kubernetes-using-the-operator)
+- [Example Application Deployment](#example-application-deployment)
+- [Managing BeeGFS Client Configuration](#managing-beegfs-client-configuration)
+  - [General Configuration](#general-configuration)
+    - [ConnAuth Configuration](#connauth-configuration)
+      - [Option 1: Use Connection Authentication](#option-1-use-connection-authentication)
+      - [Option 2: Disable Connection Authentication](#option-2-disable-connection-authentication)
+    - [BeeGFS Helperd Configuration](#beegfs-helperd-configuration)
+  - [Kubernetes Configuration](#kubernetes-configuration)
+  - [BeeGFS Client Parameters (beegfsClientConf)](#beegfs-client-parameters-beegfsclientconf)
+    - [Notable](#notable)
+    - [No Effect](#no-effect)
+    - [Unsupported](#unsupported)
+    - [Tested](#tested)
+    - [Untested](#untested)
+    - [BeeGFS Client Parameter Compatibility](#beegfs-client-parameter-compatibility)
+      - [BeeGFS 7.3 Client](#beegfs-73-client)
+- [Notes for Kubernetes Administrators](#notes-for-kubernetes-administrators)
+  - [Security and Networking Considerations](#security-and-networking-considerations)
+  - [Resource and Performance Considerations](#resource-and-performance-considerations)
+    - [Limit the number of in-flight requests.](#limit-the-number-of-in-flight-requests)
+    - [Managing CPU and Memory Requests and Limits](#managing-cpu-and-memory-requests-and-limits)
+- [Removing the Driver from Kubernetes](#removing-the-driver-from-kubernetes)
 
 ***
 
@@ -43,68 +52,39 @@ is optional.
 <a name="manual-image-verification"></a>
 ### Manual Image Verification
 
-<a name="download-certificates-and-tools"></a>
-#### Download Certificates and Tools
+#### Prerequisites: Download the public key and tools
 
 The following tools and files should be available on a Linux host.
 
-  * The openssl command.
   * The [cosign](https://github.com/sigstore/cosign/releases) utility.
-  * The certificate and CA chain file used to generate the image signatures.
-    * Download the files from the [BeeGFS CSI driver
-      releases](https://github.com/NetApp/beegfs-csi-driver/releases) page.
+  * The Cosign public key versioned in the repository at
+    [release/cosign.pub](../release/cosign.pub).
 
-<a name="verify-the-signing-certificate-is-trusted"></a>
-#### Verify the Signing Certificate is Trusted
 
-Use the following openssl command to validate that the certificate used for
-signing the images was signed by a trusted Certificate Authority.
-
-```
-openssl verify -show_chain -CAfile beegfs-csi-signer-ca-chain.crt beegfs-csi-signer.crt
-```
-
-If this command returns Ok then the certificate in the beegfs-csi-signer.crt was
-signed by a trusted CA.
-
-<a name="extract-the-public-key-from-the-certificate"></a>
-#### Extract the Public Key From the Certificate
-
-This step is optional.
-
-The cosign command can use either the certificate or the public key to validate
-the image signatures. If you just want to manually validate the images you can
-skip the step of extracting the public key. If you want to automate image
-verification in Kubernetes you may need the public key instead of the
-certificate.
-
-```
-openssl x509 -in beegfs-csi-signer.crt -inform PEM -pubkey -noout > beegfs-csi-signer-pubkey.pem
-```
-
-<a name="validate-the-beegfs-csi-driver-image-signatures"></a>
-#### Validate the BeeGFS CSI Driver Image Signatures
+#### Steps: Validate the BeeGFS CSI Driver image signatures
 
 Identify the image you want to validate. You can validate the image with either
-the version tag or the image digest. Starting with v1.40 of the BeeGFS CSI
-driver the image digests will be documented on the [BeeGFS CSI Driver GitHub
-Releases](https://github.com/NetApp/beegfs-csi-driver/releases) page for
-reference.
+the version tag or the image digest. Starting with v1.5.0 of the BeeGFS CSI
+driver the public key used to sign each release will be maintained at
+[release/cosign.pub](../release/cosign.pub).
 
 Use the cosign command to validate the signature of the BeeGFS CSI driver
-container. Make sure to use the appropriate tag or digest that you want to use
-instead of the example tag and digest.
+container. Make sure to use the appropriate key file name and tag or digest that
+you want to use instead of the placeholders.
 
-Validate the image by digest using the certificate file. 
-```
-cosign verify --cert beegfs-csi-signer.crt --cert-chain beegfs-csi-signer-ca-chain.crt docker.io/netapp/beegfs-csi-driver@sha256:9027762e2ae434aa52a071a484b0a7e26018c64d0fb884f7f8cff0af970c4eb8
-```
-or
+OPTION 1: Validate the image using the version tag:
 
-Validate the image by tag using the extracted public key.
 ```
-cosign verify --key beegfs-csi-signer-pubkey.pem docker.io/netapp/beegfs-csi-driver:v1.4.0
+cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>
 ```
+Example: `cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0`
+
+OPTION 2: Validate the image using the version tag and digest:
+
+```
+cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>@SHA256:<DIGEST>
+```
+Example: `cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0@SHA256:a6efb4f870003f28a2ee421690f4f9d0e5b8eed0e24b3881fb816a760eb6dfea`
 
 <a name="automating-image-verification"></a>
 ### Automating Image Verification with Admission Controllers
@@ -164,7 +144,7 @@ README](../deploy/k8s/README.md).
 Steps:
 * On a machine with kubectl and access to the Kubernetes cluster where you want
   to deploy the BeeGFS CSI driver clone this repository: `git clone
-  https://github.com/NetApp/beegfs-csi-driver.git`.
+  https://github.com/ThinkParQ/beegfs-csi-driver.git`.
 * Create a new kustomize overlay (changes made to the default overlay will be 
   overwritten in subsequent driver versions): `cp -r deploy/k8s/overlays/default 
   deploy/k8s/overlays/my-overlay`.
@@ -982,7 +962,7 @@ configuration.
 
 If you're experiencing any issues, find functionality lacking, or our
 documentation is unclear, we'd appreciate if you let us know:
-https://github.com/NetApp/beegfs-csi-driver/issues. 
+https://github.com/ThinkParQ/beegfs-csi-driver/issues. 
 
 The driver can be removed using `kubectl delete -k` (kustomize) and the original
 deployment manifests. On a machine with kubectl and access to the Kubernetes

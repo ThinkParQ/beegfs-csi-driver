@@ -22,23 +22,23 @@ spec:
       hostNetwork: true # Required to find an available connClientPortUDP on the host.
       containers:
         - name: node-driver-registrar
-          image: k8s.gcr.io/sig-storage/csi-node-driver-registrar:v2.5.0
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.8.0
           args:
             - --csi-address=/csi/csi.sock
             - --kubelet-registration-path=/var/lib/kubelet/plugins/beegfs.csi.netapp.com/csi.sock
             - -v=$(LOG_LEVEL)
           env:
             - name: LOG_LEVEL
-              value: '3'
+              value: "3"
           securityContext:
-            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket 
-            # created by the privileged driver container. 
+            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket
+            # created by the privileged driver container.
             privileged: true
           volumeMounts:
-          - mountPath: /csi
-            name: socket-dir
-          - mountPath: /registration
-            name: registration-dir
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /registration
+              name: registration-dir
           resources:
             limits:
               memory: 128Mi
@@ -46,7 +46,7 @@ spec:
               cpu: 80m
               memory: 10Mi
         - name: beegfs
-          image: docker.io/netapp/beegfs-csi-driver:v1.4.0
+          image: ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)
@@ -61,16 +61,16 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
             - name: LOG_LEVEL
-              value: '3'
+              value: "3"
           securityContext:
             # Privileged is required for bidirectional mount propagation and to run the mount command.
             # Adding the SYS_ADMIN capability is insufficient in certain environments (e.g. when AppArmor is enabled).
             privileged: true
           ports:
-          - containerPort: 9898
-            hostPort: 9898  # Must be same as containerPort when hostNetwork=true.
-            name: healthz
-            protocol: TCP
+            - containerPort: 9898
+              hostPort: 9898 # Must be same as containerPort when hostNetwork=true.
+              name: healthz
+              protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -84,7 +84,7 @@ spec:
             - mountPath: /host
               mountPropagation: Bidirectional
               name: host-dir
-              readOnly: true  # We should NOT write arbitrarily to the host filesystem.
+              readOnly: true # We should NOT write arbitrarily to the host filesystem.
               # Because we chwrap mount/umount, we must propagate the container's /host mounts to the node.
             - mountPath: /var/lib/kubelet/pods
               # We must know whether a directory is a mount point in order to decide how to handle it.
@@ -108,12 +108,12 @@ spec:
               memory: 20Mi
         - name: liveness-probe
           volumeMounts:
-          - mountPath: /csi
-            name: socket-dir
-          image: k8s.gcr.io/sig-storage/livenessprobe:v2.6.0
+            - mountPath: /csi
+              name: socket-dir
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.10.0
           args:
-          - --csi-address=/csi/csi.sock
-          - --health-port=9898
+            - --csi-address=/csi/csi.sock
+            - --health-port=9898
           resources:
             limits:
               memory: 128Mi
@@ -149,8 +149,8 @@ spec:
             type: DirectoryOrCreate
           name: socket-dir
         - configMap:
-            name: csi-beegfs-config  # kustomized
+            name: csi-beegfs-config # kustomized
           name: config-dir
         - secret:
-            secretName: csi-beegfs-connauth  # kustomized
+            secretName: csi-beegfs-connauth # kustomized
           name: connauth-dir

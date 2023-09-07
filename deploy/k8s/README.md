@@ -1,11 +1,13 @@
-# Kustomize Specific Deployment Details
+# Kustomize Specific Deployment Details <!-- omit in toc -->
 
 <a name="contents"></a>
-## Contents
+## Contents <!-- omit in toc -->
 
-* [Basics](#basics)
-* [Upgrading to v1.2.0](#upgrade-1.2.0-kubernetes-deployment)
-* [Upgrading to v1.4.0](#upgrade-1.4.0-kubernetes-deployment)
+- [Basics](#basics)
+- [Upgrade Notes](#upgrade-notes)
+  - [Upgrading to v1.2.0](#upgrading-to-v120)
+  - [Upgrading to v1.4.0](#upgrading-to-v140)
+  - [Upgrading to v1.5.0](#upgrading-to-v150)
 
 <a name="basics"></a>
 ## Basics
@@ -45,6 +47,8 @@ Modifications made to this overlay are completely protected. Any changes made
 by the development team to the base manifests or version patches will be picked 
 up when you pull a new version of the project and your custom modifications will 
 continue to work unless otherwise noted.
+
+## Upgrade Notes
 
 <a name="upgrade-1.2.0-kubernetes-deployment"></a>
 ### Upgrading to v1.2.0
@@ -95,6 +99,57 @@ images:
   - name: docker.io/netapp/beegfs-csi-driver
     newName: some.location/beegfs-csi-driver
     newTag: some-tag
+```
+
+Note: Overriding driver container image name is not common and most overlays
+will not need to be modified.
+
+<a name="upgrade-1.5.0-kubernetes-deployment"></a>
+### Upgrading to v1.5.0
+
+v1.5.0 changes the default driver container image name from
+`docker.io/netapp/beegfs-csi-driver` to
+`ghcr.io/thinkparq/beegfs-csi-driver:v1.5.0` as part of migrating the BeeGFS CSI
+driver to a new GitHub organization. It also changes the registry for the
+Kubernetes CSI sidecar containers from `k8s.gcr.io` to `registry.k8s.io` to
+accommodate the
+[deprecation of k8s.gcr.io](https://kubernetes.io/blog/2023/03/10/image-registry-redirect/).
+
+If you were previously using an overlay to override these image names, you must
+update your overlay(s) with the new default names.
+
+These kustomization stanzas:
+```
+images:
+  - name: docker.io/netapp/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+  - name: k8s.gcr.io/sig-storage/csi-provisioner
+    newName: some.location/csi-provisioner
+    newTag: some-tag
+  - name: k8s.gcr.io/sig-storage/csi-node-driver-registrar
+    newName: some.location/csi-node-driver-registrar
+    newTag: some-tag
+  - name: k8s.gcr.io/sig-storage/liveness-probe
+    newName: some.location/liveness-probe
+    newTag: some-tag    
+```
+
+Becomes these kustomization stanzas:
+```
+images:
+  - name: ghcr.io/thinkparq/beegfs-csi-driver
+    newName: some.location/beegfs-csi-driver
+    newTag: some-tag
+  - name: registry.k8s.io/sig-storage/csi-provisioner
+    newName: some.location/csi-provisioner
+    newTag: some-tag
+  - name: registry.k8s.io/sig-storage/csi-node-driver-registrar
+    newName: some.location/csi-node-driver-registrar
+    newTag: some-tag
+  - name: registry.k8s.io/sig-storage/liveness-probe
+    newName: some.location/liveness-probe
+    newTag: some-tag           
 ```
 
 Note: Overriding driver container image name is not common and most overlays

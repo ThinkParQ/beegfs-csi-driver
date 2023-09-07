@@ -1,12 +1,15 @@
-# BeeGFS CSI Driver End-to-End Testing
+# BeeGFS CSI Driver End-to-End Testing <!-- omit in toc -->
 
-## Contents
-* [Overview](#overview)
-* [Requirements](#requirements)
-* [CI Environments](#ci-environments)
-* [Test Commands](#test-commands)
-  * [Ginkgo](#ginkgo)
-  * [Go Test](#go-test)
+> **Warning**
+> This document has not been updated yet to reflect the project's migration to the ThinkParQ organization.
+
+## Contents <!-- omit in toc -->
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [CI Environments](#ci-environments)
+- [Test Commands](#test-commands)
+  - [Ginkgo](#ginkgo)
+  - [Go Test](#go-test)
 
 ## Overview
 
