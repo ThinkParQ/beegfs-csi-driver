@@ -1,9 +1,9 @@
 # BeeGFS CSI Driver <!-- omit in toc -->
 
-<!-- TODO: Reenable after updating the go get path. -->
-<!-- [![Go report card](https://goreportcard.com/badge/github.com/netapp/beegfs-csi-driver)](https://goreportcard.com/report/github.com/netapp/beegfs-csi-driver) -->
+[![Go report card](https://goreportcard.com/badge/github.com/thinkparq/beegfs-csi-driver)](https://goreportcard.com/report/github.com/thinkparq/beegfs-csi-driver)
 [![License](https://img.shields.io/github/license/thinkparq/beegfs-csi-driver)](LICENSE)
 [![Build, Test, and Publish](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/build-test-publish.yaml)
+[![Code scanning using CodeQL](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/codeql.yaml/badge.svg)](https://github.com/ThinkParQ/beegfs-csi-driver/actions/workflows/codeql.yaml)
 
 ## Contents <!-- omit in toc -->
 

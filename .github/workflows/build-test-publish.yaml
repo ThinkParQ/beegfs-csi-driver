@@ -57,7 +57,12 @@ jobs:
       - name: Install test dependencies
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
+          go install github.com/google/go-licenses@v1.6.0
         timeout-minutes: 5
+
+      - name: Verify license compliance and the NOTICE file is updated
+        run: |
+          make test-licenses
 
       - name: Run unit tests
         run: |
@@ -407,16 +412,16 @@ jobs:
         with:
           cosign-release: "v2.1.1"
 
-      - name: Pull tested CSI driver image from ghcr.io
-        run: |
-          docker pull ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
-
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull tested CSI driver image from ghcr.io
+        run: |
+          docker pull ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
 
       # This uses the semantic versioning option for https://github.com/docker/metadata-action#semver
       - name: Extract metadata for CSI driver container image
@@ -507,7 +512,7 @@ jobs:
   cleanup-test-images:
     runs-on: ubuntu-22.04
     timeout-minutes: 3
-    needs: publish-images
+    needs: [publish-images, e2e-tests, operator-e2e-tests]
     if: always()
     steps:
       - name: Extract CSI driver test package name
