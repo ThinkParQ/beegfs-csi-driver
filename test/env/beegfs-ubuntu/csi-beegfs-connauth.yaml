@@ -4,3 +4,5 @@
 # unmodified, the driver will deploy correctly with no custom configuration.
 - sysMgmtdHost: localhost
   connAuth: ${BEEGFS_SECRET}
+  # Do not specify the encoding type to verify backwards compatibility before
+  # support for specifying an encoding type was added.

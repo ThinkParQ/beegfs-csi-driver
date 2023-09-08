@@ -177,11 +177,11 @@ jobs:
           echo -e "\nimages:\n  - name: ${{ env.IMAGE_NAME }}\n    newName: ${{ env.TEST_IMAGE_NAME }}\n    newTag: ${{ github.sha }}" >> deploy/k8s/overlays/default/kustomization.yaml
           kubectl apply -k deploy/k8s/overlays/default
 
-      # TODO (BCSI-7): Actually run e2e tests using Ginko with an appropriate timeout.
+      # TODO (https://github.com/ThinkParQ/beegfs-csi-driver/issues/21): Actually run e2e tests using Ginko with an appropriate timeout.
 
       - name: Deploy all examples to verify the driver is available
         run: |
-          echo "${{ secrets.CONN_AUTH_SECRET }}" | sudo tee /etc/beegfs/connAuth
+          echo "${{ secrets.CONN_AUTH_SECRET }}" | sudo tee /etc/beegfs/connAuth > /dev/null
           sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf
           sudo sed -i '0,/sysMgmtdHost[[:space:]]*=[[:space:]]*/s//sysMgmtdHost = localhost/' /etc/beegfs/beegfs-client.conf
           sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s
@@ -274,11 +274,13 @@ jobs:
           chmod +x install.sh
           ./install.sh v0.25.0
 
+      # Test using a base64 encoded secret for the Operator based deployment to
+      # ensure the broadest coverage for how we handle base64 encoded secrets.
       - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing and expose as a service to the host OS
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
-          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
-          envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
+          envsubst < test/env/beegfs-ubuntu/beegfs-fs-2.yaml | kubectl apply -f -
 
           MAX_ATTEMPTS=36
           SLEEP_TIME=5
@@ -287,7 +289,7 @@ jobs:
           # If we try to expose the service to the host OS before the pod is ready we'll get an error.
           # Make sure the BeeGFS FS started before we continue.
           while [ $COUNTER -lt $MAX_ATTEMPTS ]; do
-            POD_STATUS=$(kubectl get pods beegfs-fs-1-0 -o jsonpath='{.status.phase}')
+            POD_STATUS=$(kubectl get pods beegfs-fs-2-0 -o jsonpath='{.status.phase}')
             echo "Pod status: ${POD_STATUS}"
             if [ "${POD_STATUS}" == "Running" ]; then
               echo "Verified BeeGFS FS pod is running."
@@ -302,7 +304,7 @@ jobs:
           if [ $COUNTER -eq $MAX_ATTEMPTS ]; then
             echo "BeeGFS FS pod did not reach 'Running' status within the maximum allowed time. Outputting debug information and exiting with error..."
             kubectl get pods -A
-            kubectl describe pod beegfs-fs-1-0
+            kubectl describe pod beegfs-fs-2-0
             docker images
             exit 1
           fi
@@ -311,7 +313,7 @@ jobs:
           # Exposes the service directly to the host operating system. 
           # This is required to mount BeeGFS since the kernel module is outside the container.
           # For some reason we don't need to override the ephemeral port and can use the actual 800* ports.
-          minikube service beegfs-fs-1-svc
+          minikube service beegfs-fs-2-svc
 
       # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
@@ -336,19 +338,19 @@ jobs:
         run: |
           operator-sdk run bundle ${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }}
 
-      # TODO (BCSI-7): Actually run e2e tests using Ginko with an appropriate timeout.
+      # TODO (https://github.com/ThinkParQ/beegfs-csi-driver/issues/21): Actually run e2e tests using Ginko with an appropriate timeout.
 
       - name: Deploy a BeeGFSDriver object
         run: |
           export CSI_IMAGE_NAME=$(echo ${{ env.TEST_IMAGE_NAME }})
           export CSI_IMAGE_TAG=$(echo ${{ github.sha }})
-          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
           export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           envsubst < test/env/beegfs-ubuntu/csi-beegfs-cr.yaml | kubectl apply -f -
 
       - name: Deploy all examples to verify the driver is available
         run: |
-          minikube ssh "sudo echo ${{ secrets.CONN_AUTH_SECRET }} | sudo tee /etc/beegfs/connAuth"
+          minikube ssh "sudo echo ${{ secrets.CONN_AUTH_BASE64_SECRET }} | base64 --decode | sudo tee /etc/beegfs/connAuth > /dev/null"
           minikube ssh "sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf"
           minikube ssh "sudo sed -i '0,/sysMgmtdHost[[:space:]]*=[[:space:]]*/s//sysMgmtdHost = localhost/' /etc/beegfs/beegfs-client.conf"
           minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s"
