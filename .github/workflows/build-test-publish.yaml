@@ -10,6 +10,9 @@ on:
   pull_request:
     branches:
       - "master"
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.txt"      
 
 env:
   # Container image registry to publish images to:

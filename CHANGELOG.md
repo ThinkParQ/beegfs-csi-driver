@@ -1,7 +1,7 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
-[1.5.0] - PRERELEASE
+[1.5.0] - 2023-09-11
 --------------------
 
 ### Added
