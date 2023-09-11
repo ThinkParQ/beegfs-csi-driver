@@ -26,6 +26,10 @@ all: build
 check-go-version:
 	./hack/check-go-version.sh
 
+.PHONY: generate-notices
+generate-notices:
+	@go-licenses report ./cmd/beegfs-csi-driver ./cmd/chwrap --template hack/notice.tpl > NOTICE.md --ignore github.com/thinkparq
+
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its
 # own container image and include it in a different image. This build-% recipe mirrors an analogous recipe in
 # release-tools/buildmake and allows us to explicitly build the binary specified by %.
@@ -51,6 +55,20 @@ bin/chwrap.tar: build-chwrap cmd/chwrap/chwrap.sh
 # different workaround will likely be required for multiarch builds.
 container: build-chwrap bin/chwrap.tar
 push: container  # not explicitly executed in release-tools/build.make
+
+# For details on what licenses are disallowed see
+# https://github.com/google/go-licenses#check 
+#
+# IMPORTANT: Any exceptions (using --ignore) such as the one for HCL must be
+# manually added AFTER the NOTICE file has been updated and/or other appropriate
+# steps have been taken based on the license requirements.
+test-licenses: generate-notices
+	@echo "Checking license compliance..."
+	@go-licenses check ./cmd/beegfs-csi-driver/ ./cmd/chwrap --ignore github.com/thinkparq --disallowed_types=forbidden,permissive,reciprocal,restricted,unknown
+	@if [ -n "$$(git status --porcelain NOTICE.md)" ]; then \
+        echo "NOTICE file is not up to date. Please run 'make generate-notices' and commit the changes."; \
+        exit 1; \
+    fi
 
 # Skip sanity tests that are known to fail. Use override directive to append to TESTARGS passed in on the command line. 
 # TODO(webere, A387): Correctly adhere to the CSI spec.

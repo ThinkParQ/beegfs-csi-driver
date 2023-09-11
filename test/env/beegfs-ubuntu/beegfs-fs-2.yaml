@@ -1,0 +1,109 @@
+# This file system uses random binary bytes as the conn auth secret.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: conn-auth-secret
+type: Opaque
+data:
+  connAuthFile: "${BEEGFS_SECRET}"
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: beegfs-fs-2
+spec:
+  serviceName: "beegfs-fs-2"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: beegfs-fs-2
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: beegfs
+      labels:
+        app: beegfs-fs-2
+    spec:
+      hostNetwork: true # This is the easiest (but not necessarily the best) way for clients to access the file system.
+      containers:
+        - name: beegfs-mgmtd
+          image: beegfs/beegfs-mgmtd:${BEEGFS_VERSION}
+          args:
+            - storeMgmtdDirectory=/mnt/mgmt_tgt_mgmt01
+            - storeAllowFirstRunInit=false
+            - connAuthFile=/etc/beegfs/connAuthFile
+          env:
+            - name: beegfs_setup_1
+              value: beegfs-setup-mgmtd -p /mnt/mgmt_tgt_mgmt01 -C -S mgmt_tgt_mgmt01
+          volumeMounts:
+          - name: conn-auth-secret-volume
+            mountPath: "/etc/beegfs"                   
+        - name: beegfs-meta
+          image: beegfs/beegfs-meta:${BEEGFS_VERSION}
+          args:
+            - storeMetaDirectory=/mnt/meta_01_tgt_0101
+            - storeAllowFirstRunInit=false
+            - sysMgmtdHost=localhost
+            - connAuthFile=/etc/beegfs/connAuthFile            
+          env:
+            - name: beegfs_setup_1
+              value: beegfs-setup-meta -C -p /mnt/meta_01_tgt_0101 -s 1 -S meta_01
+          volumeMounts:
+          - name: conn-auth-secret-volume
+            mountPath: "/etc/beegfs"                   
+        - name: beegfs-storage
+          image: beegfs/beegfs-storage:${BEEGFS_VERSION}
+          args:
+            - storeStorageDirectory=/mnt/stor_01_tgt_101,/mnt/stor_01_tgt_102
+            - storeAllowFirstRunInit=false
+            - sysMgmtdHost=localhost
+            - connAuthFile=/etc/beegfs/connAuthFile            
+          env:
+            - name: beegfs_setup_1
+              value: beegfs-setup-storage -C -p /mnt/stor_01_tgt_101 -s 1 -S stor_01_tgt_101 -i 101
+            - name: beegfs_setup_2
+              value: beegfs-setup-storage -C -p /mnt/stor_01_tgt_102 -s 1 -S stor_01_tgt_101 -i 102
+          volumeMounts:
+          - name: conn-auth-secret-volume
+            mountPath: "/etc/beegfs"              
+      volumes:
+        - name: conn-auth-secret-volume
+          secret:
+            secretName: conn-auth-secret              
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: beegfs-fs-2-svc
+spec:
+  type: NodePort
+  selector:
+    app: beegfs-fs-2
+  ports:
+    # Mgmt ports
+    - name: mgmt-tcp
+      protocol: TCP
+      port: 8008
+      targetPort: 8008
+    - name: mgmt-udp
+      protocol: UDP
+      port: 8008
+      targetPort: 8008
+    # Meta ports
+    - name: meta-tcp
+      protocol: TCP
+      port: 8005
+      targetPort: 8005
+    - name: meta-udp
+      protocol: UDP
+      port: 8005
+      targetPort: 8005
+    # Storage ports
+    - name: storage-tcp
+      protocol: TCP
+      port: 8003
+      targetPort: 8003
+    - name: storage-udp
+      protocol: UDP
+      port: 8003
+      targetPort: 8003

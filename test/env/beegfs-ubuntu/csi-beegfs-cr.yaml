@@ -11,7 +11,9 @@ metadata:
 stringData:
   csi-beegfs-connauth.yaml: |
     - sysMgmtdHost: "${BEEGFS_MGMTD}"
-      connAuth: "${BEEGFS_SECRET}"
+      connAuth: |+
+        ${BEEGFS_SECRET}
+      encoding: base64
 
 ---
 kind: BeegfsDriver

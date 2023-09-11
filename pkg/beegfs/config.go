@@ -11,6 +11,7 @@ package beegfs
 // consider moving it.
 
 import (
+	"encoding/base64"
 	"net"
 	"regexp"
 
@@ -110,6 +111,23 @@ func parseConnAuthFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 
 	for _, connAuth := range connAuthConfigs {
 		foundMatchingConfig := false
+		switch connAuth.Encoding {
+		case "raw", "":
+			// We previously added this newline to the connAuth in writeClientFiles because
+			// users' connAuthFiles typically contained a final newline (though they
+			// may not have realized it). When adding support for base64 encoding, we had to
+			// move the newline here to ensure we wrote out base64 encoded secrets exactly as
+			// expected.
+			connAuth.ConnAuth += "\n"
+		case "base64":
+			connAuthDecoded, err := base64.StdEncoding.DecodeString(connAuth.ConnAuth)
+			if err != nil {
+				return errors.Wrap(err, "failed to decode base64 connAuth")
+			}
+			connAuth.ConnAuth = string(connAuthDecoded)
+		default:
+			return errors.Errorf("invalid ConnAuthFile ncoding %s", connAuth.Encoding)
+		}
 		for i, specificConfig := range newPluginConfig.FileSystemSpecificConfigs {
 			if connAuth.SysMgmtdHost == specificConfig.SysMgmtdHost {
 				newPluginConfig.FileSystemSpecificConfigs[i].Config.ConnAuth = connAuth.ConnAuth

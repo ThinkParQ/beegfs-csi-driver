@@ -6,6 +6,7 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"os"
 	"reflect"
 	"regexp"
 	"testing"
@@ -158,6 +159,13 @@ func TestConnAuthNotParsedFromConfig(t *testing.T) {
 func TestParseConnAuthFromFile(t *testing.T) {
 	fs = afero.NewOsFs()
 	fsutil = afero.Afero{Fs: fs}
+
+	// Read in the binary connAuthFile for the test case that needs it.
+	binaryBytes, err := os.ReadFile("testdata/connauthfile.bin")
+	if err != nil {
+		t.Fatal("failed to read binary connAuthFile")
+	}
+
 	tests := map[string]struct {
 		path        string
 		startConfig beegfsv1.PluginConfig
@@ -186,7 +194,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
-							ConnAuth: "secret1",
+							ConnAuth: "secret1\n",
 						},
 					},
 				},
@@ -210,7 +218,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							ConnAuth:         "secret1",
+							ConnAuth:         "secret1\n",
 						},
 					},
 				},
@@ -238,7 +246,7 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
-							ConnAuth:         "secret1",
+							ConnAuth:         "secret1\n",
 						},
 					},
 				},
@@ -251,7 +259,48 @@ func TestParseConnAuthFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
-							ConnAuth: "secret1",
+							ConnAuth: "secret1\n",
+						},
+					},
+				},
+			},
+		},
+		"base64 encoded connauthfile": {
+			path: "testdata/connauthfile-base64.yaml",
+			startConfig: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{
+					BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+				},
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsv1.BeegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+					{
+						SysMgmtdHost: "127.0.0.1",
+						Config: beegfsv1.BeegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+						},
+					},
+				},
+			},
+			want: beegfsv1.PluginConfig{
+				DefaultConfig: beegfsv1.BeegfsConfig{BeegfsClientConf: map[string]string{"testkey": "testvalue"}},
+				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
+					{
+						SysMgmtdHost: "127.0.0.0",
+						Config: beegfsv1.BeegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+							ConnAuth:         "secret1\n",
+						},
+					},
+					{
+						SysMgmtdHost: "127.0.0.1",
+						Config: beegfsv1.BeegfsConfig{
+							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
+							ConnAuth:         string(binaryBytes),
 						},
 					},
 				},

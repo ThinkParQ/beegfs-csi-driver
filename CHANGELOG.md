@@ -1,12 +1,13 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file. 
 
-[1.5.0] - PRERELEASE
+[1.5.0] - 2023-09-11
 --------------------
 
 ### Added
 - Support for Kubernetes 1.26 and 1.27.
 - Support for BeeGFS v7.3.4 and v7.4.0.
+- Support for binary connAuthFile secrets utilizing base64 encoding.
 
 ### Changed
 - Migrated project to the ThinkParQ GitHub organization.
