@@ -1,9 +1,7 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
 approvers:
-  - sig-testing-approvers
   - andrewsykim
-  - fabriziopandini
   - pohly
   - oomichi
   - neolit123
@@ -11,7 +9,6 @@ approvers:
 reviewers:
   - sig-testing-reviewers
   - andrewsykim
-  - fabriziopandini
   - pohly
   - oomichi
   - neolit123
@@ -19,4 +16,5 @@ reviewers:
 labels:
   - area/e2e-test-framework
 emeritus_approvers:
+  - fabriziopandini
   - timothysc

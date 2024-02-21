@@ -7,3 +7,6 @@ junit/
 *.test
 .vscode
 coverity.conf
+# Don't ignore anything in the vendor folder! 
+# For example `junit/` is a valid package we want to vendor.
+!vendor/**/
