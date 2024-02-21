@@ -22,6 +22,7 @@ Licensed under the Apache License, Version 2.0.
 package utils
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -49,9 +50,18 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 	e2eframework.Logf("pod %s/%s exec for cmd %s, stdout: %s, stderr: %s", pod.Namespace, pod.Name, cmd, stdout, stderr)
 	ll := strings.Fields(stdout)
 	e2eframework.Logf("stdout split: %v, expected mode: %v, expected uid: %v, expected gid: %v ", ll, expectedMode, expectedUID, expectedGID)
-	e2eframework.ExpectEqual(ll[0], expectedMode)
-	e2eframework.ExpectEqual(ll[2], expectedUID)
-	e2eframework.ExpectEqual(ll[3], expectedGID)
+	// At some point ExpectEqual was removed.
+	// Based on the following, this is one way we can now handle things:
+	// https://www.kubernetes.dev/blog/2023/04/12/e2e-testing-best-practices-reloaded/
+	if ll[0] != expectedMode {
+		e2eframework.Failf("expected mode %s, got mode %s", ll[0], expectedMode)
+	}
+	if ll[2] != expectedUID {
+		e2eframework.Failf("expected UID %s, got UID %s", ll[2], expectedUID)
+	}
+	if ll[3] != expectedGID {
+		e2eframework.Failf("expected GID %s, got GID %s", ll[3], expectedGID)
+	}
 }
 
 // VerifyNoOrphanedMounts uses SSH to access all cluster nodes and verify that none of them have a BeeGFS file system
@@ -61,22 +71,28 @@ func VerifyDirectoryModeUidGidInPod(f *e2eframework.Framework, directory, expect
 // runs to ensure none of the tests within the suite causes a mount to be orphaned.
 func VerifyNoOrphanedMounts(cs clientset.Interface) {
 	// The external infrastructure taints nodes that cannot participate in the tests.
-	nodes, err := e2enode.GetReadySchedulableNodes(cs)
+	nodes, err := e2enode.GetReadySchedulableNodes(context.TODO(), cs)
 	e2eframework.ExpectNoError(err)
 	if len(nodes.Items) < 2 {
 		e2eframework.Failf("expected more than %d ready nodes", len(nodes.Items))
 	}
 	var nodeAddresses []string
 	for _, node := range nodes.Items {
-		address, err := e2enode.GetInternalIP(&node)
+		// Change due to https://github.com/kubernetes/kubernetes/commit/233f9c210a995b2ec8b680f25051ea656e8172db.
+		address, err := e2enode.GetSSHExternalIP(&node)
 		e2eframework.ExpectNoError(err)
 		nodeAddresses = append(nodeAddresses, address)
 	}
 	for _, nodeAddress := range nodeAddresses {
 		cmd := "findmnt -l -n -t beegfs | grep '/var/lib/kubelet/'"
-		result, err := e2essh.SSH(cmd, nodeAddress, e2eframework.TestContext.Provider)
+		result, err := e2essh.SSH(context.TODO(), cmd, nodeAddress, e2eframework.TestContext.Provider)
 		e2eframework.ExpectNoError(err)
-		e2eframework.ExpectEmpty(result.Stdout, "node with address %s has orphaned mounts", nodeAddress)
+		// At some point ExpectEmpty was removed.
+		// Based on the following, this is one way we can now handle things:
+		// https://www.kubernetes.dev/blog/2023/04/12/e2e-testing-best-practices-reloaded/
+		if result.Stdout != "" {
+			e2eframework.Failf("node with address %s has orphaned mounts", nodeAddress)
+		}
 	}
 }
 
@@ -95,7 +111,7 @@ func ArchiveServiceLogs(cs clientset.Interface, reportPath string) error {
 		returnError = err
 	} else { // Only proceed if we have node pods to get get logs from.
 		for _, nodePod := range nodePods {
-			logs, err := e2epod.GetPodLogs(cs, nodePod.Namespace, nodePod.Name, "beegfs")
+			logs, err := e2epod.GetPodLogs(context.TODO(), cs, nodePod.Namespace, nodePod.Name, "beegfs")
 			if err != nil {
 				e2eframework.Logf("Failed to get logs for node container beegfs due to error: %w", err)
 				if returnError == nil {
@@ -114,7 +130,7 @@ func ArchiveServiceLogs(cs clientset.Interface, reportPath string) error {
 		returnError = err
 	} else { // Only proceed if we have a controller pod to get get logs from.
 		for _, containerName := range []string{"beegfs", "csi-provisioner"} {
-			logs, err := e2epod.GetPodLogs(cs, controllerPod.Namespace, controllerPod.Name, containerName)
+			logs, err := e2epod.GetPodLogs(context.TODO(), cs, controllerPod.Namespace, controllerPod.Name, containerName)
 			if err != nil {
 				e2eframework.Logf("Failed to get logs for controller container %s due to error: %w", containerName, err)
 				if returnError == nil {
@@ -151,7 +167,7 @@ func AppendBytesToFile(filePath string, bytes []byte) error {
 // GetRunningControllerPod waits PodStartTimeout for exactly one controller service Pod to be running (in any namespace)
 // and returns it or an error.
 func GetRunningControllerPod(cs clientset.Interface) (corev1.Pod, error) {
-	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(cs, "",
+	controllerPods, err := e2epod.WaitForPodsWithLabelRunningReady(context.TODO(), cs, "",
 		labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-controller"}), 1, e2eframework.PodStartTimeout)
 	if err != nil {
 		return corev1.Pod{}, err
@@ -182,12 +198,12 @@ func GetRunningControllerPodOrFail(cs clientset.Interface) corev1.Pod {
 func GetRunningNodePods(cs clientset.Interface) ([]corev1.Pod, error) {
 	selector := labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"})
 	// Get node service Pods that should be running (we don't know how many up front).
-	nodePods, err := e2epod.WaitForPodsWithLabelScheduled(cs, "", selector)
+	nodePods, err := e2epod.WaitForPodsWithLabelScheduled(context.TODO(), cs, "", selector)
 	if err != nil {
 		return []corev1.Pod{}, err
 	}
 	// Get node service Pods one they are all running.
-	nodePods, err = e2epod.WaitForPodsWithLabelRunningReady(cs, "", selector, len(nodePods.Items),
+	nodePods, err = e2epod.WaitForPodsWithLabelRunningReady(context.TODO(), cs, "", selector, len(nodePods.Items),
 		e2eframework.PodStartTimeout)
 	if err != nil {
 		return []corev1.Pod{}, err
@@ -256,7 +272,7 @@ func CreatePVCFromStorageClass(
 
 	pvc := e2epv.MakePersistentVolumeClaim(pvcCfg, ns)
 	var err error
-	pvc, err = e2epv.CreatePVC(cs, ns, pvc)
+	pvc, err = e2epv.CreatePVC(context.TODO(), cs, ns, pvc)
 	if err != nil {
 		return pvc, err
 	}
@@ -267,7 +283,7 @@ func CreatePVCFromStorageClass(
 	}
 
 	if !isDelayedBinding {
-		err = e2epv.WaitForPersistentVolumeClaimPhase(corev1.ClaimBound, cs, pvc.Namespace, pvc.Name, e2eframework.Poll, claimProvisionTimeout)
+		err = e2epv.WaitForPersistentVolumeClaimPhase(context.TODO(), corev1.ClaimBound, cs, pvc.Namespace, pvc.Name, e2eframework.Poll, claimProvisionTimeout)
 		return pvc, err
 	}
 

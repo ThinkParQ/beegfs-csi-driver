@@ -104,7 +104,12 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	// SynchronizedBeforeSuite) to all nodes.
 	driverCM := utils.GetConfigMapInUse(cs)
 	driverConfigString, ok := driverCM.Data["csi-beegfs-config.yaml"]
-	e2eframework.ExpectEqual(ok, true, "expected a csi-beegfs-config.yaml in ConfigMap")
+	// At some point ExpectEqual was removed.
+	// Based on the following, this is one way we can now handle things:
+	// https://www.kubernetes.dev/blog/2023/04/12/e2e-testing-best-practices-reloaded/
+	if !ok {
+		e2eframework.Failf("expected a csi-beegfs-config.yaml in ConfigMap")
+	}
 	return []byte(driverConfigString)
 
 }, func(driverConfigBytes []byte) {
@@ -135,12 +140,15 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {}, func() {
 var _ = ginkgo.Describe("E2E Tests", func() {
 	beegfsDriver = driver.InitBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirBasePathBeegfsRoot,
 		staticVolDirName)
-	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDriver), func() {
+	// While upgrading dependencies this broke because at some point the Ginkgo context started expecting
+	// a text string. Possibly because Context (is now?) an alias for Describe. Presuming this can be any
+	// arbitrary string to help identify this aspect of the test definitions.
+	ginkgo.Context("Get beegfsDriver and define test suites", storageframework.GetDriverNameWithFeatureTags(beegfsDriver), func() {
 		storageframework.DefineTestSuites(beegfsDriver, beegfsSuitesToRun)
 	})
 
 	beegfsDynamicDriver = driver.InitBeegfsDynamicDriver(dynamicVolDirBasePathBeegfsRoot)
-	ginkgo.Context(storageframework.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
+	ginkgo.Context("Get beegfsDynamicDriver and define test suites", storageframework.GetDriverNameWithFeatureTags(beegfsDynamicDriver), func() {
 		storageframework.DefineTestSuites(beegfsDynamicDriver, k8sSuitesToRun)
 	})
 })

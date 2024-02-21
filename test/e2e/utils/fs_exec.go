@@ -62,7 +62,7 @@ func NewFSExec(cfg *storageframework.PerTestConfig, driver *driver.BeegfsDriver,
 	// components of the created VolumeResource during creation. If an error occurs, an embedded ExpectNoError() will
 	// register a failure and launch us back up the stack. Namespaced resources will be cleaned up by AfterEach, but
 	// non-namespaced resources will leak.
-	thisExec.Resource = storageframework.CreateVolumeResource(driver, cfg, storageframework.DefaultFsDynamicPV,
+	thisExec.Resource = storageframework.CreateVolumeResource(context.TODO(), driver, cfg, storageframework.DefaultFsDynamicPV,
 		sizeRange)
 
 	// Create a Pod to mount the storageframework.VolumeResource.
@@ -71,7 +71,7 @@ func NewFSExec(cfg *storageframework.PerTestConfig, driver *driver.BeegfsDriver,
 		PVCs:    []*corev1.PersistentVolumeClaim{thisExec.Resource.Pvc},
 		ImageID: e2epod.GetDefaultTestImageID(),
 	}
-	thisExec.pod, err = e2epod.CreateSecPodWithNodeSelection(cfg.Framework.ClientSet, &podConfig,
+	thisExec.pod, err = e2epod.CreateSecPodWithNodeSelection(context.TODO(), cfg.Framework.ClientSet, &podConfig,
 		e2eframework.PodStartTimeout)
 	if err != nil {
 		// If an error occurs during Pod creation, we can clean up the storageframework.VolumeResource, which has
@@ -228,15 +228,15 @@ func (e *FSExec) IssueCommandWithResult(cmd string) (string, error) {
 	cmd = "PATH=$PATH:/var/lib/kubelet/plugins/beegfs.csi.netapp.com/client/sbin " + cmd
 	node, err := e.cfg.Framework.ClientSet.CoreV1().Nodes().Get(context.TODO(), e.pod.Spec.NodeName, metav1.GetOptions{})
 	e2eframework.ExpectNoError(err)
-	return e.hostExec.IssueCommandWithResult(cmd, node)
+	return e.hostExec.IssueCommandWithResult(context.TODO(), cmd, node)
 }
 
 // Cleanup removes the resources used by FSExec from the cluster.
 func (e *FSExec) Cleanup() error {
 	var errs []error
-	errs = append(errs, e2epod.DeletePodWithWait(e.cfg.Framework.ClientSet, e.pod))
-	errs = append(errs, e.Resource.CleanupResource())
-	e.hostExec.Cleanup()
+	errs = append(errs, e2epod.DeletePodWithWait(context.TODO(), e.cfg.Framework.ClientSet, e.pod))
+	errs = append(errs, e.Resource.CleanupResource(context.TODO()))
+	e.hostExec.Cleanup(context.TODO())
 	// Return an error instead of asserting (e.g. e2eframework.ExpectNoError()) to give the calling code the option to
 	// further aggregate cleanup errors.
 	return errors.NewAggregate(errs)

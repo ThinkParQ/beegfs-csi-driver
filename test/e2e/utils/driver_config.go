@@ -40,7 +40,12 @@ func GetBeegfsDriverInUse(dc dynamic.Interface) *beegfsv1.BeegfsDriver {
 		}
 		e2eframework.ExpectNoError(err)
 	}
-	e2eframework.ExpectEqual(len(beegfsDriverList.Items), 1, "expected exactly one BeegfsDriver on an operator-enabled cluster")
+	// At some point ExpectEqual was removed.
+	// Based on the following, this is one way we can now handle things:
+	// https://www.kubernetes.dev/blog/2023/04/12/e2e-testing-best-practices-reloaded/
+	if len(beegfsDriverList.Items) != 1 {
+		e2eframework.Failf("expected exactly one BeegfsDriver on an operator-enabled cluster")
+	}
 
 	// Turn the unstructured object into a BeegfsDriver.
 	beegfsDriver := new(beegfsv1.BeegfsDriver)
@@ -120,10 +125,10 @@ func UpdatePluginConfigInUse(cs clientset.Interface, dc dynamic.Interface, confi
 	// because they wait for the Pod to no longer exist. That will not happen here, as the StatefulSet and DaemonSet
 	// controllers will recreate them.
 	controllerPod := GetRunningControllerPodOrFail(cs)
-	e2epod.DeletePodOrFail(cs, controllerPod.Namespace, controllerPod.Name)
+	e2epod.DeletePodOrFail(context.TODO(), cs, controllerPod.Namespace, controllerPod.Name)
 	nodePods := GetRunningNodePodsOrFail(cs)
 	for _, nodePod := range nodePods {
-		e2epod.DeletePodOrFail(cs, nodePod.Namespace, nodePod.Name)
+		e2epod.DeletePodOrFail(context.TODO(), cs, nodePod.Namespace, nodePod.Name)
 	}
 
 	// Wait for Pods to be running again.

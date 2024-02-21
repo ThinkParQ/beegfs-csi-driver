@@ -6,6 +6,7 @@ Licensed under the Apache License, Version 2.0.
 package driver
 
 import (
+	"context"
 	"path"
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
@@ -66,13 +67,13 @@ func (d *baseBeegfsDriver) SkipUnsupportedTest(pattern storageframework.TestPatt
 }
 
 // PrepareTest is part of the storageframework.TestDriver interface.
-func (d *baseBeegfsDriver) PrepareTest(f *e2eframework.Framework) (*storageframework.PerTestConfig, func()) {
+func (d *baseBeegfsDriver) PrepareTest(ctx context.Context, f *e2eframework.Framework) *storageframework.PerTestConfig {
 	config := &storageframework.PerTestConfig{
 		Driver:    d,
 		Prefix:    "beegfs",
 		Framework: f,
 	}
-	return config, func() {}
+	return config
 }
 
 // initBaseBeegfsDriver handles basic initialization shared across all exported drivers.
@@ -138,7 +139,7 @@ func InitBeegfsDynamicDriver(dynamicVolDirBasePathBeegfsRoot string) *BeegfsDyna
 }
 
 // GetDynamicProvisionStorageClass is part of the storageframework.DynamicPVTestDriver interface.
-func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframework.PerTestConfig,
+func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(ctx context.Context, config *storageframework.PerTestConfig,
 	fsType string) *storagev1.StorageClass {
 	params := map[string]string{
 		"sysMgmtdHost":   d.perFSConfigs[d.fsIndex].SysMgmtdHost,
@@ -157,7 +158,7 @@ func (d *baseBeegfsDriver) GetDynamicProvisionStorageClass(config *storageframew
 // CreateVolume is part of the storageframework.PreprovisionedVolumeTestDriver interface.
 // CreateVolume returns a storageframework.TestVolume that appropriately references a pre-created directory on a
 // BeeGFS file system known to the driver. Tests can use SetFSIndex and SetStaticDirName to modify its behavior.
-func (d *BeegfsDriver) CreateVolume(config *storageframework.PerTestConfig, volumeType storageframework.TestVolType) storageframework.TestVolume {
+func (d *BeegfsDriver) CreateVolume(ctx context.Context, config *storageframework.PerTestConfig, volumeType storageframework.TestVolType) storageframework.TestVolume {
 	fsConfig := d.perFSConfigs[d.fsIndex]
 	return beegfsVolume{
 		volumeID: beegfs.NewBeegfsURL(fsConfig.SysMgmtdHost, d.staticVolDirPathBeegfsRoot),
@@ -235,7 +236,7 @@ type beegfsVolume struct {
 
 // DeleteVolume is part of the storageframework.TestVolume interface.
 // We don't actually do anything when DeleteVolume() is called.
-func (v beegfsVolume) DeleteVolume() {
+func (v beegfsVolume) DeleteVolume(ctx context.Context) {
 	// Intentionally empty.
 	// Our pre-provisioned volumes are not created on demand and are not deleted at the end of a test.
 }
