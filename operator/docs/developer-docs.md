@@ -173,14 +173,20 @@ From the *operator/* directory
 ### Prepare Changes For a Pull Request
 <a name="prepare-changes-for-a-pull-request"></a>
 
-If you have done manual testing of changes with builds created from the dev
-environment, you'll want to unset any custom VERSION environment variables or
-changes to the Makefile for the version. Then run through the following sequence
-to generate the necessary changes without pushing any builds to the registry.
+If you have done manual testing of changes with builds created from the dev environment, you'll want
+to unset any custom VERSION or IMAGE_TAG_BASE variable overridden using the environment or changes
+to the Makefile . Then run through the following sequence to generate the necessary changes without
+pushing any builds to the registry.
 
 * make generate manifests
 * make build
 * make manifests bundle
+
+Note: Generally the VERSION set in the Makefile and in various manifests should not be updated until
+it is time to actually release a new version of the driver. If this version is updated beforehand,
+then it becomes difficult to find all the places in the repository where the old version needs to be
+updated when it is actually time to release. Unless a new Git tag is pushed, the container images
+tagged with a released version of the operator and bundle will not be overwritten.
 
 ### Update the operator-sdk version
 <a name="update-the-operator-sdk-version"></a>

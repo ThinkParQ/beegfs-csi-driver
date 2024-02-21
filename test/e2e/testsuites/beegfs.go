@@ -32,6 +32,7 @@ package testsuites
 // these tests, the two subsets should be broken out into separate suites within the testsuites directory.
 
 import (
+	"context"
 	"fmt"
 	"path"
 	"regexp"
@@ -116,7 +117,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 	cleanup := func() {
 		var errs []error
 		for _, resource := range resources {
-			errs = append(errs, resource.CleanupResource())
+			errs = append(errs, resource.CleanupResource(context.TODO()))
 		}
 		e2eframework.ExpectNoError(errors.NewAggregate(errs), "while cleaning up resources")
 	}
@@ -126,7 +127,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		"data across pod recreation on the same node", func() {
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// We can't check/skip until d is instantiated in init().
@@ -138,13 +139,13 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		var pvcs []*corev1.PersistentVolumeClaim
 		for i := 0; i < d.GetNumFS(); i++ {
 			d.SetFSIndex(i)
-			resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+			resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 			resources = append(resources, resource) // Allow for cleanup.
 			pvcs = append(pvcs, resource.Pvc)
 		}
 
 		// There is already a Kubernetes end-to-end test that tests this behavior (and more).
-		storagesuites.TestAccessMultipleVolumesAcrossPodRecreation(f, f.ClientSet, f.Namespace.Name, cfg.ClientNodeSelection, pvcs, true)
+		storagesuites.TestAccessMultipleVolumesAcrossPodRecreation(context.TODO(), f, f.ClientSet, f.Namespace.Name, cfg.ClientNodeSelection, pvcs, true)
 	})
 
 	ginkgo.It("should correctly interpret a storage class stripe pattern", func() {
@@ -155,7 +156,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Don't do expensive test setup until we know we'll run the test.
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// Create an FSExec with a storage resource including a StorageClass with non-standard striping params.
@@ -188,7 +189,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		fsExec := utils.NewFSExec(cfg, d, testVolumeSizeRange)
@@ -225,7 +226,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			cfg.Framework,
 			d.GetDriverInfo().Name,
 			"10G",
-			d.GetDynamicProvisionStorageClass(cfg, pattern.FsType),
+			d.GetDynamicProvisionStorageClass(context.TODO(), cfg, pattern.FsType),
 			pattern.VolMode,
 			d.GetDriverInfo().RequiredAccessModes,
 			provisionTimeout,
@@ -248,7 +249,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 	ginkgo.It("should use RDMA to connect", func() {
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// We can't check/skip until d is instantiated in init().
@@ -287,13 +288,13 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		controllerPod := utils.GetRunningControllerPodOrFail(f.ClientSet)
 
 		// Get a node Pod, which could be running in any namespace.
-		pods, err := e2epod.WaitForPodsWithLabel(f.ClientSet, "",
+		pods, err := e2epod.WaitForPodsWithLabel(context.TODO(), f.ClientSet, "",
 			labels.SelectorFromSet(map[string]string{"app": "csi-beegfs-node"}))
 		e2eframework.ExpectNoError(err, "expected at least 1 node pod")
 		nodePod := pods.Items[0]
 		// Just because nodePod exists doesn't mean it's running. Attempting to exec into a non-running Pod will cause
 		// an error.
-		e2epod.WaitForPodNameRunningInNamespace(f.ClientSet, nodePod.Name, nodePod.Namespace)
+		e2epod.WaitForPodNameRunningInNamespace(context.TODO(), f.ClientSet, nodePod.Name, nodePod.Namespace)
 
 		for _, pod := range []corev1.Pod{controllerPod, nodePod} {
 			// Added logging so we can see why this test is failing.
@@ -301,7 +302,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			e2eframework.Logf("Preparing to execute command in pod: %+v", pod)
 			e2eframework.ExpectNoError(err)
 
-			execOptions := e2eframework.ExecOptions{
+			execOptions := e2epod.ExecOptions{
 				// touch is chwrapped, so attempting to write /test-file actually attempts to write to /host/test-file.
 				// This test used to attempt to write to /tmp/test-file, but in OpenShift, /tmp is mounted so that it
 				// is still writeable even with our attempted read-only bind mount.
@@ -314,7 +315,10 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			}
 			// There are other framework functions that seem more appropriate (e.g. LookForStringInPodExecToContainer),
 			// but they do not work because they ignore stdErr, which we want to read.
-			_, stdErr, err := f.ExecWithOptions(execOptions)
+			//
+			// Based on this commit https://github.com/kubernetes/kubernetes/commit/dfdf88d4faafa6fd39988832ea0ef6d668f490e9
+			// this is the new way to call ExecWithOptions.
+			_, stdErr, err := e2epod.ExecWithOptions(f, execOptions)
 			e2eframework.ExpectError(err) // The touch should not be successful.
 
 			// Added logging so we can see why this test is failing.
@@ -333,7 +337,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Don't do expensive test setup until we know we'll run the test.
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// Create volume resource including a StorageClass with permissions params.
@@ -349,7 +353,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			"permissions/mode": mode,
 		})
 		defer d.UnsetStorageClassParams()
-		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
 
 		// Create a pod to consume the storage resource.
@@ -358,10 +362,10 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
 			ImageID: e2epod.GetDefaultTestImageID(),
 		}
-		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
+		pod, err := e2epod.CreateSecPodWithNodeSelection(context.TODO(), f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
 		defer func() {
 			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
-			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(context.TODO(), f.ClientSet, pod))
 		}()
 		e2eframework.ExpectNoError(err)
 
@@ -377,7 +381,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Don't do expensive test setup until we know we'll run the test.
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// Create volume resource including a StorageClass without permissions params.
@@ -386,7 +390,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			expectedUID  = "root"
 			expectedGID  = "root"
 		)
-		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup.
 
 		// Create a pod to consume the storage resource.
@@ -395,10 +399,10 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			PVCs:    []*corev1.PersistentVolumeClaim{resource.Pvc},
 			ImageID: e2epod.GetDefaultTestImageID(),
 		}
-		pod, err := e2epod.CreateSecPodWithNodeSelection(f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
+		pod, err := e2epod.CreateSecPodWithNodeSelection(context.TODO(), f.ClientSet, &podConfig, e2eframework.PodStartTimeout)
 		defer func() {
 			// ExpectNoError() must be wrapped in a func() or it will be evaluated (and the pod will be deleted) now.
-			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(f.ClientSet, pod))
+			e2eframework.ExpectNoError(e2epod.DeletePodWithWait(context.TODO(), f.ClientSet, pod))
 		}()
 		e2eframework.ExpectNoError(err)
 
@@ -441,7 +445,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Don't do expensive test setup until we know we'll run the test.
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		// Create an FSExec using a "standard" volDirBasePathBeegfsRoot so we can use it to clean up later. If we used
@@ -468,7 +472,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		// Create three volumes using the unique volDirBasePathBeegfsRoot. These will provide provide the "before"
 		// for our test.
 		for i := 0; i < 3; i++ {
-			resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+			resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 			resources = append(resources, resource) // Allow for cleanup.
 		}
 
@@ -477,8 +481,8 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		e2eframework.ExpectNoError(err)
 
 		// Create and then delete a new PVC with this same unique volDirBasePathBeegfsRoot.
-		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
-		e2eframework.ExpectNoError(resource.CleanupResource())
+		resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
+		e2eframework.ExpectNoError(resource.CleanupResource(context.TODO()))
 
 		// Verify that the current state of volDirBasePath matches our original archive.
 		s, err := fsExec.IssueCommandWithBeegfsPaths("tar --exclude %s --diff -f %s", csiDirPathBeegfsRoot, tarPathBeegfsRoot)
@@ -500,7 +504,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		config := utils.GetPluginConfigInUse(f.ClientSet, f.DynamicClient)
@@ -514,7 +518,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		interfaceFallbackTime := 5 * time.Second // It appears to take this long for BeeGFS to fall back.
 
 		startTime := time.Now()
-		resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+		resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 		resources = append(resources, resource) // Allow for cleanup if something goes wrong.
 		createTime := time.Since(startTime)
 		// If creation doesn't take longer than the grpcWaitTime or interfaceFallbackTime, this test is invalid. Figure
@@ -523,7 +527,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		gomega.Expect(createTime).To(gomega.BeNumerically(">=", interfaceFallbackTime))
 
 		startTime = time.Now()
-		err := resource.CleanupResource()
+		err := resource.CleanupResource(context.TODO())
 		e2eframework.ExpectNoError(err, "expected to delete volume despite interface fallback")
 		// Log output will be confusing if we attempt to clean up this resource again in teardown.
 		resources = make([]*storageframework.VolumeResource, 0)
@@ -552,7 +556,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 
 		init()
 		defer cleanup()
-		cfg, _ := d.PrepareTest(f)
+		cfg := d.PrepareTest(context.TODO(), f)
 		testVolumeSizeRange := b.GetTestSuiteInfo().SupportedSizeRange
 
 		var numVolumes = 200
@@ -567,7 +571,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		for i := 0; i < numVolumes; i++ {
 			go func(resourceChannel chan *storageframework.VolumeResource) {
 				defer ginkgo.GinkgoRecover()
-				resource := storageframework.CreateVolumeResource(d, cfg, pattern, testVolumeSizeRange)
+				resource := storageframework.CreateVolumeResource(context.TODO(), d, cfg, pattern, testVolumeSizeRange)
 				resourceChannel <- resource // Allow for cleanup.
 			}(resourceChannel)
 		}
@@ -595,7 +599,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			go func(resource *storageframework.VolumeResource) {
 				defer ginkgo.GinkgoRecover()
 				defer deletionWG.Done()
-				err := resource.CleanupResource()
+				err := resource.CleanupResource(context.TODO())
 				e2eframework.ExpectNoError(err, "expect to delete volumes without significant time delay")
 			}(resources[i])
 		}
