@@ -41,7 +41,7 @@ env:
 
 jobs:
   build-test-and-push-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 10
     permissions:
       packages: write
@@ -264,7 +264,7 @@ jobs:
           make -e IMG=${{ steps.determine_image_name.outputs.OPERATOR_IMAGE }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
 
   e2e-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
@@ -360,7 +360,7 @@ jobs:
           fi
 
   operator-e2e-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
@@ -533,7 +533,7 @@ jobs:
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 3
     needs: [build-test-and-push-images, e2e-tests, operator-e2e-tests]
     if: always()
