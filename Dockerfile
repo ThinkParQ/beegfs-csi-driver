@@ -17,7 +17,7 @@ LABEL org.opencontainers.image.licenses="Apache-2.0"
 # allowing the container image to be built without multiarch support by default.
 #
 # If Make is called with the `BUILD_PLATFORMS` build argument, then binaries and chwrap tar files
-# will be generared for each platform with an architecture suffix. These can then be used to build a
+# will be generated for each platform with an architecture suffix. These can then be used to build a
 # multiarch container image using `docker buildx build` by specifying the same list of platforms
 # using the `--platform` flag. Note the buildx flag and BUILD_PLATFORMS argument accept slightly
 # different values, for example to build for both amd64 and arm64:

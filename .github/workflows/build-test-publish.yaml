@@ -15,18 +15,18 @@ on:
       - "**/*.txt"
 
 env:
-  # Container image registry to publish images to:
-  REGISTRY: ghcr.io
-  # Where to push an image of the CSI driver that will be retained (for master builds or releases) without a specific tag:
-  IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
   # Equivalent of BUILD_PLATFORMS in the Makefile and release-tools build.make. We cannot just set
   # this as a default inside the project Makefile because it will be overridden by the release-tools
   # build.make. We can't update release-tools because it there is a check to prevent modifying
   # release-tools. Note release-tools specifies the buildx_platform without the os (i.e., arm64
   # instead of linux/arm64).
   RELEASE_TOOLS_BUILD_PLATFORMS: "linux amd64 amd64 amd64;linux arm64 arm64 arm64"
-  # Used as the list of platforms for Docker buildx when it is not called through release-tools.
+  # Used as the list of platforms for Docker buildx when building and pushing multiarch images.
   DOCKER_BUILDX_BUILD_PLATFORMS: "linux/amd64,linux/arm64"
+  # Container image registry to publish images to:
+  REGISTRY: ghcr.io
+  # Where to push an image of the CSI driver that will be retained (for master builds or releases) without a specific tag:
+  IMAGE_NAME: ghcr.io/thinkparq/beegfs-csi-driver
   # Where to push an image of the CSI driver for testing (including the operator) without a specific tag:
   TEST_IMAGE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver
   # Where to push an image of the operator that will be retained (for master builds or releases) without a specific tag:
@@ -36,10 +36,11 @@ env:
   # Where to push an image of the bundle for testing without a specific tag:
   OPERATOR_TEST_BUNDLE_NAME: ghcr.io/thinkparq/test-beegfs-csi-driver-operator-bundle
 
-  # Note for all test images the github.sha will be used as the tag.
+  # Note all images are tagged with the GitHub sha to ensure consistency when testing images.
+  # Additional tags are applied depending on what event caused the image to be built.
 
 jobs:
-  build-and-unit-test:
+  build-test-and-push-images:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     permissions:
@@ -93,27 +94,49 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Push the image for reuse in subsequent steps, jobs, and workflows.
-      # For now just tag with the commit ID to ensure subsequent jobs in this workflow run use the correct image.
-      # This uses the Git sha: https://github.com/docker/metadata-action?tab=readme-ov-file#typesha
-      - name: Extract metadata for test CSI driver container image
-        id: meta
+      # We only retain a limited number of test images created by PRs (non-master/release builds).
+      - name: Determine image names depending if they should be automatically cleaned up or retained
+        id: determine_image_name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "PR triggered the workflow (only publish test images)"
+            driver_image=${{ env.TEST_IMAGE_NAME }}
+            operator_image=${{ env.OPERATOR_TEST_IMAGE_NAME }}
+          else
+            echo "Non-PR event triggered the workflow"
+            driver_image=${{ env.IMAGE_NAME }}
+            operator_image=${{ env.OPERATOR_IMAGE_NAME }}       
+          fi
+          echo "DRIVER_IMAGE=$driver_image" >> $GITHUB_OUTPUT
+          echo "OPERATOR_IMAGE=$operator_image" >> $GITHUB_OUTPUT
+
+      # Release images are tagged on a push tag event:
+      # https://github.com/docker/metadata-action#semver Otherwise the image will be tagged with the
+      # branch or PR. Images created for a PR are also tagged with the commit ID to ensure
+      # subsequent jobs in this workflow run use the correct image for testing:
+      # https://github.com/docker/metadata-action?tab=readme-ov-file#typesha
+      - name: Determine metadata for CSI driver image
+        id: meta_driver
         uses: docker/metadata-action@v4
         with:
           images: |
-            ${{ env.TEST_IMAGE_NAME }}
+            ${{ steps.determine_image_name.outputs.DRIVER_IMAGE }}
           tags: |
-            type=sha,enable=true,priority=100,prefix=,suffix=,format=long
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=sha,prefix=,suffix=,format=long
 
-      - name: Build and push test container images for each supported platform
+      - name: Build and push driver container images for each supported platform
         uses: docker/build-push-action@v5.1.0
-        id: build-and-push
+        id: build_and_push_driver
         with:
           context: .
           platforms: "${{ env.DOCKER_BUILDX_BUILD_PLATFORMS }}"
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta_driver.outputs.tags }}
+          labels: ${{ steps.meta_driver.outputs.labels }}
           # If provenance is not set to false then the manifest list will contain unknown platform
           # entries that are also displayed in GitHub. Some detail on why this is needed in:
           # https://github.com/docker/buildx/issues/1509 and
@@ -121,7 +144,6 @@ jobs:
           provenance: false
           # Reference: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#adding-a-description-to-multi-arch-images
           outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=The BeeGFS Container Storage Interface (CSI) driver provides high performing and scalable storage for workloads running in Kubernetes,org.opencontainers.image.source=https://github.com/ThinkParQ/beegfs-csi-driver,org.opencontainers.image.licenses=Apache-2.0
-
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.1.1
@@ -131,7 +153,8 @@ jobs:
       # Adapted from:
       # https://github.blog/2021-12-06-safeguard-container-signing-capability-actions/
       # https://github.com/sigstore/cosign-installer#usage
-      - name: Sign CSI driver images for each platform with Cosign
+      # Note we only sign the multi-platform image manifest, not the individual platform specific images.
+      - name: Sign CSI driver image with Cosign
         run: |
           images=""
           for tag in ${TAGS}; do
@@ -143,10 +166,10 @@ jobs:
           -a "ref=${{ github.sha }}" \
            ${images}
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
+          TAGS: ${{ steps.meta_driver.outputs.tags }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          DIGEST: ${{ steps.build_and_push_driver.outputs.digest }}
 
       # TODO: Cache this dependency for reuse here and in e2e tests.
       # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
@@ -159,13 +182,10 @@ jobs:
           curl -LO ${OPERATOR_SDK_DL_URL}/operator-sdk_${OS}_${ARCH}
           chmod +x operator-sdk_${OS}_${ARCH} && sudo mv operator-sdk_${OS}_${ARCH} /usr/local/bin/operator-sdk
 
-      # For now just tag the image with the commit ID and publish as a test package.
-      # This ensures subsequent jobs in this workflow run use the correct image.
-      # If the operator passes all tests, it can be retagged as a master or release build.
-      - name: Build, test, and push operator as a test package
+      - name: Build and test operator
         run: |
           cd operator
-          make -e IMG=${{ env.OPERATOR_TEST_IMAGE_NAME }}:${{ github.sha }} build docker-build
+          make BUILD_PLATFORMS="${{ env.RELEASE_TOOLS_BUILD_PLATFORMS }}" build test
           # Build bundle without modification to verify that generated code and manifests are up to date.
           make bundle
           if ! git diff --exit-code > /dev/null; then
@@ -177,26 +197,76 @@ jobs:
               exit 1
           fi
 
-          make -e IMG=${{ env.OPERATOR_TEST_IMAGE_NAME }}:${{ github.sha }} docker-push
+      # Release images are tagged on a push tag event:
+      # https://github.com/docker/metadata-action#semver Otherwise the image will be tagged with the
+      # branch or PR. Images created for a PR are also tagged with the commit ID to ensure
+      # subsequent jobs in this workflow run use the correct image for testing:
+      # https://github.com/docker/metadata-action?tab=readme-ov-file#typesha
+      - name: Determine metadata for operator image
+        id: meta_operator
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ${{ steps.determine_image_name.outputs.OPERATOR_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=sha,prefix=,suffix=,format=long,enable=true
 
-      # The bundle container built in this step can only be used for testing.
-      # This is because it references an operator image tag that will be cleaned up after this workflow completes.
-      # This is fine because a bundle container is not actually used to release the operator (the pristine bundle directory is used instead).
+      - name: Build and push operator container images for each supported platform
+        uses: docker/build-push-action@v5.1.0
+        id: build_and_push_operator
+        with:
+          context: operator/
+          platforms: "${{ env.DOCKER_BUILDX_BUILD_PLATFORMS }}"
+          push: true
+          tags: ${{ steps.meta_operator.outputs.tags }}
+          labels: ${{ steps.meta_operator.outputs.labels }}
+          # If provenance is not set to false then the manifest list will contain unknown platform
+          # entries that are also displayed in GitHub. Some detail on why this is needed in:
+          # https://github.com/docker/buildx/issues/1509 and
+          # https://github.com/docker/build-push-action/issues/755#issuecomment-1607792956.
+          provenance: false
+          # Reference: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#adding-a-description-to-multi-arch-images
+          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=The BeeGFS CSI Driver Operator is used to deploy the driver to Operator Lifecycle Manager enabled clusters,org.opencontainers.image.source=https://github.com/ThinkParQ/beegfs-csi-driver-operator,org.opencontainers.image.licenses=Apache-2.0
+
+      # Adapted from:
+      # https://github.blog/2021-12-06-safeguard-container-signing-capability-actions/
+      # https://github.com/sigstore/cosign-installer#usage
+      # Note we only sign the multi-platform image manifest, not the individual platform specific images.
+      - name: Sign the operator image with Cosign
+        run: |
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
+          -a "repo=${{ github.repository }}" \
+          -a "run=${{ github.run_id }}" \
+          -a "ref=${{ github.sha }}" \
+           ${images}
+        env:
+          TAGS: ${{ steps.meta_operator.outputs.tags }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          DIGEST: ${{ steps.build_and_push_operator.outputs.digest }}
+
+      # The bundle container built in this step can only be used for testing. This is because it
+      # references an operator image tag that will be cleaned up after this workflow completes. This
+      # is fine because a bundle container is not actually used to release the operator (the
+      # pristine bundle directory is used instead). We always push a bundle regardless of what
+      # triggered the workflow run as this is often useful for manual testing.
       - name: Build and push the operator bundle as a test package
         run: |
           cd operator
-          make -e IMG=${{ env.OPERATOR_TEST_IMAGE_NAME }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: beegfs-csi-driver-artifacts
-          path: bin/
+          make -e IMG=${{ steps.determine_image_name.outputs.OPERATOR_IMAGE }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
 
   e2e-tests:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    needs: build-and-unit-test
+    needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
@@ -292,7 +362,7 @@ jobs:
   operator-e2e-tests:
     runs-on: ubuntu-22.04
     timeout-minutes: 10
-    needs: build-and-unit-test
+    needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
@@ -460,128 +530,12 @@ jobs:
             exit 1
           fi
 
-  publish-images:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 5
-    # We only run e2e tests for PRs and we only publish-images when we aren't on a PR.
-    # This means publish-images has to be wired to build-and-unit-test otherwise it will always get skipped.
-    needs: [build-and-unit-test]
-    if: github.event_name != 'pull_request'
-    permissions:
-      packages: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.1.1
-        with:
-          cosign-release: "v2.1.1"
-
-      - name: Log in to the GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull tested CSI driver image from ghcr.io
-        run: |
-          docker pull ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }}
-
-      # This uses the semantic versioning option for https://github.com/docker/metadata-action#semver
-      - name: Extract metadata for CSI driver container image
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: |
-            ${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}},prefix=v
-            type=semver,pattern={{major}}.{{minor}},prefix=v
-
-      # TODO: Consider adding labels available as steps.meta.output.labels.
-      - name: Tag and push the CSI driver image to GitHub Container Registry
-        run: |
-          tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
-          for tag in $tags; do
-            docker tag ${{ env.TEST_IMAGE_NAME }}:${{ github.sha }} $tag
-            docker push $tag
-          done
-
-      # Adapted from:
-      # https://github.blog/2021-12-06-safeguard-container-signing-capability-actions/
-      # https://github.com/sigstore/cosign-installer#usage
-      - name: Sign CSI driver image with Cosign
-        run: |
-          tags=$(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ')
-          for tag in $tags; do
-            DIGEST=$(docker image inspect $tag --format '{{index .RepoDigests 0}}')
-            cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-            -a "repo=${{ github.repository }}" \
-            -a "run=${{ github.run_id }}" \
-            -a "ref=${{ github.sha }}" \
-            $DIGEST
-          done
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-
-      - name: Pull tested operator image from ghcr.io
-        run: |
-          docker pull ${{ env.OPERATOR_TEST_IMAGE_NAME }}:${{ github.sha }}
-
-      # This uses the semantic versioning option for https://github.com/docker/metadata-action#semver
-      - name: Extract metadata for published operator container image
-        id: meta-operator
-        uses: docker/metadata-action@v4
-        with:
-          images: |
-            ${{ env.OPERATOR_IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}},prefix=v
-            type=semver,pattern={{major}}.{{minor}},prefix=v
-
-      # TODO: Consider adding labels available as steps.meta-operator.output.labels.
-      - name: Tag and push the operator image to GitHub Container Registry
-        run: |
-          tags=$(echo "${{ steps.meta-operator.outputs.tags }}" | tr '\n' ' ')
-          for tag in $tags; do
-            docker tag ${{ env.OPERATOR_TEST_IMAGE_NAME }}:${{ github.sha }} $tag
-            docker push $tag
-          done
-
-      # Adapted from:
-      # https://github.blog/2021-12-06-safeguard-container-signing-capability-actions/
-      # https://github.com/sigstore/cosign-installer#usage
-      - name: Sign operator image with Cosign
-        run: |
-          tags=$(echo "${{ steps.meta-operator.outputs.tags }}" | tr '\n' ' ')
-          for tag in $tags; do
-            DIGEST=$(docker image inspect $tag --format '{{index .RepoDigests 0}}')
-            cosign sign --yes --key env://COSIGN_PRIVATE_KEY \
-            -a "repo=${{ github.repository }}" \
-            -a "run=${{ github.run_id }}" \
-            -a "ref=${{ github.sha }}" \
-            $DIGEST
-          done
-        env:
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
     runs-on: ubuntu-22.04
     timeout-minutes: 3
-    needs: [publish-images, e2e-tests, operator-e2e-tests]
+    needs: [build-test-and-push-images, e2e-tests, operator-e2e-tests]
     if: always()
     steps:
       - name: Extract CSI driver test package name
