@@ -5,6 +5,12 @@
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 1.5.0
 
+# BUILD_PLATFORMS contains a set of tuples [os arch buildx_platform suffix base_image addon_image]
+# separated by semicolon. An empty variable or empty entry (= just a
+# semicolon) builds for the default platform of the current Go
+# toolchain. This approach was adapted from the CSI driver release-tools.1
+BUILD_PLATFORMS =
+
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
 # To re-generate a bundle for other specific channels without changing the standard setup, you can:
@@ -110,14 +116,23 @@ test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -v ./... -coverprofile cover.out
 
 ##@ Build
-
 .PHONY: build
 build: generate fmt vet ## Build manager binary.
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/manager main.go
+	mkdir -p bin
+	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch buildx_platform suffix base_image addon_image; do \
+		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags \
+		'$(FULL_LDFLAGS)' -o "./bin/manager$$suffix" main.go); then \
+			echo "Building manager for GOOS=$$os GOARCH=$$arch failed, see error(s) above."; \
+			exit 1; \
+		fi; \
+	done
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go --zap-devel=true --zap-log-level=5
+
+# Note the Makefile doesn't build multiarch images (only the current architecture).
+# Multiarch images are currently built/published using GitHub actions or manually.
 
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
@@ -249,9 +264,14 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: test ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
-	- docker buildx create --name project-v3-builder
-	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross
-	- docker buildx rm project-v3-builder
-	rm Dockerfile.cross
+	# sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
+	# - docker buildx create --name project-v3-builder
+	# docker buildx use project-v3-builder
+	# - docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross
+	# - docker buildx rm project-v3-builder
+	# rm Dockerfile.cross
+	# This has not been updated to work with how we build multiarch images using GitHub actions.
+	# Fail the target to prevent accidental usage.
+	@echo "Using the docker-buildx target is not currently supported"
+	@exit 1
+
