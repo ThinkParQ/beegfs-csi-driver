@@ -15,13 +15,14 @@
 # limitations under the License.
 
 # Modifications Copyright 2021 NetApp, Inc. All Rights Reserved.
+# Modifications Copyright 2024 ThinkParQ, GmbH. All Rights Reserved.
 # Licensed under the Apache License, Version 2.0.
 
 CMDS ?= beegfs-csi-driver
 # Speed up unit testing by explicitly NOT building anything in the e2e folder.
 # Do not run any operator tests during normal testing.
 TEST_GO_FILTER_CMD = -e '/test/e2e' -e '/operator'
-all: build
+all: build build-chwrap bin/chwrap.tar
 
 check-go-version:
 	./hack/check-go-version.sh
@@ -36,7 +37,7 @@ generate-notices:
 build-%: check-go-version-go
 	# Commands are taken directly from build.make build-%.
 	mkdir -p bin
-	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch suffix; do \
+	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch buildx_platform suffix base_image addon_image; do \
 		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags \
 		'$(FULL_LDFLAGS)' -o "./bin/$*$$suffix" ./cmd/$*); then \
 			echo "Building $* for GOOS=$$os GOARCH=$$arch failed, see error(s) above."; \
@@ -46,14 +47,22 @@ build-%: check-go-version-go
 
 # Put symbolic links between various commands (e.g. beegfs-ctl, mount, and umount) and cmd/chwrap into a .tar file to
 # be unpacked in the container. chwrap.tar is obviously not a binary file, but bin/ is where release-tools/build.make
-# outputs files and it is cleaned out on "make clean".
+# outputs files and it is cleaned out on "make clean". If we BUILD_PLATFORMS is set then we will create multiple tar
+# files each suffixed with the appropriate architecture. Otherwise we will create a single tar file with no suffix
+# for the current architecture.
 bin/chwrap.tar: build-chwrap cmd/chwrap/chwrap.sh
-	cmd/chwrap/chwrap.sh bin/chwrap bin/chwrap.tar
+	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch buildx_platform suffix base_image addon_image; do \
+		if ! (set -x; cmd/chwrap/chwrap.sh bin/chwrap$$arch bin/chwrap$$arch.tar osutils); then \
+			echo "Building $* for $$arch failed, see error(s) above."; \
+			exit 1; \
+		fi; \
+	done	
 
-# The beegfs-csi-driver container requires chwrap to be built and included, so we build it anytime container or push
-# are made. Additional prerequisites and the recipes for container and push are defined in release-tools/build.make. A
-# different workaround will likely be required for multiarch builds.
+# The beegfs-csi-driver container requires chwrap to be built and included, so we build it anytime
+# container, push, or push-multiarch are made. Additional prerequisites and the recipes for
+# container and push are defined in release-tools/build.make.
 container: build-chwrap bin/chwrap.tar
+push-multiarch: build-chwrap bin/chwrap.tar
 push: container  # not explicitly executed in release-tools/build.make
 
 # For details on what licenses are disallowed see

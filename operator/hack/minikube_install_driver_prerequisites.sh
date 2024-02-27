@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-export BEEGFS_VERSION=7.3.4
+export BEEGFS_VERSION=7.4.2
 
 # Install the BeeGFS beegfs-ctl tool into the Minikube container:
 minikube ssh "sudo apt-get update"
