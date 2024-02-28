@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 1.5.0
+VERSION ?= 1.6.0
 
 # BUILD_PLATFORMS contains a set of tuples [os arch buildx_platform suffix base_image addon_image]
 # separated by semicolon. An empty variable or empty entry (= just a
