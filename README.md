@@ -40,7 +40,8 @@ The driver can be easily deployed using the provided Kubernetes manifests.
 Optionally the [BeeGFS CSI Driver Operator](operator/README.md) can be used to
 automate day-1 (install/ configure) and day-2 (reconfigure/update) tasks for the
 driver. This especially simplifies discovery and installation from Operator
-Lifecycle Manger (OLM) enabled clusters.
+Lifecycle Manger (OLM) enabled clusters. Multi-arch images supporting amd64 and
+arm64 Kubernetes nodes are provided for the BeeGFS CSI driver and operator.
 
 <a name="notable-features"></a>
 ### Notable Features
@@ -77,22 +78,25 @@ table describes the versions of each component used in testing each release of
 the BeeGFS CSI driver. These configurations should be considered compatible and
 supported.
 
-| beegfs.csi.netapp.com | K8s Versions                              | Red Hat OpenShift Versions                           | BeeGFS Client Versions | CSI Version |
-| --------------------- | ----------------------------------------- | ---------------------------------------------------- | ---------------------- | ----------- |
-| v1.5.0                | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | [No longer tested.](docs/compatibility.md#openshift) | 7.3.4, v7.4.0          | v1.7.0      |
-| v1.4.0                | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 4.11 (RHEL only; RHCOS experimental)                 | 7.3.2, 7.2.8           | v1.7.0      |
-| v1.3.0                | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.1, 7.2.7           | v1.6.0      |
-| v1.2.2                | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 4.10 (RHEL only; RHCOS experimental)                 | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
-| v1.2.1                | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 4.9  (RHEL only)                                     | 7.2.5 [^1]             | v1.5.0      |
-| v1.2.0                | 1.18, 1.19, 1.20, 1.21                    | 4.8  (RHEL only)                                     | 7.2.4 [^1]             | v1.5.0      |
-| v1.1.0                | 1.18, 1.19, 1.20                          |                                                      | 7.2.1 [^1]             | v1.3.0      |
-| v1.0.0                | 1.19                                      |                                                      | 7.2 [^1]               | v1.3.0      |
+| BeeGFS CSI Driver | K8s Versions                              | BeeGFS Client Versions | CSI Version |
+| ----------------- | ----------------------------------------- | ---------------------- | ----------- |
+| v1.6.0            | 1.25.16, 1.26.14, 1.27.11, 1.28.7         | 7.3.4, 7.4.2           | v1.8.0      |
+| v1.5.0            | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | 7.3.4, 7.4.0           | v1.7.0      |
+| v1.4.0            | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 7.3.2, 7.2.8           | v1.7.0      |
+| v1.3.0            | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 7.3.1, 7.2.7           | v1.6.0      |
+| v1.2.2            | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
+| v1.2.1            | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 7.2.5 [^1]             | v1.5.0      |
+| v1.2.0            | 1.18, 1.19, 1.20, 1.21                    | 7.2.4 [^1]             | v1.5.0      |
+| v1.1.0            | 1.18, 1.19, 1.20                          | 7.2.1 [^1]             | v1.3.0      |
+| v1.0.0            | 1.19                                      | 7.2 [^1]               | v1.3.0      |
+
+Additional notes:
+* Starting with v1.6.0 official multi-arch container images are provided for both amd64 and arm64.
+* The BeeGFS CSI driver offers experimental support for [Hashicorp Nomad](docs/nomad.md).
+* As of v1.5.0 the BeeGFS CSI driver is [no longer tested](docs/compatibility.md#openshift) with Red Hat OpenShift.
 
 See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.
-
-The BeeGFS CSI driver is also tested for use with Hashicorp Nomad. See our 
-[Nomad documentation](docs/nomad.md) for details.
 
 ### Known Incompatibilities
 
