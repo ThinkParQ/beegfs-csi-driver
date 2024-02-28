@@ -18,7 +18,7 @@ spec:
       hostNetwork: true # This is the easiest (but not necessarily the best) way for clients to access the file system.
       containers:
         - name: beegfs-mgmtd
-          image: beegfs/beegfs-mgmtd:${BEEGFS_VERSION}
+          image: ${BEEGFS_REGISTRY}beegfs-mgmtd:${BEEGFS_VERSION}
           args:
             - storeMgmtdDirectory=/mnt/mgmt_tgt_mgmt01
             - storeAllowFirstRunInit=false
@@ -28,7 +28,7 @@ spec:
             - name: CONN_AUTH_FILE_DATA
               value: "${BEEGFS_SECRET}"
         - name: beegfs-meta
-          image: beegfs/beegfs-meta:${BEEGFS_VERSION}
+          image: ${BEEGFS_REGISTRY}beegfs-meta:${BEEGFS_VERSION}
           args:
             - storeMetaDirectory=/mnt/meta_01_tgt_0101
             - storeAllowFirstRunInit=false
@@ -39,7 +39,7 @@ spec:
             - name: CONN_AUTH_FILE_DATA
               value: "${BEEGFS_SECRET}"
         - name: beegfs-storage
-          image: beegfs/beegfs-storage:${BEEGFS_VERSION}
+          image: ${BEEGFS_REGISTRY}beegfs-storage:${BEEGFS_VERSION}
           args:
             - storeStorageDirectory=/mnt/stor_01_tgt_101,/mnt/stor_01_tgt_102
             - storeAllowFirstRunInit=false

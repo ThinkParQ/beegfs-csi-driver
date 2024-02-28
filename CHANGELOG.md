@@ -1,5 +1,21 @@
 # Changelog
-Notable changes to the BeeGFS CSI driver will be documented in this file. 
+Notable changes to the BeeGFS CSI driver will be documented in this file.
+
+[1.6.0] - 2024-02-28
+--------------------
+
+### Added
+- Support for BeeGFS v7.4.2 and Kubernetes v1.28.
+- Support for arm64 and official multi-arch container images for all supported platforms
+  (linux/amd64 and linux/arm64).
+
+### Deprecated
+- Kubernetes v1.25 and v1.26 support will be dropped in the next driver release according to our
+  [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+
+### Removed 
+- Support/testing for Kubernetes v1.23 and v1.24.
 
 [1.5.0] - 2023-09-11
 --------------------

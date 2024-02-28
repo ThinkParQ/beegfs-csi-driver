@@ -47,13 +47,13 @@ jobs:
       packages: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.1.1
         with:
           # Work around for how release-tools verify-subtree.sh verifies release-tools has not been modified.
           fetch-depth: "0"
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.22.0
       # Dependencies are cached by default: https://github.com/actions/setup-go#v4
@@ -85,10 +85,10 @@ jobs:
       # https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go#caching-dependencies
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.1.0
 
       - name: Log into the GitHub Container Registry
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -271,16 +271,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
-        beegfs-version: [7.3.4, 7.4.0]
+        k8s-version: [1.25.16, 1.26.14, 1.27.11, 1.28.7]
+        beegfs-version: [7.3.4, 7.4.2]
     permissions:
       packages: read
       contents: read
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - uses: actions/checkout@v4.1.1
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -288,10 +285,22 @@ jobs:
           driver: none
           kubernetes-version: ${{ matrix.k8s-version }}
 
+      # Starting with BeeGFS 7.4.1 the container registry used to host BeeGFS images switched from DockerHub
+      # to ghcr.io. This can be removed once we no longer test with BeeGFS 7.3.4.
+      - name: Determine BeeGFS image registry
+        id: determine_registry
+        run: |
+          if [ "${{ matrix.beegfs-version }}" = "7.3.4" ]; then
+            echo "BEEGFS_REGISTRY=beegfs/" >> $GITHUB_OUTPUT
+          else
+            echo "BEEGFS_REGISTRY=ghcr.io/thinkparq/" >> $GITHUB_OUTPUT      
+          fi
+
       - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          export BEEGFS_REGISTRY=$(echo ${{ steps.determine_registry.outputs.BEEGFS_REGISTRY }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
           kubectl get pods -A
 
@@ -367,13 +376,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3]
-        beegfs-version: [7.3.4, 7.4.0]
+        k8s-version: [1.25.16, 1.26.14, 1.27.11, 1.28.7]
+        beegfs-version: [7.3.4, 7.4.2]
     permissions:
       packages: read
       contents: read
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4.1.1
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -399,7 +408,7 @@ jobs:
           operator-sdk scorecard ./operator/bundle -w 180s > /tmp/scorecard.txt 2>&1 || (echo "SCORECARD FAILURE!" && exit 1)
 
       - name: Save the Operator Scorecard results as an artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4.3.1
         if: ${{ always() }}
         with:
           name: operator-scorecard-k8s${{ matrix.k8s-version }}-beegfs${{ matrix.beegfs-version }}
@@ -411,12 +420,24 @@ jobs:
           chmod +x install.sh
           ./install.sh v0.25.0
 
+      # Starting with BeeGFS 7.4.1 the container registry used to host BeeGFS images switched from DockerHub
+      # to ghcr.io. This can be removed once we no longer test with BeeGFS 7.3.4.
+      - name: Determine BeeGFS image registry
+        id: determine_registry
+        run: |
+          if [ "${{ matrix.beegfs-version }}" = "7.3.4" ]; then
+            echo "BEEGFS_REGISTRY=beegfs/" >> $GITHUB_OUTPUT
+          else
+            echo "BEEGFS_REGISTRY=ghcr.io/thinkparq/" >> $GITHUB_OUTPUT      
+          fi
+
       # Test using a base64 encoded secret for the Operator based deployment to
       # ensure the broadest coverage for how we handle base64 encoded secrets.
       - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing and expose as a service to the host OS
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
+          export BEEGFS_REGISTRY=$(echo ${{ steps.determine_registry.outputs.BEEGFS_REGISTRY }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-2.yaml | kubectl apply -f -
 
           MAX_ATTEMPTS=36
@@ -539,38 +560,40 @@ jobs:
     if: always()
     steps:
       - name: Extract CSI driver test package name
+        id: extract_driver
         run: |
           test_image_name="${{ env.TEST_IMAGE_NAME }}"
           test_image_pkg=${test_image_name##*/}
-          echo "TEST_IMAGE_PKG=$test_image_pkg" >> $GITHUB_ENV
+          echo "TEST_IMAGE_PKG=$test_image_pkg" >> $GITHUB_OUTPUT
 
-      - name: Cleanup old ${{ env.TEST_IMAGE_PKG }} packages
-        uses: actions/delete-package-versions@v4
+      - name: Cleanup old ${{ steps.extract_driver.outputs.TEST_IMAGE_PKG }} packages
+        uses: actions/delete-package-versions@v5
         with:
-          package-name: "${{ env.TEST_IMAGE_PKG }}"
+          package-name: "${{ steps.extract_driver.outputs.TEST_IMAGE_PKG }}"
           package-type: "container"
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
 
       - name: Extract operator test package names
+        id: extract_operator
         run: |
           operator_test_image_name="${{ env.OPERATOR_TEST_IMAGE_NAME }}"
           operator_test_image_pkg=${operator_test_image_name##*/}
-          echo "OPERATOR_TEST_IMAGE_PKG=$operator_test_image_pkg" >> $GITHUB_ENV
+          echo "OPERATOR_TEST_IMAGE_PKG=$operator_test_image_pkg" >> $GITHUB_OUTPUT
 
           operator_test_bundle_name="${{ env.OPERATOR_TEST_IMAGE_NAME }}"
           operator_test_bundle_pkg=${operator_test_bundle_name##*/}
-          echo "OPERATOR_TEST_BUNDLE_PKG=$operator_test_bundle_pkg" >> $GITHUB_ENV
+          echo "OPERATOR_TEST_BUNDLE_PKG=$operator_test_bundle_pkg" >> $GITHUB_OUTPUT
 
-      - name: Cleanup old ${{ env.OPERATOR_TEST_IMAGE_PKG }} packages
-        uses: actions/delete-package-versions@v4
+      - name: Cleanup old ${{ steps.extract_operator.outputs.OPERATOR_TEST_IMAGE_PKG }} packages
+        uses: actions/delete-package-versions@v5
         with:
-          package-name: "${{ env.OPERATOR_TEST_IMAGE_PKG }}"
+          package-name: "${{ steps.extract_operator.outputs.OPERATOR_TEST_IMAGE_PKG }}"
           package-type: "container"
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
 
-      - name: Cleanup old ${{ env.OPERATOR_TEST_BUNDLE_PKG }} packages
-        uses: actions/delete-package-versions@v4
+      - name: Cleanup old ${{ steps.extract_operator.outputs.OPERATOR_TEST_BUNDLE_PKG }} packages
+        uses: actions/delete-package-versions@v5
         with:
-          package-name: "${{ env.OPERATOR_TEST_BUNDLE_PKG }}"
+          package-name: "${{ steps.extract_operator.outputs.OPERATOR_TEST_BUNDLE_PKG }}"
           package-type: "container"
-          min-versions-to-keep: 5
+          min-versions-to-keep: 10
