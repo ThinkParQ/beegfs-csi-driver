@@ -48,6 +48,27 @@ spec:
             requests:
               cpu: 80m
               memory: 24Mi
+        - name: csi-resizer
+          image: registry.k8s.io/sig-storage/csi-resizer:v1.11.1
+          args:
+            - "--csi-address=/csi/csi.sock"
+            - -v=$(LOG_LEVEL)            
+          securityContext:
+            # On SELinux enabled systems, a non-privileged sidecar container cannot access the unix domain socket
+            # created by the privileged driver container.
+            privileged: true            
+          env:
+            - name: LOG_LEVEL
+              value: "3"             
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+          resources:
+            limits:
+              memory: 500Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi           
         - name: beegfs
           image: ghcr.io/thinkparq/beegfs-csi-driver:v1.6.0
           args:

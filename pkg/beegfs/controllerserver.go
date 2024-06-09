@@ -43,6 +43,7 @@ var (
 	// controllerCaps represents the capabilities of the controller service
 	controllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 		csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 	}
 )
 
@@ -378,7 +379,17 @@ func (cs *controllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnap
 }
 
 func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
+	}
+	// While currently volume "capacity" has no meaning as far as the driver is concerned, some
+	// applications rely on the capacity of the PV/PVC in the K8s API to make certain decisions.
+	// For these applications it is helpful to support volume resizing.
+	return &csi.ControllerExpandVolumeResponse{
+		CapacityBytes:         req.CapacityRange.RequiredBytes,
+		NodeExpansionRequired: false,
+	}, nil
 }
 
 func (cs *controllerServer) ControllerGetVolume(ctx context.Context, in *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
