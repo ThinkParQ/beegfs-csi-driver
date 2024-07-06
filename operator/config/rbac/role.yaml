@@ -84,8 +84,15 @@ rules:
   verbs:
   - get
   - list
+  - patch
   - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims/status
+  verbs:
+  - patch
 - apiGroups:
   - ""
   resources:
@@ -93,6 +100,15 @@ rules:
   verbs:
   - create
   - delete
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
   - get
   - list
   - watch

@@ -209,6 +209,9 @@ spec:
     csiProvisioner:
       image: some.registry/sig-storage/csi-provisioner
       tag: # Changing this tag is not supported.
+    csiResizer:
+      image: some.registry/sig-storage/csi-resizer
+      tag: # Changing this tag is not supported.      
     livenessProbe:
       image: some.registry/sig-storage/livenessprobe
       tag: # Changing this tag is not supported.

@@ -42,6 +42,7 @@ const (
 	ContainerNameBeegfsCsiDriver        = "beegfs"
 	ContainerNameCsiNodeDriverRegistrar = "node-driver-registrar"
 	ContainerNameCsiProvisioner         = "csi-provisioner"
+	ContainerNameCsiResizer             = "csi-resizer"
 	ContainerNameLivenessProbe          = "liveness-probe"
 )
 

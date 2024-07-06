@@ -370,6 +370,7 @@ var _ = Describe("Unit tests of helper functions", func() {
 				{Name: deploy.ContainerNameBeegfsCsiDriver, Image: "default.domain/default-driver-image:default-driver-tag"},
 				{Name: deploy.ContainerNameLivenessProbe, Image: "default.domain/default-liveness-image:default-liveness-tag"},
 				{Name: deploy.ContainerNameCsiNodeDriverRegistrar, Image: "default.domain/default-registrar-image:default-registrar-tag"},
+				{Name: deploy.ContainerNameCsiResizer, Image: "default.domain/default-resizer-image:default-resizer-tag"},
 			}
 		})
 
@@ -380,11 +381,13 @@ var _ = Describe("Unit tests of helper functions", func() {
 					BeegfsCsiDriver:        beegfsv1.ContainerImageOverride{Image: "override.domain/override-driver", Tag: "override-tag"},
 					CsiNodeDriverRegistrar: beegfsv1.ContainerImageOverride{Image: "override.domain/override-registrar", Tag: "override-tag"},
 					CsiProvisioner:         beegfsv1.ContainerImageOverride{Image: "override.domain/override-provisioner", Tag: "override-tag"},
+					CsiResizer:             beegfsv1.ContainerImageOverride{Image: "override.domain/override-resizer", Tag: "override-tag"},
 					LivenessProbe:          beegfsv1.ContainerImageOverride{Image: "override.domain/override-liveness", Tag: "override-tag"},
 				}
 				setImages(ctrl.Log, containers, overrides)
 				Expect(getContainerImageForName(deploy.ContainerNameCsiNodeDriverRegistrar, containers)).To(Equal("override.domain/override-registrar:override-tag"))
 				Expect(getContainerImageForName(deploy.ContainerNameCsiProvisioner, containers)).To(Equal("override.domain/override-provisioner:override-tag"))
+				Expect(getContainerImageForName(deploy.ContainerNameCsiResizer, containers)).To(Equal("override.domain/override-resizer:override-tag"))
 				Expect(getContainerImageForName(deploy.ContainerNameBeegfsCsiDriver, containers)).To(Equal("override.domain/override-driver:override-tag"))
 				Expect(getContainerImageForName(deploy.ContainerNameLivenessProbe, containers)).To(Equal("override.domain/override-liveness:override-tag"))
 			})

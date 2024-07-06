@@ -113,6 +113,9 @@ type ContainerImageOverrides struct {
 	// Defaults to registry.k8s.io/sig-storage/csi-provisioner:<the most current version at operator release>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Provisioner"
 	CsiProvisioner ContainerImageOverride `json:"csiProvisioner"`
+	// Defaults to registry.k8s.io/sig-storage/csi-resizer:<the most current version at operator release>.
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="CSI Resizer"
+	CsiResizer ContainerImageOverride `json:"csiResizer"`
 	// Defaults to registry.k8s.io/sig-storage/livenessprobe:<the most current version at operator release>.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
 	LivenessProbe ContainerImageOverride `json:"livenessProbe"`
