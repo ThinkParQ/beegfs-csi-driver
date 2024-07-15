@@ -97,7 +97,7 @@ func initBaseBeegfsDriver(dynamicVolDirBasePathBeegfsRoot, staticVolDirPathBeegf
 				storageframework.CapPVCDataSource:       false,
 				storageframework.CapMultiPODs:           true,
 				storageframework.CapRWX:                 true,
-				storageframework.CapControllerExpansion: false,
+				storageframework.CapControllerExpansion: true,
 				storageframework.CapNodeExpansion:       false,
 				storageframework.CapVolumeLimits:        false,
 				// This setting is only used in two places, both in the multivolume test suite. Setting this to true

@@ -6,10 +6,12 @@
 VERSION ?= 1.6.0
 
 # BUILD_PLATFORMS contains a set of tuples [os arch buildx_platform suffix base_image addon_image]
-# separated by semicolon. An empty variable or empty entry (= just a
-# semicolon) builds for the default platform of the current Go
-# toolchain. This approach was adapted from the CSI driver release-tools.1
-BUILD_PLATFORMS =
+# separated by semicolon. All supported architectures are listed here so other targets used for
+# development such as docker-build work correctly even when not building multi-arch images. This is
+# because the Dockerfile expects all binaries will have an architecture suffix. Note for the
+# official images/binaries published using GitHub actions, the default here is overridden by the
+# RELEASE_TOOLS_BUILD_PLATFORMS variable (see the notes there for why).
+BUILD_PLATFORMS ?= linux amd64 amd64 amd64;linux arm64 arm64 arm64
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")

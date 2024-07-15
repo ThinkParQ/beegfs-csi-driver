@@ -58,10 +58,20 @@ bin/chwrap.tar: build-chwrap cmd/chwrap/chwrap.sh
 		fi; \
 	done	
 
-# The beegfs-csi-driver container requires chwrap to be built and included, so we build it anytime
-# container, push, or push-multiarch are made. Additional prerequisites and the recipes for
-# container and push are defined in release-tools/build.make.
-container: build-chwrap bin/chwrap.tar
+
+# This target is mainly used for development to first rebuild the driver binary before building the
+# container for local testing. Since the beegfs-csi-driver container requires chwrap to be built and
+# included, we also build it anytime container, push, or push-multiarch are made. Additional
+# prerequisites and the recipes for container and push are defined in release-tools/build.make.
+#
+# IMPORTANT: Because the release tool's build.make file specifies BUILD_PLATFORMS= and cannot be
+# modified, a default set of build platforms cannot be specified in this file and thus must be
+# always provided on the command line otherwise the resulting files will not work correctly with how
+# the project's Dockerfile expects them to be named.
+#
+# For ARM: `make BUILD_PLATFORMS="linux arm64 arm64 arm64" container` For x86: `make
+# BUILD_PLATFORMS="linux amd64 amd64 amd64" container`
+container: all
 push-multiarch: build-chwrap bin/chwrap.tar
 push: container  # not explicitly executed in release-tools/build.make
 

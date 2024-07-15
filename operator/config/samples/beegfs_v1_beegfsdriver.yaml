@@ -41,6 +41,9 @@ spec:
   #   csiProvisioner:
   #     image:
   #     tag:
+    #   csiResizer:
+  #     image:
+  #     tag:
   #   livenessProbe:
   #     image:
   #     tag:

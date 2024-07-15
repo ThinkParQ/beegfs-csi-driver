@@ -71,12 +71,14 @@ type BeegfsDriverReconciler struct {
 //+kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,resourceNames=privileged,verbs=use
 
 // The operator must have the following permissions in order to grant them to the driver.
-//+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;watch;create;delete
-//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;update
+//+kubebuilder:rbac:groups=core,resources=persistentvolumes,verbs=get;list;watch;create;delete;patch
+//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=storage.k8s.io,resources=storageclasses,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=events,verbs=list;watch;create;update;patch
 //+kubebuilder:rbac:groups=storage.k8s.io,resources=csinodes,verbs=get;list;watch
 //+kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=persistentvolumeclaims/status,verbs=patch
 
 // Reconcile is part of the main Kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -598,6 +600,7 @@ func setImages(log logr.Logger, containers []corev1.Container, overrides beegfsv
 		deploy.ContainerNameBeegfsCsiDriver:        overrides.BeegfsCsiDriver,
 		deploy.ContainerNameCsiNodeDriverRegistrar: overrides.CsiNodeDriverRegistrar,
 		deploy.ContainerNameCsiProvisioner:         overrides.CsiProvisioner,
+		deploy.ContainerNameCsiResizer:             overrides.CsiResizer,
 		deploy.ContainerNameLivenessProbe:          overrides.LivenessProbe,
 	}
 

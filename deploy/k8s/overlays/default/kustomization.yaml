@@ -43,6 +43,9 @@ secretGenerator:
 #   - name: k8s.gcr.io/sig-storage/csi-provisioner
 #     newName:
 #     newTag:
+#   - name: k8s.gcr.io/sig-storage/csi-resizer
+#     newName:
+#     newTag:
 #   - name: k8s.gcr.io/sig-storage/livenessprobe
 #     newName:
 #     newTag:

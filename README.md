@@ -204,7 +204,7 @@ deployment guide](operator/README.md).
      ```
 4. Run `kubectl apply -k deploy/k8s/overlays/default`. Note by default the
    beegfs-csi-driver image will be pulled from
-   [DockerHub](https://hub.docker.com/r/netapp/beegfs-csi-driver).
+   [GitHub Container Registry](https://github.com/ThinkParQ/beegfs-csi-driver/pkgs/container/beegfs-csi-driver).
 5. Verify all components are installed and operational: `kubectl get pods -n
    beegfs-csi`.
 

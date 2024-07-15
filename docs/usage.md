@@ -69,6 +69,13 @@ any POSIX) filesystem. The driver does provide integration with BeeGFS permissio
 and quotas which provides ways to limit the capacity consumed by containers. For
 more details refer to the documentation on [Quotas](quotas.md).
 
+Starting with v1.7.0 the driver also supports [volume
+expansion](https://kubernetes-csi.github.io/docs/volume-expansion.html), which is useful for
+instances where the persistent volume claim request size has meaning for the application. As with
+the initial capacity request, the size of the PVC and PV are simply updated in the Kubernetes API to
+reflect the requested new capacity, and there are no checks there is actually sufficient space
+available to satisfy the requested capacity.
+
 <a name="static-vs-dynamic-provisioning"></a>
 ### Static vs Dynamic Provisioning
 

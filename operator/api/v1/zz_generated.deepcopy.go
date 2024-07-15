@@ -209,6 +209,7 @@ func (in *ContainerImageOverrides) DeepCopyInto(out *ContainerImageOverrides) {
 	out.BeegfsCsiDriver = in.BeegfsCsiDriver
 	out.CsiNodeDriverRegistrar = in.CsiNodeDriverRegistrar
 	out.CsiProvisioner = in.CsiProvisioner
+	out.CsiResizer = in.CsiResizer
 	out.LivenessProbe = in.LivenessProbe
 }
 

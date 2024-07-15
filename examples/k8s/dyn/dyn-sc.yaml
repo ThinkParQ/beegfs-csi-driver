@@ -20,4 +20,4 @@ parameters:
   # permissions/mode: "0644"
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
-allowVolumeExpansion: false
+allowVolumeExpansion: true
