@@ -57,6 +57,7 @@ type controllerServer struct {
 	volumeIDsInFlight      *threadSafeStringLock
 	volumeStatusMap        *threadSafeStatusMap
 	nodeUnstageTimeout     uint64
+	csi.UnimplementedControllerServer
 }
 
 func newControllerServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath, csDataDir string,
@@ -393,6 +394,10 @@ func (cs *controllerServer) ControllerExpandVolume(ctx context.Context, req *csi
 }
 
 func (cs *controllerServer) ControllerGetVolume(ctx context.Context, in *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (cs *controllerServer) ControllerModifyVolume(ctx context.Context, in *csi.ControllerModifyVolumeRequest) (*csi.ControllerModifyVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 

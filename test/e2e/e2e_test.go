@@ -117,7 +117,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	var pluginConfig beegfsv1.PluginConfig
 	err := yaml.UnmarshalStrict(driverConfigBytes, &pluginConfig)
 	e2eframework.ExpectNoError(err, "expected to successfully unmarshal PluginConfig")
-	e2eframework.ExpectNotEqual(len(pluginConfig.FileSystemSpecificConfigs), 0,
+	gomega.Expect(len(pluginConfig.FileSystemSpecificConfigs)).NotTo(gomega.Equal(0),
 		"expected PluginConfig to specifically reference at least one file system")
 	beegfsDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)
 	beegfsDynamicDriver.SetPerFSConfigs(pluginConfig.FileSystemSpecificConfigs)

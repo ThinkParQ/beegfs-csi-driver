@@ -107,13 +107,13 @@ func ArchiveServiceLogs(cs clientset.Interface, reportPath string) error {
 	// Dump logs of each node pod's beegfs container.
 	nodePods, err := GetRunningNodePods(cs)
 	if err != nil {
-		e2eframework.Logf("Failed to get node pods due to error: %w", err)
+		e2eframework.Logf("Failed to get node pods due to error: %s", err)
 		returnError = err
 	} else { // Only proceed if we have node pods to get get logs from.
 		for _, nodePod := range nodePods {
 			logs, err := e2epod.GetPodLogs(context.TODO(), cs, nodePod.Namespace, nodePod.Name, "beegfs")
 			if err != nil {
-				e2eframework.Logf("Failed to get logs for node container beegfs due to error: %w", err)
+				e2eframework.Logf("Failed to get logs for node container beegfs due to error: %s", err)
 				if returnError == nil {
 					returnError = err
 				}
@@ -126,13 +126,13 @@ func ArchiveServiceLogs(cs clientset.Interface, reportPath string) error {
 	// Dump logs of controller pod's beegfs and csi-provisioner containers
 	controllerPod, err := GetRunningControllerPod(cs)
 	if err != nil {
-		e2eframework.Logf("Failed to get controller pod due to error: %w", err)
+		e2eframework.Logf("Failed to get controller pod due to error: %s", err)
 		returnError = err
 	} else { // Only proceed if we have a controller pod to get get logs from.
 		for _, containerName := range []string{"beegfs", "csi-provisioner"} {
 			logs, err := e2epod.GetPodLogs(context.TODO(), cs, controllerPod.Namespace, controllerPod.Name, containerName)
 			if err != nil {
-				e2eframework.Logf("Failed to get logs for controller container %s due to error: %w", containerName, err)
+				e2eframework.Logf("Failed to get logs for controller container %s due to error: %s", containerName, err)
 				if returnError == nil {
 					returnError = err
 				}

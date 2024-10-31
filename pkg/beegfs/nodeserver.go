@@ -46,6 +46,7 @@ type nodeServer struct {
 	pluginConfig           beegfsv1.PluginConfig
 	clientConfTemplatePath string
 	mounter                mount.Interface
+	csi.UnimplementedNodeServer
 }
 
 func newNodeServer(nodeID string, pluginConfig beegfsv1.PluginConfig, clientConfTemplatePath string) (*nodeServer, error) {

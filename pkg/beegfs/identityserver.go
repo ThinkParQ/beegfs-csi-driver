@@ -31,6 +31,7 @@ import (
 type identityServer struct {
 	name    string
 	version string
+	csi.UnimplementedIdentityServer
 }
 
 func newIdentityServer(name, version string) *identityServer {
