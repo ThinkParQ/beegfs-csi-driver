@@ -407,15 +407,6 @@ spec:
           - apps
           resources:
           - daemonsets
-          verbs:
-          - create
-          - get
-          - list
-          - update
-          - watch
-        - apiGroups:
-          - apps
-          resources:
           - statefulsets
           verbs:
           - create
@@ -453,6 +444,8 @@ spec:
           - ""
           resources:
           - configmaps
+          - secrets
+          - serviceaccounts
           verbs:
           - create
           - get
@@ -472,6 +465,7 @@ spec:
           - ""
           resources:
           - nodes
+          - pods
           verbs:
           - get
           - list
@@ -504,64 +498,11 @@ spec:
           - patch
           - watch
         - apiGroups:
-          - ""
-          resources:
-          - pods
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - secrets
-          verbs:
-          - create
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - serviceaccounts
-          verbs:
-          - create
-          - get
-          - list
-          - watch
-        - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
           - clusterroles
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
           - rolebindings
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
           - roles
           verbs:
           - create
@@ -591,13 +532,6 @@ spec:
           - storage.k8s.io
           resources:
           - csinodes
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - storage.k8s.io
-          resources:
           - storageclasses
           verbs:
           - get
