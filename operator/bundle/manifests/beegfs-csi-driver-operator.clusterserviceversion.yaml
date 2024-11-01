@@ -501,7 +501,6 @@ spec:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
-          - clusterroles
           - rolebindings
           - roles
           verbs:
@@ -509,6 +508,17 @@ spec:
           - delete
           - get
           - list
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - update
           - watch
         - apiGroups:
           - security.openshift.io
