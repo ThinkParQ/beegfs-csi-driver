@@ -46,7 +46,7 @@ spec:
               cpu: 80m
               memory: 10Mi
         - name: beegfs
-          image: ghcr.io/thinkparq/beegfs-csi-driver:v1.6.0
+          image: ghcr.io/thinkparq/beegfs-csi-driver:v1.7.0
           args:
             - --driver-name=beegfs.csi.netapp.com
             - --node-id=$(KUBE_NODE_NAME)

@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/thinkparq/beegfs-csi-driver-operator
-  newTag: v1.6.0
+  newTag: v1.7.0

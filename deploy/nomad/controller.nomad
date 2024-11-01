@@ -22,7 +22,7 @@ job "beegfs-csi-plugin-controller" {
       driver = "docker"
 
       config {
-        image = "ghcr.io/thinkparq/beegfs-csi-driver:v1.6.0"
+        image = "ghcr.io/thinkparq/beegfs-csi-driver:v1.7.0"
 
         # chwrap is used to execute the beegfs-ctl binary already installed on the host. We also read the 
         # beegfs-client.conf template already installed on the host.
