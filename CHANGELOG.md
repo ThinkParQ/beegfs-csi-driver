@@ -1,6 +1,26 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file.
 
+[1.7.0] - 2024-11-04
+--------------------
+
+### Added
+- Support for BeeGFS v7.4.5, Kubernetes v1.29, v1.30, and v1.31.
+- Support for volume resizing.
+  - Note that volume capacity still has no effect when using the driver. However, support for
+    resizing can be helpful for applications that rely on the size of the Persistent Volume (PV) or
+    Persistent Volume Claim (PVC) as indicated in the Kubernetes API.
+
+### Deprecated
+- Kubernetes v1.27 and v1.28 support will be dropped in the next driver release according to our
+  [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+- BeeGFS 7.3 support will be dropped in the next driver release. Users are advised to upgrade to
+  BeeGFS 7.4.
+
+### Removed 
+- Support/testing for Kubernetes v1.25 and v1.26.
+
 [1.6.0] - 2024-02-28
 --------------------
 

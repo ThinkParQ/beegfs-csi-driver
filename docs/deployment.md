@@ -79,8 +79,8 @@ cosign verify --key <PUBLIC_KEY_FILE> ghcr.io/thinkparq/beegfs-csi-driver:<TAG>
 ```
 Examples: 
 ```
-cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.6.0
-cosign verify --key https://raw.githubusercontent.com/ThinkParQ/beegfs-csi-driver/master/release/cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.6.0
+cosign verify --key cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.7.0
+cosign verify --key https://raw.githubusercontent.com/ThinkParQ/beegfs-csi-driver/master/release/cosign.pub ghcr.io/thinkparq/beegfs-csi-driver:v1.7.0
 ```
 
 OPTION 2: Validate the image using the version tag and digest:
