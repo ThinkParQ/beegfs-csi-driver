@@ -28,8 +28,11 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/netapp/beegfs-csi-driver/operator/controllers"
@@ -63,12 +66,35 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
+	// Watch all namespaces, or only the namespace provided by the Downward API:
+	var defaultNamespaces map[string]cache.Config
+	if driverNamespace := os.Getenv("BEEGFS_CSI_DRIVER_NAMESPACE"); driverNamespace != "" {
+		defaultNamespaces = map[string]cache.Config{
+			driverNamespace: {},
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
-		// Watch the namespace provided by the Downward API or all namespaces.
-		Namespace:              os.Getenv("BEEGFS_CSI_DRIVER_NAMESPACE"),
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		// The old Namespace field was deprecated in:
+		// https://github.com/kubernetes-sigs/controller-runtime/commit/0377e0f7a41bd9d88d43811192309b193c9cd793#diff-d500fbd6a2aa620607ca5e2a7c3ac4f1a4c82309d1a549561e92abfcb18f2f0e.
+		// More details are in the commit that added the DefaultNamespaces field to cache.Options:
+		// https://github.com/kubernetes-sigs/controller-runtime/commit/3e35cab1ea29145d8699259b079633a2b8cfc116#diff-964e351ee2375d359c78d69e514c4edc42577219761c4475f391ed2daf715e51.
+		Cache: cache.Options{
+			DefaultNamespaces: defaultNamespaces,
+		},
+		// The old MetricsBindAddress field was deprecated in:
+		// https://github.com/kubernetes-sigs/controller-runtime/commit/e59161ee8f41b2f24953419533dca84d30262c21#diff-d500fbd6a2aa620607ca5e2a7c3ac4f1a4c82309d1a549561e92abfcb18f2f0eR36.
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		// The old Port field was deprecated in:
+		// https://github.com/kubernetes-sigs/controller-runtime/commit/f8c6ee427c500fb6ff8f8ee595110661c81da4e7#diff-d500fbd6a2aa620607ca5e2a7c3ac4f1a4c82309d1a549561e92abfcb18f2f0e.
+		WebhookServer: &webhook.DefaultServer{
+			Options: webhook.Options{
+				Port: 9443,
+			},
+		},
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "0d697945.csi.netapp.com",

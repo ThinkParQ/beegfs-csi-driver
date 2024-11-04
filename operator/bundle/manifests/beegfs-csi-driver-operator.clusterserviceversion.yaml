@@ -63,7 +63,7 @@ metadata:
       ]
     capabilities: Seamless Upgrades
     categories: Storage
-    containerImage: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.6.0
+    containerImage: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.7.0
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
@@ -71,7 +71,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/ThinkParQ/beegfs-csi-driver
     support: ThinkParQ
-  name: beegfs-csi-driver-operator.v1.6.0
+  name: beegfs-csi-driver-operator.v1.7.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -407,15 +407,6 @@ spec:
           - apps
           resources:
           - daemonsets
-          verbs:
-          - create
-          - get
-          - list
-          - update
-          - watch
-        - apiGroups:
-          - apps
-          resources:
           - statefulsets
           verbs:
           - create
@@ -453,6 +444,8 @@ spec:
           - ""
           resources:
           - configmaps
+          - secrets
+          - serviceaccounts
           verbs:
           - create
           - get
@@ -472,6 +465,7 @@ spec:
           - ""
           resources:
           - nodes
+          - pods
           verbs:
           - get
           - list
@@ -504,35 +498,11 @@ spec:
           - patch
           - watch
         - apiGroups:
-          - ""
-          resources:
-          - pods
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - secrets
-          verbs:
-          - create
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - serviceaccounts
-          verbs:
-          - create
-          - get
-          - list
-          - watch
-        - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
+          - rolebindings
+          - roles
           verbs:
           - create
           - delete
@@ -548,26 +518,7 @@ spec:
           - delete
           - get
           - list
-          - watch
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
-          - rolebindings
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
-          - roles
-          verbs:
-          - create
-          - delete
-          - get
-          - list
+          - update
           - watch
         - apiGroups:
           - security.openshift.io
@@ -591,13 +542,6 @@ spec:
           - storage.k8s.io
           resources:
           - csinodes
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - storage.k8s.io
-          resources:
           - storageclasses
           verbs:
           - get
@@ -654,7 +598,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                image: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.6.0
+                image: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.7.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -749,4 +693,4 @@ spec:
   provider:
     name: ThinkParQ
     url: https://www.thinkparq.com
-  version: 1.6.0
+  version: 1.7.0

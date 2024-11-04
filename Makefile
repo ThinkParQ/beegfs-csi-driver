@@ -24,8 +24,21 @@ CMDS ?= beegfs-csi-driver
 TEST_GO_FILTER_CMD = -e '/test/e2e' -e '/operator'
 all: build build-chwrap bin/chwrap.tar
 
+# This check is primarily meant to ensure when the Go version in go.mod changes, CI workflows are
+# also updated to use this version of Go.
+.PHONY: check-go-version
 check-go-version:
-	./hack/check-go-version.sh
+	@echo "Checking Go version..."
+	@{ \
+		GO_MOD_VERSION=go$$(grep '^go ' go.mod | awk '{print $$2}'); \
+		INSTALLED_VERSION=$$(go version | { read _ _ ver _; echo $${ver}; }); \
+		if [ "$$INSTALLED_VERSION" = "$$GO_MOD_VERSION" ]; then \
+			echo "INFO: go.mod requests ($$GO_MOD_VERSION) and the build environment has $$INSTALLED_VERSION."; \
+		else \
+			echo "ERROR: go.mod requests $$GO_MOD_VERSION but the build environment has $$INSTALLED_VERSION."; \
+			exit 1; \
+		fi \
+	} || { echo >&2 "ERROR: determining version of Go failed"; exit 1; }
 
 .PHONY: generate-notices
 generate-notices:

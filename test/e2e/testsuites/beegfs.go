@@ -210,7 +210,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 		}
 		unusedPool := utils.GetUnusedPoolId(validPools)
 		// Ensure that we actually found an unused pool
-		e2eframework.ExpectNotEqual(unusedPool, "")
+		gomega.Expect(unusedPool).NotTo(gomega.Equal(""))
 
 		// Now set the storageclass params to use the invalid storage pool id
 		d.SetStorageClassParams(map[string]string{
@@ -319,7 +319,7 @@ func (b *beegfsTestSuite) DefineTests(tDriver storageframework.TestDriver, patte
 			// Based on this commit https://github.com/kubernetes/kubernetes/commit/dfdf88d4faafa6fd39988832ea0ef6d668f490e9
 			// this is the new way to call ExecWithOptions.
 			_, stdErr, err := e2epod.ExecWithOptions(f, execOptions)
-			e2eframework.ExpectError(err) // The touch should not be successful.
+			gomega.Expect(err).To(gomega.HaveOccurred()) // The touch should not be successful.
 
 			// Added logging so we can see why this test is failing.
 			// TODO(kcole, A472): Remove when the root cause of failures has been fixed.

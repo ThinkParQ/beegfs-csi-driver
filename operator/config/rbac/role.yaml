@@ -8,15 +8,6 @@ rules:
   - apps
   resources:
   - daemonsets
-  verbs:
-  - create
-  - get
-  - list
-  - update
-  - watch
-- apiGroups:
-  - apps
-  resources:
   - statefulsets
   verbs:
   - create
@@ -54,6 +45,8 @@ rules:
   - ""
   resources:
   - configmaps
+  - secrets
+  - serviceaccounts
   verbs:
   - create
   - get
@@ -73,6 +66,7 @@ rules:
   - ""
   resources:
   - nodes
+  - pods
   verbs:
   - get
   - list
@@ -105,35 +99,11 @@ rules:
   - patch
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts
-  verbs:
-  - create
-  - get
-  - list
-  - watch
-- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
+  - rolebindings
+  - roles
   verbs:
   - create
   - delete
@@ -149,26 +119,7 @@ rules:
   - delete
   - get
   - list
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - rolebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - roles
-  verbs:
-  - create
-  - delete
-  - get
-  - list
+  - update
   - watch
 - apiGroups:
   - security.openshift.io
@@ -192,13 +143,6 @@ rules:
   - storage.k8s.io
   resources:
   - csinodes
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - storage.k8s.io
-  resources:
   - storageclasses
   verbs:
   - get
