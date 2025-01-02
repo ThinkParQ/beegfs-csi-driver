@@ -11,8 +11,11 @@ on:
     branches:
       - "master"
     paths-ignore:
-      - "**/*.md"
-      - "**/*.txt"
+      - "CHANGELOG.md"    
+      - "CONTRIBUTING.md"  
+      - "README.md"
+      - "SECURITY.md"
+      - 'docs/**'
 
 env:
   # Equivalent of BUILD_PLATFORMS in the Makefile and release-tools build.make. We cannot just set

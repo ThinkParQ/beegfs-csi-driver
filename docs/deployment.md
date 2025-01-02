@@ -783,10 +783,14 @@ parameter falls under determines its level of support in the driver.
 
 Special attention should be paid to these parameters.
 
-* `connDisableAuthentication` - Added in BeeGFS v7.3.1 and BeeGFS v7.2.7. If the
-  file system the BeeGFS client will connect to does not use connAuth files,
-  this must be set to `true`.
-
+* `connDisableAuthentication` - Added in BeeGFS v7.3.1 and BeeGFS v7.2.7. If the file system the
+  BeeGFS client will connect to does not use connAuth files, this must be set to `"true"`.
+  * Note: To avoid YAML interpeting the value as a native boolean, it must be enclosed in double
+    quotes or you will get an error like:
+    
+    ```
+    failed to handle configuration file: likely missing quotes around an integer or boolean beegfsClientConf value: error unmarshaling JSON: while decoding JSON: json: cannot unmarshal bool into Go struct field BeegfsConfig.config.beegfsClientConf of type string`
+    ```
 
 <a name="no-effect"></a>
 #### No Effect

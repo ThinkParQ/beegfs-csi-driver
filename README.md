@@ -194,7 +194,7 @@ deployment guide](operator/README.md).
      ```yaml
      config:
        beegfsClientConf:
-         connDisableAuthentication: true
+         connDisableAuthentication: "true" # note the quotes are required
      ```
    * Provide connAuth details in `csi-beegfs-connauth.yaml` if your existing
      file system does use connection authentication.
