@@ -44,7 +44,7 @@ env:
 
 jobs:
   build-test-and-push-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     permissions:
       packages: write
@@ -58,7 +58,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.2
+          go-version-file: go.mod
       # Dependencies are cached by default: https://github.com/actions/setup-go#v4
       # This can be explicitly disabled if it ever causes problems.
 
@@ -71,8 +71,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
-          go install github.com/google/go-licenses@v1.6.0
+          make install-tools
         timeout-minutes: 5
 
       - name: Verify license compliance and the NOTICE file is updated
@@ -267,7 +266,7 @@ jobs:
           make -e IMG=${{ steps.determine_image_name.outputs.OPERATOR_IMAGE }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
 
   e2e-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
@@ -311,8 +310,8 @@ jobs:
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
       - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
         run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
-          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
           sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
@@ -372,7 +371,7 @@ jobs:
           fi
 
   operator-e2e-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
@@ -480,8 +479,8 @@ jobs:
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
       - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
         run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
-          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
           sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
@@ -490,8 +489,8 @@ jobs:
         run: |
           minikube ssh "sudo apt-get update"
           minikube ssh "sudo apt-get install wget -y"
-          minikube ssh "sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -"
-          minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list"
+          minikube ssh "sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc"
+          minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list"
           minikube ssh "sudo apt-get update"
           minikube ssh "sudo apt-get install beegfs-utils -y"
 
@@ -557,7 +556,7 @@ jobs:
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 3
     needs: [build-test-and-push-images, e2e-tests, operator-e2e-tests]
     if: always()
