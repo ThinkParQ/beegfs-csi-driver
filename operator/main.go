@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"os"
 
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -55,11 +57,20 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	// Adapted from https://github.com/kubernetes-sigs/kubebuilder/discussions/3907.
+	//
+	// If the enable-http2 flag is false (the default), http/2 should be disabled due to its
+	// vulnerabilities. More specifically, disabling http/2 will prevent from being vulnerable to
+	// the HTTP/2 Stream Cancellation and Rapid Reset CVEs. For more information see:
+	//  - https://github.com/advisories/GHSA-qppj-fm5r-hxr3
+	//  - https://github.com/advisories/GHSA-4374-p667-p6c8
+	var enableHTTP2 bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&enableHTTP2, "enable-http2", false, "Enable HTTP/2 for the metrics server.")
 	opts := zap.Options{}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -74,6 +85,14 @@ func main() {
 		}
 	}
 
+	tlsOpts := []func(*tls.Config){}
+	if !enableHTTP2 {
+		tlsOpts = append(tlsOpts, func(c *tls.Config) {
+			setupLog.Info("disabling http/2")
+			c.NextProtos = []string{"http/1.1"}
+		})
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
 		// The old Namespace field was deprecated in:
@@ -86,7 +105,10 @@ func main() {
 		// The old MetricsBindAddress field was deprecated in:
 		// https://github.com/kubernetes-sigs/controller-runtime/commit/e59161ee8f41b2f24953419533dca84d30262c21#diff-d500fbd6a2aa620607ca5e2a7c3ac4f1a4c82309d1a549561e92abfcb18f2f0eR36.
 		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
+			BindAddress:    metricsAddr,
+			SecureServing:  true,
+			TLSOpts:        tlsOpts,
+			FilterProvider: filters.WithAuthenticationAndAuthorization,
 		},
 		// The old Port field was deprecated in:
 		// https://github.com/kubernetes-sigs/controller-runtime/commit/f8c6ee427c500fb6ff8f8ee595110661c81da4e7#diff-d500fbd6a2aa620607ca5e2a7c3ac4f1a4c82309d1a549561e92abfcb18f2f0e.

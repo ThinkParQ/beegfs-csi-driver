@@ -29,6 +29,7 @@ spec:
         - /manager
         args:
         - --leader-elect
+        - --metrics-bind-address=0.0.0.0:8443
         image: controller:latest
         name: manager
         securityContext:

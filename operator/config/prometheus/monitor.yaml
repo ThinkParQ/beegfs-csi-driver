@@ -14,7 +14,7 @@ spec:
       scheme: https
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
-        insecureSkipVerify: true
+        insecureSkipVerify: false
   selector:
     matchLabels:
       control-plane: controller-manager
