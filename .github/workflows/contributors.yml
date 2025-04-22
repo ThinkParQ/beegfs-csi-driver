@@ -1,0 +1,113 @@
+name: Contributor Verification
+
+# This workflow serves two purposes:
+# * Verifies all commit authors/committers have signed the ThinkParQ CLA.
+# * Verified all commits are made using expected names+email addresses to avoid a contributor
+#   accidentally leaking their private information (i.e., forgetting to use a GitHub noreply email).
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Ensure we have the full commit history for this PR
+      - name: Verify the creator of this PR has signed the ThinkParQ contributor license agreement (CLA)
+        env:
+          APPROVED_CONTRIBUTORS: ${{ vars.APPROVED_CONTRIBUTORS }}
+        run: |
+          PR_USER="${{ github.event.pull_request.user.login }}"
+          echo "Pull request created by '$PR_USER'"
+
+          # APPROVED_CONTRIBUTORS is expected as a space-separated list (name1, name2, ...)
+          ALLOWED_USERS="$APPROVED_CONTRIBUTORS"
+          IS_ALLOWED=false
+
+          for user in $ALLOWED_USERS; do
+            if [ "$user" = "$PR_USER" ]; then
+              IS_ALLOWED=true
+              break
+            fi
+          done
+
+          if [ "$IS_ALLOWED" = "false" ]; then
+            echo "::error::User '$PR_USER' has not yet signed the ThinkParQ contributor license agreement. Please contact info@thinkparq.com to get started."
+            exit 1
+          else
+            echo "::notice::User '$PR_USER' has signed the ThinkParQ contributor license agreement."
+          fi
+      - name: Verify all commits were made by known committers using their expected names and emails
+        env:
+          # Fine to print the list of approved committers in the logs because it only contains a
+          # list of names and emails that should be allowed in commits.
+          APPROVED_COMMITTERS: ${{ vars.APPROVED_COMMITTERS }}
+        run: |
+          # Determine base branch for this PR
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          echo "Base branch is $BASE_REF"
+
+          # Gather the commits that are unique to this PR
+          COMMITS=$(git log "origin/$BASE_REF..HEAD" --pretty=format:"%H")
+
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits found (maybe this PR is empty?)."
+            exit 0
+          fi
+
+          echo "Analyzing commits in this PR:"
+          echo "$COMMITS"
+
+          # Parse the JSON from $APPROVED_COMMITTERS using 'jq'
+          # Expected JSON structure is { "Name1": "Email1", "Name2": "Email2", ... }
+
+          EXIT_CODE=0
+
+          for c in $COMMITS; do
+            AUTH_NAME=$(git show -s --format="%an" "$c")
+            AUTH_EMAIL=$(git show -s --format="%ae" "$c")
+            COMM_NAME=$(git show -s --format="%cn" "$c")
+            COMM_EMAIL=$(git show -s --format="%ce" "$c")
+
+            # Mask both emails so they won't appear in cleartext logs
+            echo "::add-mask::$AUTH_EMAIL"
+            echo "::add-mask::$COMM_EMAIL"
+
+            echo "Checking commit $c by $AUTH_NAME / committer $COMM_NAME"
+
+            # Lookup the expected email for the AUTHOR name
+            EXPECTED_AUTHOR_EMAIL=$(echo "${APPROVED_COMMITTERS}" | jq -r ".\"$AUTH_NAME\"")
+            if [ "$EXPECTED_AUTHOR_EMAIL" = "null" ] || [ -z "$EXPECTED_AUTHOR_EMAIL" ]; then
+              echo "::error::Author name '$AUTH_NAME' is not an approved name. Did they forget to set the right Git user.name?"
+              EXIT_CODE=1
+            else
+              # Compare actual email to the expected email
+              if [ "$AUTH_EMAIL" != "$EXPECTED_AUTHOR_EMAIL" ]; then
+                echo "::error::Author '$AUTH_NAME' used an unapproved email. Did they forget to set the right Git user.email?"
+                EXIT_CODE=1
+              fi
+            fi
+
+            # Lookup the expected email for the COMMITTER name
+            EXPECTED_COMMITTER_EMAIL=$(echo "${APPROVED_COMMITTERS}" | jq -r ".\"$COMM_NAME\"")
+            if [ "$EXPECTED_COMMITTER_EMAIL" = "null" ] || [ -z "$EXPECTED_COMMITTER_EMAIL" ]; then
+              echo "::error::Committer name '$COMM_NAME' is not an approved name. Did they forget to set the right Git user.name?"
+              EXIT_CODE=1
+            else
+              if [ "$COMM_EMAIL" != "$EXPECTED_COMMITTER_EMAIL" ]; then
+                echo "::error::Committer '$COMM_NAME' used an unapproved email. Did they forget to set the right Git user.email"
+                EXIT_CODE=1
+              fi
+            fi
+          done
+
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::One or more commits failed the policy check."
+            exit $EXIT_CODE
+          fi
+
+          echo "::notice::All commits were made by known committers with their expected names and emails."

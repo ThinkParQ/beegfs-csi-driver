@@ -8,9 +8,8 @@ set -euo pipefail
 
 # IMPORTANT: This script is not idempotent, notably the step to create directories in BeeGFS.
 
-export BEEGFS_VERSION=7.4.5
+export BEEGFS_VERSION=7.4.6
 export BEEGFS_SECRET=mysecret
-export BEEGFS_REGISTRY=ghcr.io/thinkparq/
 
 # Deploy BeeGFS file system:
 envsubst < ../test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -

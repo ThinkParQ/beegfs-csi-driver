@@ -44,7 +44,7 @@ env:
 
 jobs:
   build-test-and-push-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     permissions:
       packages: write
@@ -58,7 +58,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.23.2
+          go-version-file: go.mod
       # Dependencies are cached by default: https://github.com/actions/setup-go#v4
       # This can be explicitly disabled if it ever causes problems.
 
@@ -71,8 +71,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
-          go install github.com/google/go-licenses@v1.6.0
+          make install-tools
         timeout-minutes: 5
 
       - name: Verify license compliance and the NOTICE file is updated
@@ -267,15 +266,15 @@ jobs:
           make -e IMG=${{ steps.determine_image_name.outputs.OPERATOR_IMAGE }}:${{ github.sha }} -e BUNDLE_IMG=${{ env.OPERATOR_TEST_BUNDLE_NAME }}:${{ github.sha }} bundle bundle-build bundle-push
 
   e2e-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.27.11, 1.28.7, 1.29.10, 1.30.6, 1.31.2]
-        beegfs-version: [7.3.4, 7.4.5]
+        k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3]
+        beegfs-version: [7.4.6]
     permissions:
       packages: read
       contents: read
@@ -288,22 +287,10 @@ jobs:
           driver: none
           kubernetes-version: ${{ matrix.k8s-version }}
 
-      # Starting with BeeGFS 7.4.1 the container registry used to host BeeGFS images switched from DockerHub
-      # to ghcr.io. This can be removed once we no longer test with BeeGFS 7.3.4.
-      - name: Determine BeeGFS image registry
-        id: determine_registry
-        run: |
-          if [ "${{ matrix.beegfs-version }}" = "7.3.4" ]; then
-            echo "BEEGFS_REGISTRY=beegfs/" >> $GITHUB_OUTPUT
-          else
-            echo "BEEGFS_REGISTRY=ghcr.io/thinkparq/" >> $GITHUB_OUTPUT      
-          fi
-
       - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
-          export BEEGFS_REGISTRY=$(echo ${{ steps.determine_registry.outputs.BEEGFS_REGISTRY }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
           kubectl get pods -A
 
@@ -311,8 +298,8 @@ jobs:
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
       - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
         run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
-          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
           sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
@@ -372,15 +359,15 @@ jobs:
           fi
 
   operator-e2e-tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 10
     needs: build-test-and-push-images
     if: github.event_name == 'pull_request'
     strategy:
       fail-fast: true
       matrix:
-        k8s-version: [1.27.11, 1.28.7, 1.29.10, 1.30.6, 1.31.2]
-        beegfs-version: [7.3.4, 7.4.5]
+        k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3]
+        beegfs-version: [7.4.6]
     permissions:
       packages: read
       contents: read
@@ -423,24 +410,12 @@ jobs:
           chmod +x install.sh
           ./install.sh v0.25.0
 
-      # Starting with BeeGFS 7.4.1 the container registry used to host BeeGFS images switched from DockerHub
-      # to ghcr.io. This can be removed once we no longer test with BeeGFS 7.3.4.
-      - name: Determine BeeGFS image registry
-        id: determine_registry
-        run: |
-          if [ "${{ matrix.beegfs-version }}" = "7.3.4" ]; then
-            echo "BEEGFS_REGISTRY=beegfs/" >> $GITHUB_OUTPUT
-          else
-            echo "BEEGFS_REGISTRY=ghcr.io/thinkparq/" >> $GITHUB_OUTPUT      
-          fi
-
       # Test using a base64 encoded secret for the Operator based deployment to
       # ensure the broadest coverage for how we handle base64 encoded secrets.
       - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing and expose as a service to the host OS
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
-          export BEEGFS_REGISTRY=$(echo ${{ steps.determine_registry.outputs.BEEGFS_REGISTRY }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-2.yaml | kubectl apply -f -
 
           MAX_ATTEMPTS=36
@@ -480,18 +455,21 @@ jobs:
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
       - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
         run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list
-          sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
           sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
 
+      # Remove all third-party APT sources then only add back the BeeGFS sources. This prevents
+      # broken or expired keys from blocking `apt-get update` and optimizes the update.
       - name: Install BeeGFS ${{ matrix.beegfs-version }} beegfs-ctl tool into the Minikube container
         run: |
+          minikube ssh "sudo rm -f /etc/apt/sources.list.d/*"
           minikube ssh "sudo apt-get update"
           minikube ssh "sudo apt-get install wget -y"
-          minikube ssh "sudo wget -q https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O- | sudo apt-key add -"
-          minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-focal.list"
+          minikube ssh "sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc"
+          minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list"
           minikube ssh "sudo apt-get update"
           minikube ssh "sudo apt-get install beegfs-utils -y"
 
@@ -557,7 +535,7 @@ jobs:
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 3
     needs: [build-test-and-push-images, e2e-tests, operator-e2e-tests]
     if: always()
