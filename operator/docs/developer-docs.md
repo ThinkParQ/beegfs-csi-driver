@@ -333,9 +333,10 @@ chmod +x install.sh
 * All prerequisites for the BeeGFS CSI driver must be installed on your
   Kubernetes nodes. If you are using Minikube there is a script to do this at
   `hack/minikube_install_driver_prerequisites.sh`.
-   * You must also provide Minikube its own base client configuration file. For example you might
-     bind mount /etc/beegfs from the host OS into the Minikube container using `minikube mount
-     /etc/beegfs:/etc/beegfs` (note the command must stay running for the mount to stay active).
+   * Minikube requires a base client configuration file. By default the script will download the
+     latest `beegfs-client.conf` file from GitHub. You could alternatively bind mount /etc/beegfs
+     from the host OS into the Minikube container using `minikube mount /etc/beegfs:/etc/beegfs`
+     (note the command must stay running for the mount to stay active).
 
 Steps:
 
