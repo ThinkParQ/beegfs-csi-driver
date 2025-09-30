@@ -799,16 +799,15 @@ These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or
 are determined dynamically and have no effect when specified in the
 `beeGFSClientConf` configuration section.
 
-* `sysMgmtdHost` (This is specified in a `fileSystemSpecificConfigs[i]` or by
-  the volume definition itself.)
-* `connClientPortUDP` (An ephemeral port, obtained by binding to port 0, allows
-  multiple filesystem mounts. On Linux the selected ephemeral port is
-  constrained by the values of [IP
-  variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).
-  [Ensure that firewalls allow UDP
-  traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat)
-  between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver
-  nodes.)
+* `sysMgmtdHost` - This is specified in a `fileSystemSpecificConfigs[i]` or by the volume definition
+  itself.
+* `connClientPort` (BeeGFS 8+) / `connClientPortUDP` (BeeGFS 7) - An ephemeral port, obtained by
+  binding to port 0, allows multiple filesystem mounts. 
+  * On Linux the selected ephemeral port is constrained by the values of [IP
+    variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables). 
+  * [Ensure that firewalls allow UDP
+    traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat)
+    between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver nodes.
 * `connPortShift`
 
 <a name="unsupported"></a>
@@ -840,8 +839,9 @@ These parameters have been tested and verified to have the desired effect.
 These parameters SHOULD result in the desired effect but have not been tested.
 
 * `connHelperdPortTCP`
-* `connMgmtdPortTCP`
-* `connMgmtdPortUDP`
+* `connMgmtdPort` (BeeGFS 8+)
+* `connMgmtdPortTCP` (BeeGFS 7)
+* `connMgmtdPortUDP` (BeeGFS 7)
 * `connCommRetrySecs`
 * `connFallbackExpirationSecs`
 * `connMaxInternodeNum`

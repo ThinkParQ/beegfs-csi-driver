@@ -171,6 +171,10 @@ type ContainerResourceOverrides struct {
 // form view by OpenShift or other graphical interfaces, but it can be critical in some environments. Add or modify it
 // in YAML view.
 type BeegfsConfig struct {
+	// The gRPC port for the management service (BeeGFS 8+ only).
+	//+operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Management gRPC Port (BeeGFS 8+)"
+	//+kubebuilder:default:="8010"
+	GrpcPort string `json:"grpcPort,omitempty"`
 	// A list of interfaces the BeeGFS client service can communicate over (e.g. "ib0" or "eth0"). Often not required.
 	// See beegfs-client.conf for more details.
 	//+operator-sdk:csv:customresourcedefinitions:type=spec
@@ -190,6 +194,8 @@ type BeegfsConfig struct {
 	BeegfsClientConf map[string]string `json:"beegfsClientConf,omitempty"`
 	// This field is explicitly NOT tagged for inclusion in the CSV, as it cannot be set externally.
 	ConnAuth string `json:"-"` // Do not support unmarshalling from a configuration file.
+	// This field is explicitly NOT tagged for inclusion in the CSV, as it cannot be set externally.
+	TLSCert string `json:"-"` // Do not support unmarshalling from a configuration file.
 	// A list of interfaces the BeeGFS client will use for outbound RDMA connections. This is used in support
 	// of the BeeGFS multi-rail feature. This feature does not depend on or use the connInterfaces parameter.
 	// This feature requires the BeeGFS client version 7.3.0 or later.
@@ -204,14 +210,18 @@ func NewBeegfsConfig() *BeegfsConfig {
 	}
 }
 
-// MarshalJSON overrides the default JSON encoding for the BeegfsConfig struct. klogr uses JSON encoding to log
-// struct values and thus implicitly calls this method. BeegfsConfig does not support marshalling the ConnAuth field,
-// so MarshalJSON encodes a new anonymous struct that includes an marshalled connAuth field and replaces it's value
-// with "******" if it is not empty.
+// MarshalJSON overrides the default JSON encoding for the BeegfsConfig struct. klogr uses JSON
+// encoding to log struct values and thus implicitly calls this method. BeegfsConfig does not
+// support marshalling the ConnAuth+TLsCert fields, so MarshalJSON encodes a new anonymous struct
+// that includes marshalled connAuth and tlsCert fields obfuscating their values if not empty.
 func (c BeegfsConfig) MarshalJSON() ([]byte, error) {
 	var connAuthString string
 	if c.ConnAuth != "" {
 		connAuthString = "******"
+	}
+	var tlsCertString string
+	if c.TLSCert != "" {
+		tlsCertString = "******"
 	}
 
 	// See https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/ for more context on how this works.
@@ -219,9 +229,11 @@ func (c BeegfsConfig) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		// Use omitempty to avoid logging in "impossible" locations like DefaultConfig.
 		ConnAuth          string `json:"connAuth,omitempty"`
+		TLSCert           string `json:"tlsCert,omitempty"`
 		beegfsConfigAlias        // Embed the BeegfsConfig type to avoid retyping all of its fields.
 	}{
 		ConnAuth:          connAuthString,
+		TLSCert:           tlsCertString,
 		beegfsConfigAlias: beegfsConfigAlias(c),
 	})
 }
@@ -294,4 +306,33 @@ func (c ConnAuthConfig) MarshalJSON() ([]byte, error) {
 	// See https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/ for more context on how this works.
 	type connAuthConfigAlias ConnAuthConfig // Use an alias to avoid an infinite loop and a stack overflow.
 	return json.Marshal(connAuthConfigAlias{SysMgmtdHost: c.SysMgmtdHost, ConnAuth: connAuthString})
+}
+
+// TLSCertConfig associated a TLSCert with a SysMgmtdHost.
+type TLSCertConfig struct {
+	SysMgmtdHost string `json:"sysMgmtdHost"`
+	TLSCert      string `json:"tlsCert"`
+	// Right now our TLS certs are strictly in PEM form, which is already ASCII Base64 sandwiched
+	// between BEGIN/END CERTIFICATE. If ever requested it would be trivial to add an encoding field
+	// with a switch in parseTLSCertsFromFile() as we have in parseConnAuthFromFile().
+}
+
+// MarshalJSON overrides the default JSON encoding for TLSCertConfig. Although a TLS certificate
+// (without a private key) is not strictly secret, we still redact it in logs to:
+//
+//   - avoid leaking internal details (subjects/SANs/issuers) that may be sensitive,
+//   - keep logging consistent with ConnAuth redaction, and
+//   - future-proof against misconfiguration where key material or other sensitive data could
+//     be placed in this field.
+//
+// The log displays "******" when TLSCert is non-empty.
+func (c TLSCertConfig) MarshalJSON() ([]byte, error) {
+	var tlsCertString string
+	if c.TLSCert != "" {
+		tlsCertString = "******"
+	}
+
+	// See https://blog.gopheracademy.com/advent-2016/advanced-encoding-decoding/ for more context on how this works.
+	type tlsCertConfigAlias TLSCertConfig // Use an alias to avoid an infinite loop and a stack overflow.
+	return json.Marshal(tlsCertConfigAlias{SysMgmtdHost: c.SysMgmtdHost, TLSCert: tlsCertString})
 }

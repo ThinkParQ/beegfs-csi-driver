@@ -11,9 +11,11 @@ package beegfs
 // consider moving it.
 
 import (
+	"context"
 	"encoding/base64"
 	"net"
 	"regexp"
+	"strconv"
 
 	beegfsv1 "github.com/netapp/beegfs-csi-driver/operator/api/v1"
 	"github.com/pkg/errors"
@@ -24,6 +26,7 @@ import (
 var noEffectBeegfsConfOptions = []string{
 	"sysMgmtdHost",
 	"connClientPortUDP",
+	"connClientPort",
 	"connPortShift",
 }
 
@@ -126,7 +129,7 @@ func parseConnAuthFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 			}
 			connAuth.ConnAuth = string(connAuthDecoded)
 		default:
-			return errors.Errorf("invalid ConnAuthFile ncoding %s", connAuth.Encoding)
+			return errors.Errorf("invalid ConnAuthFile encoding %s", connAuth.Encoding)
 		}
 		for i, specificConfig := range newPluginConfig.FileSystemSpecificConfigs {
 			if connAuth.SysMgmtdHost == specificConfig.SysMgmtdHost {
@@ -153,6 +156,44 @@ func parseConnAuthFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 	return nil
 }
 
+func parseTLSCertsFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) error {
+	tlsCertConfigs := make([]beegfsv1.TLSCertConfig, 0)
+	rawTlsCertConfigBytes, err := fsutil.ReadFile(path)
+	if err != nil {
+		return errors.Wrap(err, "failed to read tlsCerts file")
+	}
+	if err := yaml.UnmarshalStrict(rawTlsCertConfigBytes, &tlsCertConfigs); err != nil {
+		return errors.Wrap(err, "failed to unmarshal tlsCerts file")
+	}
+	// The TLSCertConfig.MarshalJSON method makes this safe for logging.
+	LogDebug(context.TODO(), "Raw tlsCerts configuration parsed", "parsePath", path,
+		"tlsCertConfigs", tlsCertConfigs)
+
+	for _, tlsCert := range tlsCertConfigs {
+		foundMatchingConfig := false
+		// newline added for consistency with how connAuthFiles are written out.
+		tlsCert.TLSCert += "\n"
+		for i, specificConfig := range newPluginConfig.FileSystemSpecificConfigs {
+			if tlsCert.SysMgmtdHost == specificConfig.SysMgmtdHost {
+				newPluginConfig.FileSystemSpecificConfigs[i].Config.TLSCert = tlsCert.TLSCert
+				foundMatchingConfig = true
+				break
+			}
+		}
+		if !foundMatchingConfig {
+			newSpecificConfig := beegfsv1.FileSystemSpecificConfig{
+				SysMgmtdHost: tlsCert.SysMgmtdHost,
+				Config: beegfsv1.BeegfsConfig{
+					TLSCert: tlsCert.TLSCert,
+				},
+			}
+			newPluginConfig.FileSystemSpecificConfigs = append(newPluginConfig.FileSystemSpecificConfigs, newSpecificConfig)
+		}
+	}
+
+	return nil
+}
+
 // validateConfig checks the basic syntax of assorted fields in a PluginConfig and returns an error if it finds
 // something incorrect.
 func validateConfig(plConfig *beegfsv1.PluginConfig) error {
@@ -169,6 +210,12 @@ func validateConfig(plConfig *beegfsv1.PluginConfig) error {
 	}
 
 	for _, config := range beegfsConfigs {
+		// Validate optional BeeGFS 8 mgmtd gRPC port, if provided.
+		if config.GrpcPort != "" {
+			if p, err := strconv.Atoi(config.GrpcPort); err != nil || p < 1 || p > 65535 {
+				return errors.Errorf("invalid GrpcPort %s", config.GrpcPort)
+			}
+		}
 		for _, filter := range config.ConnNetFilter {
 			if _, _, err := net.ParseCIDR(filter); err != nil && net.ParseIP(filter) == nil {
 				return errors.Errorf("invalid ConnNetFilter %s", filter)
@@ -231,6 +278,10 @@ func overwriteFileSystemSpecificConfigs(writeTo, writeFrom []beegfsv1.FileSystem
 // overWriteBeegfsConfig ONLY overwrites configuration in the writeTo BeegfsConfig that is also defined in the
 // writeFrom BeegfsConfig, while leaving writeFrom untouched.
 func overWriteBeegfsConfig(writeTo *beegfsv1.BeegfsConfig, writeFrom beegfsv1.BeegfsConfig) {
+
+	if len(writeFrom.GrpcPort) != 0 {
+		writeTo.GrpcPort = writeFrom.GrpcPort
+	}
 	if len(writeFrom.ConnInterfaces) != 0 {
 		writeTo.ConnInterfaces = make([]string, len(writeFrom.ConnInterfaces))
 		copy(writeTo.ConnInterfaces, writeFrom.ConnInterfaces)
@@ -249,6 +300,9 @@ func overWriteBeegfsConfig(writeTo *beegfsv1.BeegfsConfig, writeFrom beegfsv1.Be
 	}
 	if writeFrom.ConnAuth != "" {
 		writeTo.ConnAuth = writeFrom.ConnAuth
+	}
+	if writeFrom.TLSCert != "" {
+		writeTo.TLSCert = writeFrom.TLSCert
 	}
 	for k, v := range writeFrom.BeegfsClientConf {
 		writeTo.BeegfsClientConf[k] = v

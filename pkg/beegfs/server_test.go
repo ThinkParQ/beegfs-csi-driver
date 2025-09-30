@@ -36,9 +36,10 @@ func TestStripSecretsFromLogs(t *testing.T) {
 	buff := new(bytes.Buffer)
 	klog.SetOutput(buff)
 
-	// Create a BeegfsConfig with a secret that should not be logged.
+	// Create a BeegfsConfig with secrets that should not be logged.
 	cfg := beegfsv1.NewBeegfsConfig()
 	cfg.ConnAuth = "secret"
+	cfg.TLSCert = "tlsCert"
 
 	failIfLogIncorrect := func(buff *bytes.Buffer) {
 		stringBuff := buff.String()

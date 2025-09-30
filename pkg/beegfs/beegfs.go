@@ -106,6 +106,18 @@ type beegfsVolume struct {
 	volumeID                 string // like beegfs://sysMgmtdHost/volDirPathBeegfsRoot
 }
 
+// getConnAuthPath provides a standard way to assemble the path for both writing out the file and
+// executing CTL functionality.
+func (v beegfsVolume) getConnAuthPath() string {
+	return path.Join(v.mountDirPath, "connAuthFile")
+}
+
+// getTLSCertPath provides a standard way to assemble the path for both writing out the file and
+// executing CTL functionality.
+func (v beegfsVolume) getTLSCertPath() string {
+	return path.Join(v.mountDirPath, "cert.pem")
+}
+
 // stripePatternConfig contains our internal representation of all CreateVolume parameters (StorageClass parameters in
 // K8s) that should be prefaced with stripePattern/.
 type stripePatternConfig struct {
@@ -169,14 +181,14 @@ var (
 )
 
 // NewBeegfsDriver initializes a working BeegfsDriver.
-func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+func NewBeegfsDriver(connAuthPath, tlsCertsPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
 
 	if err := verifyBeegfsClientModuleIsAvailable(); err != nil {
 		return nil, err
 	}
 
-	driver, err := newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID,
+	driver, err := newBeegfsDriver(connAuthPath, tlsCertsPath, configPath, csDataDir, driverName, endpoint, nodeID,
 		clientConfTemplatePath, version, nodeUnstageTimeout)
 	if err != nil {
 		return nil, err
@@ -196,9 +208,9 @@ func NewBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 
 // NewBeegfsDriverSanity initializes a BeegfsDriver that doesn't have a working mounter or beegfs-ctl execution
 // capabilities. This BeegfsDriver can be used for sanity testing on any machine.
-func NewBeegfsDriverSanity(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+func NewBeegfsDriverSanity(connAuthPath, tlsCertsPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
-	driver, err := newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID,
+	driver, err := newBeegfsDriver(connAuthPath, tlsCertsPath, configPath, csDataDir, driverName, endpoint, nodeID,
 		clientConfTemplatePath, version, nodeUnstageTimeout)
 	if err != nil {
 		return nil, err
@@ -213,7 +225,7 @@ func NewBeegfsDriverSanity(connAuthPath, configPath, csDataDir, driverName, endp
 }
 
 // newBeegfsDriver is used by both NewBeegfsDriver and NewBeegfsDriverSanity for common initialization.
-func newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
+func newBeegfsDriver(connAuthPath, tlsCertsPath, configPath, csDataDir, driverName, endpoint, nodeID, clientConfTemplatePath,
 	version string, nodeUnstageTimeout uint64) (*beegfs, error) {
 	if driverName == "" {
 		return nil, errors.New("no driver name provided")
@@ -250,6 +262,12 @@ func newBeegfsDriver(connAuthPath, configPath, csDataDir, driverName, endpoint, 
 	if connAuthPath != "" {
 		if err = parseConnAuthFromFile(connAuthPath, &pluginConfig); err != nil {
 			return nil, errors.WithMessage(err, "failed to handle connAuth file")
+		}
+	}
+
+	if tlsCertsPath != "" {
+		if err = parseTLSCertsFromFile(tlsCertsPath, &pluginConfig); err != nil {
+			return nil, errors.WithMessage(err, "failed to handle tlsCerts file")
 		}
 	}
 

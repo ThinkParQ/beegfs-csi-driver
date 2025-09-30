@@ -19,7 +19,7 @@ spec:
         app: csi-beegfs-node
     spec:
       serviceAccountName: csi-beegfs-node-sa
-      hostNetwork: true # Required to find an available connClientPortUDP on the host.
+      hostNetwork: true # Required to find an available connClientPort on the host.
       containers:
         - name: node-driver-registrar
           image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.8.0
@@ -53,6 +53,7 @@ spec:
             - --endpoint=unix://csi/csi.sock
             - --config-path=/csi/config/csi-beegfs-config.yaml
             - --connauth-path=/csi/connauth/csi-beegfs-connauth.yaml
+            - --tlscerts-path=/csi/tlscerts/csi-beegfs-tlscerts.yaml
             - -v=$(LOG_LEVEL)
           env:
             - name: KUBE_NODE_NAME
@@ -100,6 +101,8 @@ spec:
               name: config-dir
             - mountPath: /csi/connauth
               name: connauth-dir
+            - mountPath: /csi/tlscerts
+              name: tlscerts-dir
           resources:
             limits:
               memory: 128Mi
@@ -154,3 +157,6 @@ spec:
         - secret:
             secretName: csi-beegfs-connauth # kustomized
           name: connauth-dir
+        - secret:
+            secretName: csi-beegfs-tlscerts # kustomized
+          name: tlscerts-dir

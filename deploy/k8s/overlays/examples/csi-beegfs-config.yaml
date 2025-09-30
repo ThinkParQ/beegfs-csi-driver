@@ -9,6 +9,7 @@
 # of csi-beegfs-config.yaml in an overlay.
 
 config:
+  grpcPort: "8010"
   connInterfaces:
     - ib0
     - eth0
@@ -31,6 +32,7 @@ config:
 fileSystemSpecificConfigs:
   - sysMgmtdHost: some.specific.file.system
     config:
+      grpcPort: "8010"
       connInterfaces:
         - ib1
         - eth1
@@ -49,6 +51,7 @@ nodeSpecificConfigs:
       - node1
       - node2
     config:
+      grpcPort: "8010"
       connInterfaces:
         - ib2
         - eth2
@@ -65,6 +68,7 @@ nodeSpecificConfigs:
     fileSystemSpecificConfigs:
       - sysMgmtdHost: some.specific.file.system
         config:
+          grpcPort: "8010"
           connInterfaces:
             - ib3
             - eth3
