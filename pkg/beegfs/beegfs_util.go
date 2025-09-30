@@ -388,7 +388,7 @@ func unmountAndCleanUpIfNecessary(ctx context.Context, vol beegfsVolume, rmDir b
 // also deletes vol.mountDirPath if rmDir is set to true.
 func cleanUpIfNecessary(ctx context.Context, vol beegfsVolume, rmDir bool) (err error) {
 	LogDebug(ctx, "Cleaning up path", "path", vol.mountDirPath, "volumeID", vol.volumeID)
-	if rmDir == false {
+	if !rmDir {
 		dir, err := ioutil.ReadDir(vol.mountDirPath)
 		if err != nil {
 			return errors.WithStack(err)

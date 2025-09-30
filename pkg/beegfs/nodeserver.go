@@ -112,9 +112,9 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 	}
 
 	// Check to make sure file system is not already bind mounted
-	// Use mount.IsNotMountPoint because mounter.IsLikelyNotMountPoint can't detect bind mounts
-	var notMnt bool
-	notMnt, err = mount.IsNotMountPoint(ns.mounter, targetPath)
+	// Use mounter.IsMountPoint because mounter.IsLikelyNotMountPoint can't detect bind mounts
+	var isMnt bool
+	isMnt, err = ns.mounter.IsMountPoint(targetPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// The file system can't be mounted because the mount point hasn't been created
@@ -122,13 +122,13 @@ func (ns *nodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublis
 				err = errors.WithStack(err)
 				return nil, newGrpcErrorFromCause(codes.Internal, err)
 			}
-			notMnt = true
+			isMnt = false
 		} else {
 			err = errors.WithStack(err)
 			return nil, newGrpcErrorFromCause(codes.Internal, err)
 		}
 	}
-	if !notMnt {
+	if isMnt {
 		// The filesystem is already mounted. There is nothing to do.
 		LogDebug(ctx, "Volume is already mounted to path", "volumeID", vol.volumeID, "path", vol.mountPath)
 		return &csi.NodePublishVolumeResponse{}, nil

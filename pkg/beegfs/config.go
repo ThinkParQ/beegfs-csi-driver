@@ -64,7 +64,7 @@ func parseConfigFromFile(path, nodeID string) (beegfsv1.PluginConfig, error) {
 		}
 		return beegfsv1.PluginConfig{}, errors.Wrap(err, "failed to unmarshal configuration file")
 	}
-	LogDebug(nil, "Raw configuration parsed", "parsePath", path, "rawConfig", rawConfig)
+	LogDebug(context.TODO(), "Raw configuration parsed", "parsePath", path, "rawConfig", rawConfig)
 
 	// start populating newPluginConfig using values directly from rawConfig
 	newPluginConfig = beegfsv1.PluginConfig{
@@ -92,7 +92,7 @@ func parseConfigFromFile(path, nodeID string) (beegfsv1.PluginConfig, error) {
 		return newPluginConfig, errors.WithMessage(err, "config validation failed")
 	}
 	stripConfig(&newPluginConfig)
-	LogDebug(nil, "Actual configuration to be applied", "PluginConfig", newPluginConfig)
+	LogDebug(context.TODO(), "Actual configuration to be applied", "PluginConfig", newPluginConfig)
 
 	return newPluginConfig, nil
 }
@@ -109,7 +109,7 @@ func parseConnAuthFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 		return errors.Wrap(err, "failed to unmarshal connAuth file")
 	}
 	// The connAuthConfig.UnmarshallJSON method makes connAuthConfigs safe for logging.
-	LogDebug(nil, "Raw connAuth configuration parsed", "parsePath", path,
+	LogDebug(context.TODO(), "Raw connAuth configuration parsed", "parsePath", path,
 		"connAuthConfigs", connAuthConfigs)
 
 	for _, connAuth := range connAuthConfigs {
@@ -150,7 +150,7 @@ func parseConnAuthFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 	}
 
 	// The pluginConfig.UnmashallJSON method makes newPluginConfig safe for logging.
-	LogDebug(nil, "Actual configuration to be applied after parsing connAuth configuration",
+	LogDebug(context.TODO(), "Actual configuration to be applied after parsing connAuth configuration",
 		"PluginConfig", newPluginConfig)
 
 	return nil
@@ -199,7 +199,7 @@ func parseTLSCertsFromFile(path string, newPluginConfig *beegfsv1.PluginConfig) 
 func validateConfig(plConfig *beegfsv1.PluginConfig) error {
 	beegfsConfigs := []beegfsv1.BeegfsConfig{plConfig.DefaultConfig}
 	// this regex is used to determine whether a given string is a domain name
-	domainRegex := regexp.MustCompile("^(?:[_a-z0-9](?:[_a-z0-9-]{0,61}[a-z0-9]\\.)|(?:[0-9]+/[0-9]{2})\\.)+(?:[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?$")
+	domainRegex := regexp.MustCompile(`^(?:[_a-z0-9](?:[_a-z0-9-]{0,61}[a-z0-9]\.)|(?:[0-9]+/[0-9]{2})\.)+(?:[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?)?$`)
 	for _, config := range plConfig.FileSystemSpecificConfigs {
 		// sysMgmtdHost can be localhost, an IP address, or a domain name. if it is none of these, return an error
 		if config.SysMgmtdHost != "localhost" && net.ParseIP(config.SysMgmtdHost) == nil &&
@@ -242,14 +242,14 @@ func stripConfig(plConfig *beegfsv1.PluginConfig) {
 	for _, config := range beegfsConfigs {
 		for _, noEffectOption := range noEffectBeegfsConfOptions {
 			if val, present := config.BeegfsClientConf[noEffectOption]; present {
-				LogDebug(nil, "WARNING: No-effect beegfs configuration option found and removed from config",
+				LogDebug(context.TODO(), "WARNING: No-effect beegfs configuration option found and removed from config",
 					"noEffectOption", noEffectOption, "noEffectValue", val)
 				delete(config.BeegfsClientConf, noEffectOption)
 			}
 		}
 		for _, unsupportedOption := range unsupportedBeegfsConfOptions {
 			if val, present := config.BeegfsClientConf[unsupportedOption]; present {
-				LogDebug(nil, "WARNING: Unsupported beegfs configuration option found and left in config",
+				LogDebug(context.TODO(), "WARNING: Unsupported beegfs configuration option found and left in config",
 					"unsupportedOption", unsupportedOption, "unsupportedValue", val)
 			}
 		}
@@ -268,7 +268,7 @@ func overwriteFileSystemSpecificConfigs(writeTo, writeFrom []beegfsv1.FileSystem
 				overWriteBeegfsConfig(&writeTo[i].Config, writeFromConfig.Config)
 			}
 		}
-		if writeToHadConfig == false {
+		if !writeToHadConfig {
 			writeTo = append(writeTo, writeFromConfig)
 		}
 	}

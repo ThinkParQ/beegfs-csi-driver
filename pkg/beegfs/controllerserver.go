@@ -407,7 +407,7 @@ func (cs *controllerServer) ControllerModifyVolume(ctx context.Context, in *csi.
 func getControllerServiceCapabilities(cl []csi.ControllerServiceCapability_RPC_Type) []*csi.ControllerServiceCapability {
 	var csc []*csi.ControllerServiceCapability
 	for _, cap := range cl {
-		LogDebug(nil, "Adding controller service capability", "capability", cap.String())
+		LogDebug(context.TODO(), "Adding controller service capability", "capability", cap.String())
 		csc = append(csc, &csi.ControllerServiceCapability{
 			Type: &csi.ControllerServiceCapability_Rpc{
 				Rpc: &csi.ControllerServiceCapability_RPC{

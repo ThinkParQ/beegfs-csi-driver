@@ -22,6 +22,7 @@ Licensed under the Apache License, Version 2.0.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -50,7 +51,7 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	if err := flag.Set("logtostderr", "true"); err != nil {
-		beegfs.LogFatal(nil, err, "Failed to set klog flag logtostderr=true")
+		beegfs.LogFatal(context.TODO(), err, "Failed to set klog flag logtostderr=true")
 	}
 	flag.Parse()
 
@@ -68,7 +69,7 @@ func handle() {
 	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *tlsCertsPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID,
 		*clientConfTemplatePath, version, *nodeUnstageTimeout)
 	if err != nil {
-		beegfs.LogFatal(nil, err, "Failed to initialize driver")
+		beegfs.LogFatal(context.TODO(), err, "Failed to initialize driver")
 	}
 	driver.Run()
 }

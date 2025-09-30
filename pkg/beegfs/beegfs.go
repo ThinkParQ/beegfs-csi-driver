@@ -22,6 +22,7 @@ Licensed under the Apache License, Version 2.0.
 package beegfs
 
 import (
+	"context"
 	"os"
 	"path"
 
@@ -277,7 +278,7 @@ func newBeegfsDriver(connAuthPath, tlsCertsPath, configPath, csDataDir, driverNa
 		return nil, errors.Wrap(err, "failed to create csDataDir")
 	}
 
-	logger(nil).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
+	logger(context.TODO()).Info("Driver initializing", "driverName", driverName, "version", vendorVersion)
 
 	driver := beegfs{
 		driverName:             driverName,
