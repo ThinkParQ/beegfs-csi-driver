@@ -292,7 +292,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
 		}
 		// The Secret doesn't exist. Let's create it.
-		log.Info("Creating Secret")
+		log.Info("Creating Secret", "ResourceName", s.Name)
 		if err = r.Create(ctx, s); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -300,6 +300,30 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Many of the other objects created by this controller may need to be updated to keep them in sync with the
 		// CRD. We expect the Secret to be updated manually and have no meaningful changes to make here.
 		s = sFromCluster // We need the correct resourceVersion later on.
+	}
+
+	// A TLS secret named "csi-beegfs-tlscerts" in the operator's namespace is required for driver
+	// operation. If it does not exist, we create it, own it, and garbage collect it. If it already
+	// exists (pre-created by an administrator) we do nothing.
+	t := newTLS()
+	if err = r.setCommonObjectMetadata(req, driver, t); err != nil {
+		return ctrl.Result{}, err
+	}
+	tFromCluster := new(corev1.Secret)
+	err = r.Get(ctx, types.NamespacedName{Name: t.Name, Namespace: req.Namespace}, tFromCluster)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return ctrl.Result{}, err // Something we aren't prepared for went wrong.
+		}
+		// The Secret doesn't exist. Let's create it.
+		log.Info("Creating Secret", "ResourceName", t.Name)
+		if err = r.Create(ctx, t); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		// Many of the other objects created by this controller may need to be updated to keep them in sync with the
+		// CRD. We expect the Secret to be updated manually and have no meaningful changes to make here.
+		t = tFromCluster // We need the correct resourceVersion later on.
 	}
 
 	// There are some number of RBAC objects from the deployment manifests on the cluster. We do not hard code
@@ -462,7 +486,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err = r.setCommonObjectMetadata(req, driver, sts); err != nil {
 		return ctrl.Result{}, err
 	}
-	setResourceVersionAnnotations(log, cm, s, &sts.Spec.Template)
+	setResourceVersionAnnotations(log, cm, s, t, &sts.Spec.Template)
 	setImages(log, sts.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, sts.Spec.Template.Spec.Containers)
 	setNodeAffinity(log, &driver.Spec.NodeAffinityControllerService, &sts.Spec.Template.Spec)
@@ -486,7 +510,7 @@ func (r *BeegfsDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err = r.setCommonObjectMetadata(req, driver, ds); err != nil {
 		return ctrl.Result{}, err
 	}
-	setResourceVersionAnnotations(log, cm, s, &ds.Spec.Template)
+	setResourceVersionAnnotations(log, cm, s, t, &ds.Spec.Template)
 	setImages(log, ds.Spec.Template.Spec.Containers, driver.Spec.ContainerImageOverrides)
 	setLogLevel(log, driver.Spec.LogLevel, ds.Spec.Template.Spec.Containers)
 	setNodeAffinity(log, &driver.Spec.NodeAffinityNodeService, &ds.Spec.Template.Spec)
@@ -551,6 +575,16 @@ func newSecret() *corev1.Secret {
 	return s
 }
 
+func newTLS() *corev1.Secret {
+	s := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deploy.ResourceNameTLS,
+		},
+		Data: map[string][]byte{deploy.KeyNameTLS: nil},
+	}
+	return s
+}
+
 // setCommonObjectMetadata can be used on any namespaced Kubernetes object to ensure that:
 //   - The object exists in the correct namespace (based on the namespace of the request).
 //   - The object is owned by the BeegfsDriver object (for proper garbage collection). setCommonObjectMetadata will NOT
@@ -565,12 +599,13 @@ func (r *BeegfsDriverReconciler) setCommonObjectMetadata(req ctrl.Request, drive
 const (
 	annotationConfigMapVersion      = "beegfs.csi.netapp.com/configMapVersion"
 	annotationConnauthSecretVersion = "beegfs.csi.netapp.com/connauthSecretVersion"
+	annotationTLSCertsSecretVersion = "beegfs.csi.netapp.com/tlscertsSecretVersion"
 )
 
 // setResourceVersionAnnotations is an important part of our overall configuration scheme. It records the current name
 // and resource version of the Config Map and Secret required by our driver in annotations on a Pod Template Spec (for
 // either a Daemon Set or a Stateful Set).
-func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret,
+func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *corev1.Secret, t *corev1.Secret,
 	podTemplate *corev1.PodTemplateSpec) {
 	if podTemplate.Annotations == nil {
 		podTemplate.Annotations = make(map[string]string)
@@ -583,6 +618,11 @@ func setResourceVersionAnnotations(log logr.Logger, cm *corev1.ConfigMap, s *cor
 	if s != nil { // We may not be using a Secret in this deployment of the driver.
 		correctSecretNameAndVersion := fmt.Sprintf("%s/%s", s.Name, s.ResourceVersion)
 		podTemplate.Annotations[annotationConnauthSecretVersion] = correctSecretNameAndVersion
+		log.V(5).Info("Setting Secret version annotation", "versionAnnotation", correctSecretNameAndVersion)
+	}
+	if t != nil { // We may not be using TLS in this deployment of the driver.
+		correctSecretNameAndVersion := fmt.Sprintf("%s/%s", t.Name, t.ResourceVersion)
+		podTemplate.Annotations[annotationTLSCertsSecretVersion] = correctSecretNameAndVersion
 		log.V(5).Info("Setting Secret version annotation", "versionAnnotation", correctSecretNameAndVersion)
 	}
 }

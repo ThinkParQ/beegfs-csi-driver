@@ -91,6 +91,9 @@ spec:
       - kind: Secret
         name: ""
         version: v1
+      - kind: Secret
+        name: ""
+        version: v1
       - kind: StatefulSet
         name: ""
         version: v1
@@ -239,6 +242,9 @@ spec:
           for more details.
         displayName: Conn TCP Only Filter
         path: pluginConfig.config.connTcpOnlyFilter
+      - description: The gRPC port for the management service (BeeGFS 8+ only).
+        displayName: Management gRPC Port (BeeGFS 8+)
+        path: pluginConfig.config.grpcPort
       - displayName: File System Specific Config
         path: pluginConfig.fileSystemSpecificConfigs[0].config
       - description: A map of additional key value pairs matching key value pairs
@@ -268,6 +274,9 @@ spec:
           for more details.
         displayName: Conn TCP Only Filter
         path: pluginConfig.fileSystemSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: The gRPC port for the management service (BeeGFS 8+ only).
+        displayName: Management gRPC Port (BeeGFS 8+)
+        path: pluginConfig.fileSystemSpecificConfigs[0].config.grpcPort
       - description: The sysMgmtdHost used by the BeeGFS client service to make initial
           contact with the BeeGFS mgmtd service.
         displayName: SysMgmtdHost
@@ -301,6 +310,9 @@ spec:
           for more details.
         displayName: Conn TCP Only Filter
         path: pluginConfig.nodeSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: The gRPC port for the management service (BeeGFS 8+ only).
+        displayName: Management gRPC Port (BeeGFS 8+)
+        path: pluginConfig.nodeSpecificConfigs[0].config.grpcPort
       - description: A list of file system specific configurations that override the
           default configuration for specific file systems on these nodes.
         displayName: File System Specific Configs for Nodes
@@ -334,6 +346,9 @@ spec:
           for more details.
         displayName: Conn TCP Only Filter
         path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.connTcpOnlyFilter
+      - description: The gRPC port for the management service (BeeGFS 8+ only).
+        displayName: Management gRPC Port (BeeGFS 8+)
+        path: pluginConfig.nodeSpecificConfigs[0].fileSystemSpecificConfigs[0].config.grpcPort
       - description: The sysMgmtdHost used by the BeeGFS client service to make initial
           contact with the BeeGFS mgmtd service.
         displayName: SysMgmtdHost

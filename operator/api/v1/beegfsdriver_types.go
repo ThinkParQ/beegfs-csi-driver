@@ -74,7 +74,7 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+operator-sdk:csv:customresourcedefinitions:displayName="BeeGFS Driver"
-//+operator-sdk:csv:customresourcedefinitions:resources={{ConfigMap,v1,},{DaemonSet,v1,},{Secret,v1,},{StatefulSet,v1,}}
+//+operator-sdk:csv:customresourcedefinitions:resources={{ConfigMap,v1,},{DaemonSet,v1,},{Secret,v1,},{Secret,v1,},{StatefulSet,v1,}}
 
 // Deploys the BeeGFS CSI driver
 type BeegfsDriver struct {

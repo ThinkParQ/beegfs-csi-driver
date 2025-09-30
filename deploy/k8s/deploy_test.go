@@ -101,12 +101,15 @@ func TestGetNodeServiceDaemonSet(t *testing.T) {
 func testForKeysInContainerArgs(t *testing.T, containers []corev1.Container) {
 	foundCMKey := false
 	foundSKey := false
+	foundTKey := false
 	for _, container := range containers {
 		for _, arg := range container.Args {
 			if strings.Contains(arg, KeyNameConfigMap) {
 				foundCMKey = true
 			} else if strings.Contains(arg, KeyNameSecret) {
 				foundSKey = true
+			} else if strings.Contains(arg, KeyNameTLS) {
+				foundTKey = true
 			}
 		}
 	}
@@ -116,16 +119,22 @@ func testForKeysInContainerArgs(t *testing.T, containers []corev1.Container) {
 	if !foundSKey {
 		t.Fatalf("expected to find a reference to %s in Container args", KeyNameSecret)
 	}
+	if !foundTKey {
+		t.Fatalf("expected to find a reference to %s in Container args", KeyNameTLS)
+	}
 }
 
 func testForResourceNamesInPodVolumes(t *testing.T, volumes []corev1.Volume) {
 	foundCMName := false
 	foundSName := false
+	foundTName := false
 	for _, volume := range volumes {
 		if volume.ConfigMap != nil && volume.ConfigMap.Name == ResourceNameConfigMap {
 			foundCMName = true
 		} else if volume.Secret != nil && volume.Secret.SecretName == ResourceNameSecret {
 			foundSName = true
+		} else if volume.Secret != nil && volume.Secret.SecretName == ResourceNameTLS {
+			foundTName = true
 		}
 	}
 	if !foundCMName {
@@ -133,5 +142,8 @@ func testForResourceNamesInPodVolumes(t *testing.T, volumes []corev1.Volume) {
 	}
 	if !foundSName {
 		t.Fatalf("expected to find a reference to %s in Pod volumes", ResourceNameSecret)
+	}
+	if !foundTName {
+		t.Fatalf("expected to find a reference to %s in Pod volumes", ResourceNameTLS)
 	}
 }
