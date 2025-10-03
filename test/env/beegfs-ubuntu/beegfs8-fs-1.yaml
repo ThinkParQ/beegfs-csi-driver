@@ -1,3 +1,16 @@
+# TLS enabled BeeGFS mgmtd with conn.auth.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: beegfs-env
+stringData:
+  CONN_AUTH_FILE_DATA: "${BEEGFS_SECRET}"
+  TLS_CERT_FILE_DATA: |-
+    ${TLS_CERT_FILE_DATA_INDENTED}
+  TLS_KEY_FILE_DATA: |-
+    ${TLS_KEY_FILE_DATA_INDENTED}
+---
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
@@ -20,13 +33,13 @@ spec:
         - name: beegfs-mgmtd
           image: ghcr.io/thinkparq/beegfs-mgmtd:${BEEGFS_VERSION}
           args:
-            - storeMgmtdDirectory=/mnt/mgmt_tgt_mgmt01
-            - storeAllowFirstRunInit=false
+            - --db-file /mnt/mgmt_tgt_mgmt01/mgmtd.sqlite --log-target=stderr --tls-disable=false
           env:
             - name: beegfs_setup_1
-              value: beegfs-setup-mgmtd -p /mnt/mgmt_tgt_mgmt01 -C -S mgmt_tgt_mgmt01
-            - name: CONN_AUTH_FILE_DATA
-              value: "${BEEGFS_SECRET}"
+              value: beegfs-mgmtd --init --db-file /mnt/mgmt_tgt_mgmt01/mgmtd.sqlite --log-target stderr
+          envFrom:
+            - secretRef:
+                name: beegfs-env
         - name: beegfs-meta
           image: ghcr.io/thinkparq/beegfs-meta:${BEEGFS_VERSION}
           args:
