@@ -14,6 +14,7 @@
 - [Install the Driver](#install-the-driver)
   - [BeegfsDriver Custom Resource Fields](#beegfsdriver-custom-resource-fields)
   - [ConnAuth Configuration](#connauth-configuration)
+  - [TLS Certificate Configuration](#tls-certificate-configuration)
   - [Verify the BeeGFS CSI Driver Image Signature](#verify-the-beegfs-csi-driver-image-signature)
   - [Install from the OpenShift Console (deprecated)](#install-from-the-openshift-console-deprecated-1)
   - [Install Using kubectl](#install-using-kubectl)
@@ -280,6 +281,44 @@ data:
     - sysMgmtdHost: some.other.specific.file.system
       connAuth: some-other-secret
       encoding: encoding-type # raw or base64
+```
+
+### TLS Certificate Configuration
+<a name="tls-certificate-configuration"></a>
+
+The Kubernetes deployment of the BeeGFS CSI driver makes use of a Secret to store the contents of
+[BeeGFS TLS Certificates](../docs/deployment.md#tls-certificate-configuration). The driver expects
+the Secret to be named *csi-beegfs-tlscerts* and to exist in the driver namespace. If the Secret
+does not exist when a BeegfsDriver resource is applied, the operator creates it with an empty data
+field.
+
+To use TLS certificates with a driver deployed by the operator, either:
+1. Pre-create a Secret named *csi-beegfs-connauth* in the driver namespace, or
+2. Modify the Secret after it has been created by the operator.  
+   NOTE: A Secret's `data` field must be Base64-encoded, making it cumbersome to modify directly. A
+   simpler approach is to add TLS cert information to the existing Secret's `stringData` field.
+   Kubernetes will automatically encode the string and add the result to the `data` field in the
+   background.
+   
+A correctly formatted Secret looks like this:
+
+```yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: csi-beegfs-tlscerts
+stringData:
+  csi-beegfs-tlscerts.yaml: |
+    - sysMgmtdHost: some.specific.file.system
+      tlsCert: |+
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+    - sysMgmtdHost: some.other.specific.file.system
+      tlsCert: |+
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----        
 ```
 
 ### Verify the BeeGFS CSI Driver Image Signature
