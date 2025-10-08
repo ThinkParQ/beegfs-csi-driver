@@ -13,6 +13,7 @@ Licensed under the Apache License, Version 2.0.
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -33,7 +34,7 @@ func validBinary(path string) bool {
 		// Not a regular file or symlink
 		return false
 	}
-	if 0 == stat.Mode&unix.S_IRUSR || 0 == stat.Mode&unix.S_IXUSR {
+	if stat.Mode&unix.S_IRUSR == 0 || stat.Mode&unix.S_IXUSR == 0 {
 		// Not readable or not executable
 		return false
 	}
@@ -78,8 +79,9 @@ func main() {
 	}
 	// Now implement the path search logic, but in the host's filesystem
 	argv0 := findBinary("/host", binary)
-	if "" == argv0 {
-		panic(binary + " not found")
+	if argv0 == "" {
+		fmt.Fprintf(os.Stderr, "%s: command not found\n", binary)
+		os.Exit(127)
 	}
 	// Chroot in the the host's FS
 	if err := unix.Chroot("/host"); nil != err {

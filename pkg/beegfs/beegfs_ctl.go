@@ -60,60 +60,45 @@ func newBeeGFSCtlExecutor() (beegfsCtlExecutorInterface, error) {
 	}
 
 	if v7err != nil && v8Err != nil {
-		return nil, fmt.Errorf("checking the BeeGFS 7 CTL is installed failed for %w; checking the BeeGFS 8 CTL failed for %w (one or both must be installed and in $PATH to proceed)", v7err, v8Err)
+		return nil, fmt.Errorf("unable to verify the BeeGFS 7 CTL is installed: %w; unable to verify the BeeGFS 8 CTL is installed: %w (one must be installed and in $PATH to proceed)", v7err, v8Err)
 	}
 
 	return beegfsCtlDispatcher{}, nil
 }
 
-// detectCTLVersion determines if this is a v7 or v8 beegfsVolume. It works by first checking if the
-// v8 CTL is installed then trying to run node list for this sysMgmtdHost. If the v8 CTL is not
-// installed or node list fails, it checks if the v7 CTL is installed and tries to run node list.
+// detectCTLVersion determines if this is a v7 or v8 beegfsVolume. It works by first trying to run
+// the v8 `beegfs node list` command for this sysMgmtdHost. If the v8 CTL is not installed or node
+// list fails, it tries to run the v7 `beegfs-ctl --listnodes` to determine if this is a v7 volume.
 func (d beegfsCtlDispatcher) detectCTLVersion(ctx context.Context, vol beegfsVolume) (beegfsCtlExecutorInterface, error) {
 
 	LogDebug(context.TODO(), "Detecting BeeGFS version for volume", "volumeID", vol.volumeID)
 
-	var errCheckingV8CTLInstall error
 	var errCheckingV8NodeList error
-	var errCheckingV7CTLInstall error
 	var errCheckingV7NodeList error
 	var errString strings.Builder
 
 	// As with above, we don't use exec.LookPath because chwrap confuses it.
 	executorV8 := beegfsCtlExecutorV8{}
-	if _, errCheckingV8CTLInstall = executorV8.execute(ctx, beegfsVolume{}, []string{"--help"}); errCheckingV8CTLInstall == nil {
-		// The v8 CTL can always execute --help, if available, and will not return a conn auth error.
-		if _, errCheckingV8NodeList = executorV8.execute(ctx, vol, []string{"node", "list"}); errCheckingV8NodeList == nil {
-			// If we were able to execute node list for this volume, this must be BeeGFS 8.
-			LogDebug(context.TODO(), "BeeGFS 8 volume detected", "volumeID", vol.volumeID)
-			return executorV8, nil
-		}
-		errString.WriteString("BeeGFS 8 list nodes failed (" + errCheckingV8NodeList.Error() + ")")
-		LogDebug(ctx, "executing the v8 ctl with this volume failed, falling back to v7", "vol", vol.volumeID, "error", errCheckingV8NodeList)
-	} else {
-		errString.WriteString("BeeGFS 8 CTL could not be executed (" + errCheckingV8CTLInstall.Error() + ")")
+	if _, errCheckingV8NodeList = executorV8.execute(ctx, vol, []string{"node", "list"}); errCheckingV8NodeList == nil {
+		// If we were able to execute node list for this volume, this must be BeeGFS 8.
+		LogDebug(context.TODO(), "BeeGFS 8 volume detected", "volumeID", vol.volumeID)
+		return executorV8, nil
 	}
+	// The command could fail because the beegfs tool was not installed, or due to a runtime error.
+	// We don't also check if the tool is installed to reduce overhead (the handling is the same).
+	errString.WriteString("BeeGFS 8 list nodes failed (" + errCheckingV8NodeList.Error() + ")")
+	LogDebug(ctx, "executing the v8 ctl with this volume failed, falling back to v7", "vol", vol.volumeID, "error", errCheckingV8NodeList)
 
 	executorV7 := beegfsCtlExecutorV7{}
-	if _, errCheckingV7CTLInstall = executorV7.execute(ctx, "", []string{"--help"}); errCheckingV7CTLInstall == nil || errors.As(errCheckingV7CTLInstall, &ctlConnAuthError{}) {
-		// A connAuth error here is not significant. We will likely be picking up conn auth config
-		// on a per file system basis. For now, just verify if we can execute beegfs-ctl or not.
-		if _, errCheckingV7NodeList = executorV7.execute(ctx, vol.clientConfPath, []string{"--listnodes", "--nodetype=management"}); errCheckingV7NodeList == nil {
-			// If we were able to execute node list for this volume, this must be BeeGFS 7.
-			LogDebug(context.TODO(), "BeeGFS 7 volume detected", "volumeID", vol.volumeID)
-			return &executorV7, nil
-		}
-		if errString.Len() > 0 {
-			errString.WriteString("; ")
-		}
-		errString.WriteString("BeeGFS 7 list nodes failed (" + errCheckingV7NodeList.Error() + ")")
-	} else {
-		if errString.Len() > 0 {
-			errString.WriteString("; ")
-		}
-		errString.WriteString("BeeGFS 7 CTL could not be executed (" + errCheckingV7CTLInstall.Error() + ")")
+	if _, errCheckingV7NodeList = executorV7.execute(ctx, vol.clientConfPath, []string{"--listnodes", "--nodetype=management"}); errCheckingV7NodeList == nil {
+		// If we were able to execute node list for this volume, this must be BeeGFS 7.
+		LogDebug(context.TODO(), "BeeGFS 7 volume detected", "volumeID", vol.volumeID)
+		return &executorV7, nil
 	}
-
+	if errString.Len() > 0 {
+		errString.WriteString("; ")
+	}
+	errString.WriteString("BeeGFS 7 list nodes failed (" + errCheckingV7NodeList.Error() + ")")
 	// Neither the v8 or v7 CTL are installed or this is not a compatible beegfsVolume.
 	return nil, fmt.Errorf("unable to verify if this is a BeeGFS 7 or 8 volume: %s (hint: verify the management address and that the correct version of BeeGFS CTL is installed and in $PATH)", errString.String())
 }
@@ -148,6 +133,8 @@ func execBeeGFSCmd(ctx context.Context, cmd *exec.Cmd, isHelpCommand bool) (stdO
 	cmd.Stdout = &stdoutBuffer
 	cmd.Stderr = &stderrBuffer
 	LogDebug(ctx, "Executing command", "command", cmd.Args)
+	// Keep in mind we're running chwrapped commands here, which may return different error codes or
+	// stdout/stderr than the non-chwrapped versions. See chwrap/main.go for details.
 	err = cmd.Run()
 	stdOutString := stdoutBuffer.String()
 	stdErrString := stderrBuffer.String()
@@ -156,15 +143,16 @@ func execBeeGFSCmd(ctx context.Context, cmd *exec.Cmd, isHelpCommand bool) (stdO
 			// In BeeGFS 8 if CTL is run with mount=none then the error is 'does not exist' (the same as
 			// BeeGFS 7). However if CTL was ever executed against a mounted file system the error would
 			// be "no such file or directory".
-			err = errors.WithStack(newCtlNotExistError(stdOutString, stdErrString))
+			err = newCtlNotExistError(stdOutString, stdErrString)
 		} else if strings.Contains(stdErrString, "exists already") || strings.Contains(stdOutString, "exists already") {
 			// In BeeGFS 8 since commands can act on multiple entries, "exists already" is only
 			// returned in stdout.
-			err = errors.WithStack(newCtlExistError(stdOutString, stdErrString))
+			err = newCtlExistError(stdOutString, stdErrString)
 		} else if strings.Contains(stdErrString, "No connAuthFile configured") {
-			err = errors.WithStack(newCtlConnAuthError(stdOutString, stdErrString))
+			err = newCtlConnAuthError(stdOutString, stdErrString)
 		} else {
-			err = errors.Wrapf(err, "beegfs ctl failed with stdOut: %q and stdErr: %q", stdOutString, stdErrString)
+			// This is also the codepath if CTL is not installed (i.e., beegfs: command not found).
+			err = fmt.Errorf("error executing ctl: %w (stdOut: %q | stdErr: %q)", err, strings.TrimRight(stdOutString, "\n"), strings.TrimRight(stdErrString, "\n"))
 		}
 	}
 	if stdOutString != "" && !isHelpCommand { // Don't log the --help output.
