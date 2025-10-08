@@ -16,7 +16,6 @@ func TestThreadSafeStringLock(t *testing.T) {
 	tssl := newThreadSafeStringLock()
 	const numStrings = 2
 	const numRoutinesPerString = 5
-	rand.Seed(time.Now().UnixNano())
 
 	// Track a map of channels indexed by the name of the string to be locked. Each channel receives true from each
 	// Goroutine that successfully obtains a lock on its associated string and false from each Goroutine that does not.

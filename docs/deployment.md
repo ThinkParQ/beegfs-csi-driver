@@ -20,7 +20,10 @@
     - [ConnAuth Configuration](#connauth-configuration)
       - [Option 1: Use Connection Authentication](#option-1-use-connection-authentication)
       - [Option 2: Disable Connection Authentication](#option-2-disable-connection-authentication)
-    - [BeeGFS Helperd Configuration](#beegfs-helperd-configuration)
+    - [BeeGFS Helperd Configuration (BeeGFS 7 only)](#beegfs-helperd-configuration-beegfs-7-only)
+    - [TLS Certificate Configuration](#tls-certificate-configuration)
+      - [Option 1: Use TLS](#option-1-use-tls)
+      - [Option 2: Disable TLS](#option-2-disable-tls)
   - [Kubernetes Configuration](#kubernetes-configuration)
   - [BeeGFS Client Parameters (beegfsClientConf)](#beegfs-client-parameters-beegfsclientconf)
     - [Notable](#notable)
@@ -125,17 +128,18 @@ runs a component of the driver:
   file](https://doc.beegfs.io/latest/advanced_topics/manual_installation.html)
   for your Linux distribution to the appropriate directory.
 * Using the package manager for your Linux distribution (i.e. yum, apt, zypper)
-  install the following packages: 
-  * beegfs-client-dkms
-  * beegfs-helperd
-  * beegfs-utils
-* For BeeGFS versions 7.3.1+ or 7.2.7+, configure the `beegfs-helperd` service
-  (in `/etc/beegfs/beegfs-helperd.conf`) with `connDisableAuthentication = true`
-  or `connAuthFile = <path to a connAuthFile shared by all file systems>`. See
-  [BeeGFS Helperd Configuration](#beegfs-helperd-configuration) for other
-  options or more details.
-* Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd
-  && systemctl enable beegfs-helperd`
+  install the following packages depending on your version of BeeGFS:
+  * BeeGFS 7: beegfs-client-dkms, beegfs-helperd, beegfs-utils
+    * For BeeGFS versions 7.3.1+ or 7.2.7+, configure the beegfs-helperd service (in
+      `/etc/beegfs/beegfs-helperd.conf`) with `connDisableAuthentication = true` or `connAuthFile =
+      <path to a connAuthFile shared by all file systems>`. See [BeeGFS Helperd
+      Configuration](#beegfs-helperd-configuration) for other options or more details.
+    * Start and enable beegfs-helperd using systemd: `systemctl start beegfs-helperd && systemctl
+      enable beegfs-helperd`. 
+  * BeeGFS 8+: beegfs-client-dkms, beegfs-tools
+    * Note in BeeGFS 8 the CTL tool required for driver operation is now part of the beegfs-tools
+      package, and the beegfs-utils package is no longer required for driver operation. Additionally
+      beegfs-helperd was removed in BeeGFS 8.
 
 IMPORTANT: By default the driver uses the beegfs-client.conf file at
 */etc/beegfs/beegfs-client.conf* for base configuration. Modifying the location
@@ -170,6 +174,12 @@ Steps:
     *deploy/k8s/overlays/examples/csi-beegfs-connauth.yaml*. Please see 
     the section on [ConnAuth Configuration](#connauth-configuration) for full 
     details.
+* In BeeGFS 8+ TLS can be configured by filling in the empty Secret config file at
+   *deploy/k8s/overlays/my-overlay/csi-beegfs-tlscerts.yaml*. If a TLS certificate is not provided
+   for a particular `sysMgmtdHost` the driver automatically disables TLS for that file system.
+  * An example Secret config file is provided at
+    *deploy/k8s/overlays/examples/csi-beegfs-tlscerts.yaml*. Please see the section on [TLS
+    Certificate Configuration](#tlscerts-configuration) for full details.
 * Enable any desired patches for the BeeGFS CSI driver configuration by
   including a reference to any patch files in the kustomization.yaml file for
   the overlay beng used to deploy the driver.
@@ -531,6 +541,9 @@ outermost `config` is required.
 ```yaml
 # when more specific configuration is not provided; PRECEDENCE 3 (lowest)
 config:  # OPTIONAL
+  # grpcPort corresponds with grpc-port in beegfs-mgmtd.toml and defaults to 8010 if unspecified.
+  # This only applies in BeeGFS 8+ and can be set but will be ignored for BeeGFS 7 mgmtd servers.
+  grpcPort: "<port>"
   connInterfaces:
     - <interface_name>  # e.g. ib0
     - <interface_name>
@@ -685,7 +698,9 @@ NOTE: This parameter does not exist in previous BeeGFS versions and BeeGFS will
 fail to mount if it is provided for a file system that does not support it.
 
 <a name="beegfs-helperd-configuration"></a>
-#### BeeGFS Helperd Configuration
+#### BeeGFS Helperd Configuration (BeeGFS 7 only)
+
+*Note: This section only applies to BeeGFS 7 as Helperd was removed in BeeGFS 8.*
 
 The [BeeGFS Helperd 
 service](https://doc.beegfs.io/latest/advanced_topics/client_compat.html?highlight=helperd#helperd) 
@@ -734,6 +749,47 @@ Non-recommended options:
   and prevents the use of DNS names with BeeGFS services. It also disables the
   BeeGFS mount sanity check, allowing mounts to "succeed" even when critical
   BeeGFS services cannot be reached.
+
+<a name="tls-certificate-configuration"></a>
+#### TLS Certificate Configuration
+
+BeeGFS 8 introduces TLS encryption for communication between some BeeGFS components, notably the
+BeeGFS CTL tool and management service. Because the driver relies on BeeGFS CTL, if a particular
+management server is [configured to use TLS](https://doc.beegfs.io/latest/advanced_topics/tls.html)
+the driver needs to be configured with the same TLS certificate. If there is a mismatch between the
+driver and management TLS configuration, the driver will log errors like `connect: cannot assign
+requested address`.
+
+If you are still running BeeGFS 7, after upgrading the driver to 1.8+, you can preemptively
+configure the driver with TLS certificates before upgrading to BeeGFS 8. The certificates will
+simply be ignored until the driver detects it is communicating with a BeeGFS 8 management server.
+
+NOTES:
+* Unlike general configuration, TLS certificates only apply at a per file system level. There are no
+default certificates and the concept of node specific certificates doesn't make sense.
+* When running the driver directly, the TLS certificate configuration file is specified by the
+`--tlscerts-path` command line argument. For Kubernetes, the deployment manifests handle this
+automatically.
+
+##### Option 1: Use TLS
+
+As with connection authentication secrets, TLS certificates are stored in a separate file and are
+specified for each management service based on its IP or hostname (`sysMgmtdHost`). This file should
+only contain entries for file systems where the management server is configured to use TLS.
+
+```yaml
+- sysMgmtdHost: some.specific.file.system
+  tlsCert: |-
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+```
+
+##### Option 2: Disable TLS
+
+If TLS is disabled on a particular management server, no additional configuration should be
+specified for that `sysMgmtdHost` in the TLS certs file. The driver will automatically disable TLS
+when communicating with management servers that do not have an entry in this file.
 
 <a name="kubernetes-configuration"></a>
 ### Kubernetes Configuration
@@ -785,7 +841,7 @@ Special attention should be paid to these parameters.
 
 * `connDisableAuthentication` - Added in BeeGFS v7.3.1 and BeeGFS v7.2.7. If the file system the
   BeeGFS client will connect to does not use connAuth files, this must be set to `"true"`.
-  * Note: To avoid YAML interpeting the value as a native boolean, it must be enclosed in double
+  * Note: To avoid YAML interpreting the value as a native boolean, it must be enclosed in double
     quotes or you will get an error like:
     
     ```
@@ -799,16 +855,21 @@ These parameters are specified elsewhere (a Kubernetes StorageClass, etc.) or
 are determined dynamically and have no effect when specified in the
 `beeGFSClientConf` configuration section.
 
-* `sysMgmtdHost` (This is specified in a `fileSystemSpecificConfigs[i]` or by
-  the volume definition itself.)
-* `connClientPortUDP` (An ephemeral port, obtained by binding to port 0, allows
-  multiple filesystem mounts. On Linux the selected ephemeral port is
-  constrained by the values of [IP
-  variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).
-  [Ensure that firewalls allow UDP
-  traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat)
-  between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver
-  nodes.)
+* `sysMgmtdHost` - This is specified in a `fileSystemSpecificConfigs[i]` or by the volume definition
+  itself.
+* `connClientPort` (BeeGFS 8+) / `connClientPortUDP` (BeeGFS 7) - An ephemeral port, obtained by
+  binding to port 0, allows multiple filesystem mounts.
+  * In BeeGFS 8 `connClientPortUDP` was deprecated and renamed to `connClientPort`. Configurations
+    can still use `connClientPortUDP` as long as `connClientPort` is not also set. The driver will
+    use `connClientPortUDP` or `connClientPort` depending which exists in the template client
+    configuration file, typically located at `/etc/beegfs/beegfs-client.conf`. It is recommended to
+    upgrade your template config file to the one provided with the BeeGFS 8+ client package, which
+    is typically done by upgrading the package and allowing the original file to be overwritten.
+  * On Linux the selected ephemeral port is constrained by the values of [IP
+    variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables). 
+  * [Ensure that firewalls allow UDP
+    traffic](https://doc.beegfs.io/latest/advanced_topics/network_tuning.html#firewalls-network-address-translation-nat)
+    between BeeGFS file system nodes and ephemeral ports on BeeGFS CSI Driver nodes.
 * `connPortShift`
 
 <a name="unsupported"></a>
@@ -839,9 +900,13 @@ These parameters have been tested and verified to have the desired effect.
 
 These parameters SHOULD result in the desired effect but have not been tested.
 
-* `connHelperdPortTCP`
-* `connMgmtdPortTCP`
-* `connMgmtdPortUDP`
+* `connHelperdPortTCP` (BeeGFS 7, ignored in BeeGFS 8+)
+* `connMgmtdPort` (BeeGFS 8+)
+  * Note: Replaces `connMgmtdPortTCP` and `connMgmtdPortUDP` in BeeGFS 8.
+* `connMgmtdPortTCP` (BeeGFS 7)
+  * Note: This can be set in BeeGFS 8 if `connMgmtdPort` is not set, and `connMgmtdPortUDP` is set to the same value.
+* `connMgmtdPortUDP` (BeeGFS 7)
+  * Note: This can be set in BeeGFS 8 if `connMgmtdPort` is not set, and `connMgmtdPortTCP` is set to the same value.
 * `connCommRetrySecs`
 * `connFallbackExpirationSecs`
 * `connMaxInternodeNum`

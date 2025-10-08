@@ -22,6 +22,7 @@ Licensed under the Apache License, Version 2.0.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -32,14 +33,15 @@ import (
 )
 
 var (
-	connAuthPath           = flag.String("connauth-path", "", "path to connection authentication file")
-	configPath             = flag.String("config-path", "", "path to plugin configuration file")
-	csDataDir              = flag.String("cs-data-dir", "/tmp/beegfs-csi-data-dir", "path to directory the controller service uses to store client configuration files and mount file systems")
-	driverName             = flag.String("driver-name", "beegfs.csi.netapp.com", "name of the driver")
-	endpoint               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	nodeID                 = flag.String("node-id", "", "node id")
-	showVersion            = flag.Bool("version", false, "Show version.")
-	clientConfTemplatePath = flag.String("client-conf-template-path", "", "path to template beegfs-client.conf")
+	connAuthPath           = flag.String("connauth-path", "", "path to the file containing BeeGFS connection authentication secrets")
+	tlsCertsPath           = flag.String("tlscerts-path", "", "path to the file containing BeeGFS TLS certificates")
+	configPath             = flag.String("config-path", "", "path to the plugin configuration file")
+	csDataDir              = flag.String("cs-data-dir", "/tmp/beegfs-csi-data-dir", "path to the directory the controller service uses to store client configuration files and mount file systems")
+	driverName             = flag.String("driver-name", "beegfs.csi.netapp.com", "name of the CSI driver")
+	endpoint               = flag.String("endpoint", "unix://tmp/csi.sock", "the CSI endpoint")
+	nodeID                 = flag.String("node-id", "", "the Kubernetes node ID")
+	showVersion            = flag.Bool("version", false, "print the driver version and exit")
+	clientConfTemplatePath = flag.String("client-conf-template-path", "", "path to the template beegfs-client.conf file")
 	nodeUnstageTimeout     = flag.Uint64("node-unstage-timeout", 0, "seconds DeleteVolume waits for NodeUnstageVolume to complete on all nodes")
 
 	// Set by the build process
@@ -49,7 +51,7 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	if err := flag.Set("logtostderr", "true"); err != nil {
-		beegfs.LogFatal(nil, err, "Failed to set klog flag logtostderr=true")
+		beegfs.LogFatal(context.TODO(), err, "Failed to set klog flag logtostderr=true")
 	}
 	flag.Parse()
 
@@ -64,10 +66,10 @@ func main() {
 }
 
 func handle() {
-	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID,
+	driver, err := beegfs.NewBeegfsDriver(*connAuthPath, *tlsCertsPath, *configPath, *csDataDir, *driverName, *endpoint, *nodeID,
 		*clientConfTemplatePath, version, *nodeUnstageTimeout)
 	if err != nil {
-		beegfs.LogFatal(nil, err, "Failed to initialize driver")
+		beegfs.LogFatal(context.TODO(), err, "Failed to initialize driver")
 	}
 	driver.Run()
 }

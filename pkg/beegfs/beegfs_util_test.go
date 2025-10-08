@@ -45,6 +45,30 @@ connAuthFile           = /testvol/connAuthFile
 connRDMAInterfacesFile = /testvol/connRDMAInterfacesFile
 `
 
+const TestWriteClientFilesTemplateV8 = `# A minimal configuration file that verifies connClientPort / connMgmtdPort handling.
+sysMgmtdHost          =
+connClientPort        =
+# One arbitrary key that can be overridden.
+connMgmtdPort         = 8008
+connInterfacesFile    =
+connNetFilterFile     =
+connTcpOnlyFilterFile =
+connAuthFile          =
+connRDMAInterfacesFile =
+`
+
+const TestWriteClientFilesBeegfsClientConfV8 = `# A minimal configuration file that verifies connClientPort / connMgmtdPort handling.
+sysMgmtdHost           = 127.0.0.1
+connClientPort         = 49152
+# One arbitrary key that can be overridden.
+connMgmtdPort          = 8000
+connInterfacesFile     = /testvol/connInterfacesFile
+connNetFilterFile      = /testvol/connNetFilterFile
+connTcpOnlyFilterFile  = /testvol/connTcpOnlyFilterFile
+connAuthFile           = /testvol/connAuthFile
+connRDMAInterfacesFile = /testvol/connRDMAInterfacesFile
+`
+
 func TestNewBeegfsUrl(t *testing.T) {
 	tests := map[string]struct {
 		host, path string
@@ -197,7 +221,7 @@ func TestWriteClientFiles(t *testing.T) {
 	}
 
 	// check written connAuthFile
-	got, err = fsutil.ReadFile(path.Join(vol.mountDirPath, "connAuthFile"))
+	got, err = fsutil.ReadFile(vol.getConnAuthPath())
 	if err != nil {
 		t.Errorf("could not read output connAuthFile")
 	}
@@ -244,6 +268,121 @@ func TestWriteClientFiles(t *testing.T) {
 	if wantConnTcpOnlyFilterFile != string(got) {
 		t.Errorf("connTcpOnlyFilterFile does not match; expected:\n%vgot:\n%v",
 			wantConnTcpOnlyFilterFile, string(got))
+	}
+}
+
+func TestWriteClientFilesV8(t *testing.T) {
+
+	fs = afero.NewMemMapFs() // test sets up its own, new, memory-mapped file system
+	fsutil = afero.Afero{Fs: fs}
+	confTemplateDirPath := "/etc/beegfs"
+	confTemplatePath := path.Join(confTemplateDirPath, "beegfs-client.conf")
+	mountDirPath := "/testvol"
+	sysMgmtdHost := "127.0.0.1"
+	testConfig := beegfsv1.PluginConfig{
+		DefaultConfig: beegfsv1.BeegfsConfig{
+			ConnInterfaces:     []string{"ib0"},
+			ConnNetFilter:      []string{"127.0.0.0/24"},
+			ConnTcpOnlyFilter:  []string{"127.0.0.0"},
+			ConnRDMAInterfaces: []string{"ib0"},
+			BeegfsClientConf: map[string]string{
+				"connMgmtdPortTCP": "8000",
+				"connMgmtdPortUDP": "8000",
+			},
+		},
+		FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
+			{
+				SysMgmtdHost: sysMgmtdHost,
+				Config: beegfsv1.BeegfsConfig{
+					ConnAuth: "secret1",
+					TLSCert:  "tlsCert1",
+				},
+			},
+		},
+	}
+	wantTLSCertsFile := "tlsCert1"
+
+	// set up template directory in memory-mapped filesystem
+	if err := fs.MkdirAll(confTemplateDirPath, 0755); err != nil {
+		t.Fatalf("failed to set up configuration template directory: %v", err)
+	}
+	if err := fsutil.WriteFile(confTemplatePath, []byte(TestWriteClientFilesTemplateV8), 0644); err != nil {
+		t.Fatalf("failed to write template beegfs-client.conf: %v", err)
+	}
+
+	// set up conf directory in memory-mapped filesystem
+	if err := fs.Mkdir(mountDirPath, 0755); err != nil {
+		t.Fatalf("failed to set up new configuration directory: %v", err)
+	}
+
+	vol := newBeegfsVolume(mountDirPath, sysMgmtdHost, "test", testConfig)
+	if err := writeClientFiles(context.Background(), vol, confTemplatePath); err != nil {
+		t.Fatalf("expected no error to occur: %v", err)
+	}
+
+	// check written beegfs-client.conf
+	got, err := fsutil.ReadFile(vol.clientConfPath)
+	if err != nil {
+		t.Errorf("could not read output beegfs-client.conf")
+	}
+	// We cannot predict what connClientPort will be chosen, so we don't check that line.
+	udpExpression := regexp.MustCompile(`connClientPort\s*=\s\d*\n`)
+	wantString := udpExpression.ReplaceAllString(TestWriteClientFilesBeegfsClientConfV8, "")
+	gotString := udpExpression.ReplaceAllString(string(got), "")
+	if wantString != gotString {
+		t.Errorf("beegfs-client.conf does not match; expected:\n%vgot:\n%v",
+			wantString, gotString)
+	}
+
+	// check written connAuthFile
+	got, err = fsutil.ReadFile(vol.getTLSCertPath())
+	if err != nil {
+		t.Errorf("could not read output TLSCerts")
+	}
+	if wantTLSCertsFile != string(got) {
+		t.Errorf("connAuthFile does not match; expected:\n%vgot:\n%v",
+			wantTLSCertsFile, string(got))
+	}
+
+	// Verifying other files are written correctly is handled in TestWriteClientFiles,
+}
+
+func TestWriteClientFilesV8ConnMgmtdMismatch(t *testing.T) {
+
+	fs = afero.NewMemMapFs() // test sets up its own, new, memory-mapped file system
+	fsutil = afero.Afero{Fs: fs}
+	confTemplateDirPath := "/etc/beegfs"
+	confTemplatePath := path.Join(confTemplateDirPath, "beegfs-client.conf")
+	mountDirPath := "/testvol"
+	sysMgmtdHost := "127.0.0.1"
+	testConfig := beegfsv1.PluginConfig{
+		DefaultConfig: beegfsv1.BeegfsConfig{
+			BeegfsClientConf: map[string]string{
+				// When using a BeeGFS 8 client template, the deprecated connMgmtdPortTCP/UDP
+				// parameters must be the same to handle automatically.
+				"connMgmtdPortTCP": "8001",
+				"connMgmtdPortUDP": "8002",
+			},
+		},
+		FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{},
+	}
+
+	// set up template directory in memory-mapped filesystem
+	if err := fs.MkdirAll(confTemplateDirPath, 0755); err != nil {
+		t.Fatalf("failed to set up configuration template directory: %v", err)
+	}
+	if err := fsutil.WriteFile(confTemplatePath, []byte(TestWriteClientFilesTemplateV8), 0644); err != nil {
+		t.Fatalf("failed to write template beegfs-client.conf: %v", err)
+	}
+
+	// set up conf directory in memory-mapped filesystem
+	if err := fs.Mkdir(mountDirPath, 0755); err != nil {
+		t.Fatalf("failed to set up new configuration directory: %v", err)
+	}
+
+	vol := newBeegfsVolume(mountDirPath, sysMgmtdHost, "test", testConfig)
+	if err := writeClientFiles(context.Background(), vol, confTemplatePath); err == nil {
+		t.Fatalf("expected an error for the mismatched connMgmtdPortTCP/UDP configuration")
 	}
 }
 

@@ -1,0 +1,19 @@
+# Copyright 2025 ThinkParQ, GmbH. All Rights Reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# This is a fairly complicated csi-beegfs-tlscerts.yaml representing multiple file systems that each require a
+# TLS cert for access. See /docs/deployment.md for complete instructions on how to use this file.
+
+# Editing this file directly has no effect. Either edit csi-beegfs-tlscerts.yaml in an overlay or copy this file on top
+# of csi-beegfs-config.yaml in an overlay.
+
+- sysMgmtdHost: some.specific.file.system
+  tlsCert: |-
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
+- sysMgmtdHost: "203.0.113.1"
+  tlsCert: |-
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----

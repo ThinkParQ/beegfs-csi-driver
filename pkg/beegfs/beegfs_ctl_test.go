@@ -17,6 +17,7 @@ func TestConstructSetPatternForVolumeArgs(t *testing.T) {
 		config        stripePatternConfig
 		wantArgs      []string
 		wantToExecute bool
+		isV8          bool
 	}{
 		"everything example": {
 			config: stripePatternConfig{
@@ -36,11 +37,31 @@ func TestConstructSetPatternForVolumeArgs(t *testing.T) {
 			wantArgs:      []string{},
 			wantToExecute: false,
 		},
+		"everything example (v8)": {
+			config: stripePatternConfig{
+				storagePoolID:           "2",
+				stripePatternChunkSize:  "2m",
+				stripePatternNumTargets: "4",
+			},
+			wantArgs:      []string{"--mount=none", "entry", "set", "--pool=2", "--chunk-size=2m", "--num-targets=4"},
+			wantToExecute: true,
+			isV8:          true,
+		},
+		"nothing example (v8)": {
+			config: stripePatternConfig{
+				storagePoolID:           "",
+				stripePatternChunkSize:  "",
+				stripePatternNumTargets: "",
+			},
+			wantArgs:      []string{},
+			wantToExecute: false,
+			isV8:          true,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got, needToExecute := constructSetPatternForVolumeArgs(tc.config)
+			got, needToExecute := constructSetPatternForVolumeArgs(tc.config, tc.isV8)
 			if !reflect.DeepEqual(tc.wantArgs, got) {
 				t.Fatalf("expected: %s, got: %s", tc.wantArgs, got)
 			}
@@ -55,6 +76,7 @@ func TestConstructCreateDirForVolumeArgs(t *testing.T) {
 	tests := map[string]struct {
 		config   permissionsConfig
 		wantArgs []string
+		isV8     bool
 	}{
 		"default": {
 			config: permissionsConfig{
@@ -98,11 +120,21 @@ func TestConstructCreateDirForVolumeArgs(t *testing.T) {
 			// We explicitly do not use the leading digit in octal notation because beegfs-ctl ignores it anyway.
 			wantArgs: []string{"--unmounted", "--createdir", "--access=755", "--uid=1000", "--gid=1000"},
 		},
+		"all modified (v8)": {
+			config: permissionsConfig{
+				uid:  1000,
+				gid:  1000,
+				mode: 0o2755,
+			},
+			// For both v7 and v8 the leading digit in octal notation is always dropped.
+			wantArgs: []string{"--mount=none", "entry", "create", "directory", "--permissions=755", "--uid=1000", "--gid=1000"},
+			isV8:     true,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			got := constructCreateDirForVolumeArgs(tc.config)
+			got := constructCreateDirForVolumeArgs(tc.config, tc.isV8)
 			if !reflect.DeepEqual(tc.wantArgs, got) {
 				t.Fatalf("expected: %s, got: %s", tc.wantArgs, got)
 			}

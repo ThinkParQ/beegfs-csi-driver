@@ -65,12 +65,7 @@ func newGrpcErrorFromCause(code codes.Code, cause error) grpcError {
 	statusErr := status.Error(code, cause.Error())
 	return grpcError{statusErr: statusErr, cause: cause}
 }
-func newGrpcError(code codes.Code, msg string) grpcError {
-	return newGrpcErrorFromCause(code, errors.New(msg))
-}
-func newGrpcErrorf(code codes.Code, format string, a ...interface{}) grpcError {
-	return newGrpcError(code, fmt.Sprintf(format, a...))
-}
+
 func (e grpcError) Error() string {
 	return e.statusErr.Error()
 }
@@ -109,8 +104,6 @@ func (s *nonBlockingGRPCServer) Start(endpoint string, ids csi.IdentityServer, c
 	s.wg.Add(1)
 
 	go s.serve(endpoint, ids, cs, ns)
-
-	return
 }
 
 func (s *nonBlockingGRPCServer) Wait() {
@@ -129,21 +122,21 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 
 	proto, addr, err := parseEndpoint(endpoint)
 	if err != nil {
-		LogFatal(nil, err, "Error parsing endpoint")
+		LogFatal(context.TODO(), err, "Error parsing endpoint")
 	}
 
 	if proto == "unix" {
 		addr = "/" + addr
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) { //nolint: vetshadow
 			err = errors.WithStack(err)
-			LogFatal(nil, err, "Failed to remove address", "address", addr)
+			LogFatal(context.TODO(), err, "Failed to remove address", "address", addr)
 		}
 	}
 
 	listener, err := net.Listen(proto, addr)
 	if err != nil {
 		err = errors.WithStack(err)
-		LogFatal(nil, err, "Failed to listen")
+		LogFatal(context.TODO(), err, "Failed to listen")
 	}
 
 	opts := []grpc.ServerOption{
@@ -162,14 +155,14 @@ func (s *nonBlockingGRPCServer) serve(endpoint string, ids csi.IdentityServer, c
 		csi.RegisterNodeServer(server, ns)
 	}
 
-	logger(nil).Info("Listening for connections", "address", listener.Addr())
+	logger(context.TODO()).Info("Listening for connections", "address", listener.Addr())
 
 	if err = server.Serve(listener); err != nil {
 		if err == grpc.ErrServerStopped {
 			err = errors.WithStack(err)
-			LogError(nil, err, "")
+			LogError(context.TODO(), err, "")
 		} else {
-			LogFatal(nil, err, "Fatal error")
+			LogFatal(context.TODO(), err, "Fatal error")
 		}
 	}
 }

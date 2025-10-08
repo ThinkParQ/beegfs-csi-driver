@@ -45,6 +45,7 @@ func TestNewBeegfsDriver(t *testing.T) {
 
 	type testCase struct {
 		connAuthPath           string
+		tlsCertsPath           string
 		configPath             string
 		csDataDir              string
 		driverName             string
@@ -56,6 +57,7 @@ func TestNewBeegfsDriver(t *testing.T) {
 	}
 	defaultTestCase := testCase{
 		connAuthPath:           "", // Failure behavior tested in TestParseConnAuthFromFile.
+		tlsCertsPath:           "", // TODO: Test somewhere
 		configPath:             "", // Failure behavior tested in TestParseConfigFromFile.
 		csDataDir:              "/csDataDir",
 		driverName:             "beegfs.csi.netapp.com",
@@ -103,7 +105,7 @@ func TestNewBeegfsDriver(t *testing.T) {
 	for name, tcFunc := range tests {
 		t.Run(name, func(t *testing.T) {
 			tc := tcFunc()
-			_, err := NewBeegfsDriver(tc.connAuthPath, tc.configPath, tc.csDataDir, tc.driverName, tc.endpoint,
+			_, err := NewBeegfsDriver(tc.connAuthPath, tc.tlsCertsPath, tc.configPath, tc.csDataDir, tc.driverName, tc.endpoint,
 				tc.nodeID, tc.clientConfTemplatePath, tc.version, tc.nodeUnstageTimeout)
 			if err == nil {
 				t.Fatal("expected error but got none")

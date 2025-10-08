@@ -1,0 +1,3 @@
+- sysMgmtdHost: localhost
+  tlsCert: |-
+    ${TLS_CERT_FILE_DATA_INDENTED}

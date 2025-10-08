@@ -6,7 +6,6 @@
 - [Building the Project](#building-the-project)
   - [Building the binaries](#building-the-binaries)
   - [Building the containers](#building-the-containers)
-  - [Building and pushing the containers](#building-and-pushing-the-containers)
 - [Developer Kubernetes Deployment](#developer-kubernetes-deployment)
 - [Style Guidelines](#style-guidelines)
   - [YAML Files](#yaml-files)
@@ -37,8 +36,14 @@ make
 
 ### Building the containers
 
+For arm64:
 ```shell
-make container
+make BUILD_PLATFORMS="linux arm64 arm64 arm64" container
+```
+
+For amd64 (x86-64):
+``shell
+make BUILD_PLATFORMS="linux amd64 amd64 amd64" container
 ```
 
 ### Building and pushing the containers

@@ -11,11 +11,11 @@ on:
     branches:
       - "master"
     paths-ignore:
-      - "CHANGELOG.md"    
-      - "CONTRIBUTING.md"  
+      - "CHANGELOG.md"
+      - "CONTRIBUTING.md"
       - "README.md"
       - "SECURITY.md"
-      - 'docs/**'
+      - "docs/**"
 
 env:
   # Equivalent of BUILD_PLATFORMS in the Makefile and release-tools build.make. We cannot just set
@@ -274,12 +274,22 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3]
-        beegfs-version: [7.4.6]
+        beegfs-version: [7.4.6, 8.1]
     permissions:
       packages: read
       contents: read
     steps:
       - uses: actions/checkout@v4.1.1
+      - name: Check BeeGFS major version
+        id: version_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if dpkg --compare-versions "${{ matrix.beegfs-version }}" ge "8.0.0"; then
+            echo "GE_BEEGFS8=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GE_BEEGFS8=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -287,16 +297,34 @@ jobs:
           driver: none
           kubernetes-version: ${{ matrix.k8s-version }}
 
-      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-1.yaml | kubectl apply -f -
           kubectl get pods -A
 
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
+          export TLS_CERT_FILE_DATA_INDENTED="$(
+            printf '%s\n' "${{ secrets.TLS_CERT_FILE_DATA }}" |
+            awk 'NR==1{print;next}{print "    " $0}'
+          )"
+          export TLS_KEY_FILE_DATA_INDENTED="$(
+            printf '%s\n' "${{ secrets.TLS_KEY_FILE_DATA }}" |
+            awk 'NR==1{print;next}{print "    " $0}'
+          )"
+          envsubst < test/env/beegfs-ubuntu/beegfs8-fs-1.yaml | kubectl apply -f -
+          kubectl get pods -A
+
       # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
-      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
           sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
@@ -304,10 +332,26 @@ jobs:
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
 
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-tools -y
+
+      # Deploy the driver the same way for BeeGFS 7 and 8. When communicating with a BeeGFS 7 mgmtd
+      # the driver should ignore the TLS cert. This allows users to upgrade the driver first
+      # including deploying any TLS certs for BeeGFS 8, then later upgrade servers and the
+      # client+tools installed on the K8s nodes to BeeGFS 8.
       - name: Deploy the BeeGFS CSI driver
         run: |
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_SECRET }})
           envsubst < test/env/beegfs-ubuntu/csi-beegfs-connauth.yaml > deploy/k8s/overlays/default/csi-beegfs-connauth.yaml
+          export TLS_CERT_FILE_DATA_INDENTED="$(
+            printf '%s\n' "${{ secrets.TLS_CERT_FILE_DATA }}" |
+            awk 'NR==1{print;next}{print "    " $0}'
+          )"
+          envsubst < test/env/beegfs-ubuntu/csi-beegfs-tlscerts.yaml > deploy/k8s/overlays/default/csi-beegfs-tlscerts.yaml
           # TODO: Enable once the K8s versions in the matrix are added to versions/
           # sed -i 's?/versions/latest?/versions/v${{ matrix.k8s-version }}?g' deploy/k8s/overlays/default/kustomization.yaml
           echo -e "\nimages:\n  - name: ${{ env.IMAGE_NAME }}\n    newName: ${{ env.TEST_IMAGE_NAME }}\n    newTag: ${{ github.sha }}" >> deploy/k8s/overlays/default/kustomization.yaml
@@ -315,7 +359,8 @@ jobs:
 
       # TODO (https://github.com/ThinkParQ/beegfs-csi-driver/issues/21): Actually run e2e tests using Ginko with an appropriate timeout.
 
-      - name: Deploy all examples to verify the driver is available
+      - name: Deploy all examples to verify the driver is available (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           echo "${{ secrets.CONN_AUTH_SECRET }}" | sudo tee /etc/beegfs/connAuth > /dev/null
           sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf
@@ -324,6 +369,17 @@ jobs:
           sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all
           sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static
           sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static-ro
+          kubectl apply -f examples/k8s/all
+
+      - name: Deploy all examples to verify the driver is available (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          echo "${{ secrets.CONN_AUTH_SECRET }}" | sudo tee /etc/beegfs/conn.auth > /dev/null
+          echo "${{ secrets.TLS_CERT_FILE_DATA }}" | sudo tee /etc/beegfs/cert.pem > /dev/null
+          sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 /k8s
+          sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 /k8s/all
+          sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 /k8s/all/static
+          sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 /k8s/all/static-ro
           kubectl apply -f examples/k8s/all
 
       # If the controller or node service failed to start, our test pod would still be in phase pending.
@@ -367,12 +423,22 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3]
-        beegfs-version: [7.4.6]
+        beegfs-version: [7.4.6, 8.1]
     permissions:
       packages: read
       contents: read
     steps:
       - uses: actions/checkout@v4.1.1
+      - name: Check BeeGFS major version
+        id: version_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if dpkg --compare-versions "${{ matrix.beegfs-version }}" ge "8.0.0"; then
+            echo "GE_BEEGFS8=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "GE_BEEGFS8=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -410,14 +476,28 @@ jobs:
           chmod +x install.sh
           ./install.sh v0.25.0
 
-      # Test using a base64 encoded secret for the Operator based deployment to
-      # ensure the broadest coverage for how we handle base64 encoded secrets.
-      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} for testing and expose as a service to the host OS
+      # Test using a base64 encoded secret for the Operator based deployment to ensure the broadest
+      # coverage for how we handle base64 encoded secrets.
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
           export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
           envsubst < test/env/beegfs-ubuntu/beegfs-fs-2.yaml | kubectl apply -f -
 
+      # Do not use TLS for BeeGFS 8 to test that use case. Note if TLS is ever used here, the static
+      # TLS key/cert pair generated for testing will likely not work since the operator deployment
+      # cannot use the "none" Minikube driver because of OLM. In this deployment the driver uses
+      # InternalIP instead of localhost to access BeeGFS - which is not a valid IP for the TLS cert.
+      - name: Deploy BeeGFS ${{ matrix.beegfs-version }} (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          export BEEGFS_VERSION=$(echo ${{ matrix.beegfs-version }})
+          export BEEGFS_SECRET=$(echo ${{ secrets.CONN_AUTH_BASE64_SECRET }})
+          envsubst < test/env/beegfs-ubuntu/beegfs8-fs-2.yaml | kubectl apply -f -
+
+      - name: Wait for BeeGFS start then expose as a service to the host OS
+        run: |
           MAX_ATTEMPTS=36
           SLEEP_TIME=5
           COUNTER=0
@@ -453,7 +533,8 @@ jobs:
 
       # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
       # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
-      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
           sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
@@ -461,9 +542,16 @@ jobs:
           sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
           sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
 
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-tools -y
+
       # Remove all third-party APT sources then only add back the BeeGFS sources. This prevents
       # broken or expired keys from blocking `apt-get update` and optimizes the update.
-      - name: Install BeeGFS ${{ matrix.beegfs-version }} beegfs-ctl tool into the Minikube container
+      - name: Configure BeeGFS ${{ matrix.beegfs-version }} package repos for the Minikube container
         run: |
           minikube ssh "sudo rm -f /etc/apt/sources.list.d/*"
           minikube ssh "sudo apt-get update"
@@ -471,7 +559,16 @@ jobs:
           minikube ssh "sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc"
           minikube ssh "sudo wget -P /etc/apt/sources.list.d/ https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list"
           minikube ssh "sudo apt-get update"
+
+      - name: Install BeeGFS ${{ matrix.beegfs-version }} beegfs-ctl tool into the Minikube container (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
+        run: |
           minikube ssh "sudo apt-get install beegfs-utils -y"
+
+      - name: Install BeeGFS ${{ matrix.beegfs-version }} beegfs tool into the Minikube container (BeeGFS 8)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          minikube ssh "sudo apt-get install beegfs-tools -y"
 
       - name: Use operator-sdk to create a pod to serve the bundle to OLM via subscription
         run: |
@@ -487,7 +584,8 @@ jobs:
           export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           envsubst < test/env/beegfs-ubuntu/csi-beegfs-cr.yaml | kubectl apply -f -
 
-      - name: Deploy all examples to verify the driver is available
+      - name: Deploy all examples to verify the driver is available (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
         run: |
           minikube ssh "sudo echo ${{ secrets.CONN_AUTH_BASE64_SECRET }} | base64 --decode | sudo tee /etc/beegfs/connAuth > /dev/null"
           minikube ssh "sudo sed -i '0,/connAuthFile[[:space:]]*=[[:space:]]*/s//connAuthFile = \/etc\/beegfs\/connAuth/' /etc/beegfs/beegfs-client.conf"
@@ -496,6 +594,18 @@ jobs:
           minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all"
           minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static"
           minikube ssh "sudo beegfs-ctl --cfgFile=/etc/beegfs/beegfs-client.conf --unmounted --createdir /k8s/all/static-ro"
+          export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+          for file in examples/k8s/all/*; do sed -i 's/localhost/'"${BEEGFS_MGMTD}"'/g' "$file"; done
+          kubectl apply -f examples/k8s/all
+
+      - name: Deploy all examples to verify the driver is available (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          minikube ssh "sudo echo ${{ secrets.CONN_AUTH_BASE64_SECRET }} | base64 --decode | sudo tee /etc/beegfs/conn.auth > /dev/null"
+          minikube ssh "sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 --tls-disable /k8s"
+          minikube ssh "sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 --tls-disable /k8s/all"
+          minikube ssh "sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 --tls-disable /k8s/all/static"
+          minikube ssh "sudo beegfs entry create dir --mount=none --mgmtd-addr=localhost:8010 --tls-disable /k8s/all/static-ro"
           export BEEGFS_MGMTD=$(kubectl get nodes -o=jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
           for file in examples/k8s/all/*; do sed -i 's/localhost/'"${BEEGFS_MGMTD}"'/g' "$file"; done
           kubectl apply -f examples/k8s/all

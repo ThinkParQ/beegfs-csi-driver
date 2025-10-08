@@ -52,6 +52,7 @@ const (
 const (
 	ResourceNameConfigMap = "csi-beegfs-config"
 	ResourceNameSecret    = "csi-beegfs-connauth"
+	ResourceNameTLS       = "csi-beegfs-tlscerts"
 )
 
 // These are expected Config Map and Secret keys within the manifests. Some operator logic is based off the expectation
@@ -60,6 +61,7 @@ const (
 const (
 	KeyNameConfigMap = "csi-beegfs-config.yaml"
 	KeyNameSecret    = "csi-beegfs-connauth.yaml"
+	KeyNameTLS       = "csi-beegfs-tlscerts.yaml"
 )
 
 // GetRBAC returns a slice of pointers to the following RBAC objects as interfaces: Cluster Role, Cluster Role Binding,

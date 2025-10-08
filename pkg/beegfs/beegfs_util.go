@@ -62,7 +62,6 @@ func parseBeegfsURL(rawURL string) (sysMgmtdHost string, path string, err error)
 // beegfsVolume's config. writeClientFiles assumes an empty directory has already been created at mountDirPath.
 func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath string) (err error) {
 	LogDebug(ctx, "Writing client files", "volumeID", vol.volumeID, "path", vol.mountDirPath)
-	connAuthFilePath := path.Join(vol.mountDirPath, "connAuthFile")
 	connInterfacesFilePath := path.Join(vol.mountDirPath, "connInterfacesFile")
 	connNetFilterFilePath := path.Join(vol.mountDirPath, "connNetFilterFile")
 	connTcpOnlyFilterFilePath := path.Join(vol.mountDirPath, "connTcpOnlyFilterFile")
@@ -80,15 +79,17 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		return nil
 	}
 
-	// The BeeGFS client must bind to and listen on a UDP port. Each BeeGFS mount requires a different port. Though
-	// the client is free to define and use its own port, BeeGFS does not support binding to port 0 to obtain an OS
-	// assigned ephemeral port.
-	var connClientPortUDP string
+	// The BeeGFS client must bind to and listen on a UDP port. Each BeeGFS mount requires a
+	// different port. Though the client is free to define and use its own port, BeeGFS does not
+	// support binding to port 0 to obtain an OS assigned ephemeral port. In BeeGFS 8 this was
+	// renamed to connClientPort as part of simplifying the configuration but inside the driver is
+	// still referenced in places as connClientPortUDP.
+	var connClientPort string
 	port, err := getEphemeralPortUDP()
 	if err != nil {
-		return errors.WithMessage(err, "error selecting connClientPortUDP")
+		return errors.WithMessage(err, "error selecting connClientPort")
 	}
-	connClientPortUDP = strconv.Itoa(port)
+	connClientPort = strconv.Itoa(port)
 
 	var clientConfBytes []byte
 	var clientConfINI *ini.File
@@ -101,12 +102,47 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 	if err = setConfigValueIfKeyExists(clientConfINI, "sysMgmtdHost", vol.sysMgmtdHost); err != nil {
 		return err
 	}
-	if err = setConfigValueIfKeyExists(clientConfINI, "connClientPortUDP", connClientPortUDP); err != nil {
-		return err
+	// In BeeGFS 8 the name of the config option in the default config file changed from
+	// connClientPortUDP to connClientPort. A template beegfs-client.conf file from BeeGFS 7 will
+	// still work with BeeGFS 8 which will just flag connClientPortUDP as a deprecated parameter.
+	if err = setConfigValueIfKeyExists(clientConfINI, "connClientPort", connClientPort); err != nil {
+		// Fallback to BeeGFS 7 parameter name:
+		if err = setConfigValueIfKeyExists(clientConfINI, "connClientPortUDP", connClientPort); err != nil {
+			return fmt.Errorf("unable to set connClientPort (BeeGFS 8) or connClientPortUDP (BeeGFS 7): %w", err)
+		}
 	}
+
+	// connMgmtdPort is used when replacing deprecated connMgmtdPortTCP/connMgmtdPortUDP parameters
+	// to ensure those weren't originally set to different values (which is not supported in v8).
+	connMgmtdPort := ""
 	for k, v := range vol.config.BeegfsClientConf {
 		if err := setConfigValueIfKeyExists(clientConfINI, k, v); err != nil {
-			return err
+			// In BeeGFS 8 it is no longer possible to specify different values for connMgmtdPortTCP
+			// and connMgmtdPortUDP and these were combined into a single connMgmtdPort parameter.
+			// If this template config file is from BeeGFS 7 then the BeeGFS 8 client will simply
+			// warn about deprecated config parameters. But if this template config file is from
+			// BeeGFS 8 then setConfigValueIfKeyExists will fail if the driver config contains
+			// deprecated config parameters. Smooth the transition by automatically replacing the
+			// deprecated parameters with the new one when the TCP/UDP ports don't differ.
+			if k == "connMgmtdPortTCP" || k == "connMgmtdPortUDP" {
+				// Only BeeGFS 8+ beegfs-client.conf files should contain connMgmtdPort.
+				if clientConfINI.Section("").HasKey("connMgmtdPort") {
+					if connMgmtdPort == "" {
+						connMgmtdPort = v
+					} else if connMgmtdPort != v {
+						return fmt.Errorf("the template beegfs-client.conf file appears to be for BeeGFS 8 but connMgmtdPortTCP and connMgmtdPortUDP appear to be set to different values in the driver configuration (they must be the same in BeeGFS 8+)")
+					}
+					LogDebug(ctx, "driver configuration contains a deprecated configuration key that does not exist in the template beegfs-client.conf file", "deprecatedKey", k, "replacedWith", "connMgmtdPort")
+					if err = setConfigValueIfKeyExists(clientConfINI, "connMgmtdPort", v); err != nil {
+						return err
+					}
+				} else {
+					// If the template doesn't contain connMgmtdPort then don't perform the replacement.
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 	}
 
@@ -124,11 +160,19 @@ func writeClientFiles(ctx context.Context, vol beegfsVolume, confTemplatePath st
 		// We don't add a newline here (as we do for the other files) because its important to maintain the exact contents
 		// of connAuthFile. For raw (not base64) encoded connAuth secrets, see additional behavior in parseConnAuthFromFile.
 		connAuthFileContents := vol.config.ConnAuth
-		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", connAuthFilePath); err != nil {
+		if err := setConfigValueIfKeyExists(clientConfINI, "connAuthFile", vol.getConnAuthPath()); err != nil {
 			return err
 		}
-		if err = fsutil.WriteFile(connAuthFilePath, []byte(connAuthFileContents), 0400); err != nil {
+		if err = fsutil.WriteFile(vol.getConnAuthPath(), []byte(connAuthFileContents), 0400); err != nil {
 			return errors.Wrap(err, "error writing connAuth file")
+		}
+	}
+
+	if len(vol.config.TLSCert) != 0 {
+		tlsCertFileContents := vol.config.TLSCert
+		// The TLS cert should not be set in the client config file.
+		if err = fsutil.WriteFile(vol.getTLSCertPath(), []byte(tlsCertFileContents), 0400); err != nil {
+			return errors.Wrap(err, "error writing tlsCert file")
 		}
 	}
 
@@ -344,7 +388,7 @@ func unmountAndCleanUpIfNecessary(ctx context.Context, vol beegfsVolume, rmDir b
 // also deletes vol.mountDirPath if rmDir is set to true.
 func cleanUpIfNecessary(ctx context.Context, vol beegfsVolume, rmDir bool) (err error) {
 	LogDebug(ctx, "Cleaning up path", "path", vol.mountDirPath, "volumeID", vol.volumeID)
-	if rmDir == false {
+	if !rmDir {
 		dir, err := ioutil.ReadDir(vol.mountDirPath)
 		if err != nil {
 			return errors.WithStack(err)

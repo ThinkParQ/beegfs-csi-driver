@@ -20,7 +20,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: beegfs
+        kubectl.kubernetes.io/default-container: beegfs-mgmtd
       labels:
         app: beegfs-fs-2
     spec:
@@ -36,40 +36,40 @@ spec:
             - name: beegfs_setup_1
               value: beegfs-setup-mgmtd -p /mnt/mgmt_tgt_mgmt01 -C -S mgmt_tgt_mgmt01
           volumeMounts:
-          - name: conn-auth-secret-volume
-            mountPath: "/etc/beegfs"                   
+            - name: conn-auth-secret-volume
+              mountPath: "/etc/beegfs"
         - name: beegfs-meta
           image: ghcr.io/thinkparq/beegfs-meta:${BEEGFS_VERSION}
           args:
             - storeMetaDirectory=/mnt/meta_01_tgt_0101
             - storeAllowFirstRunInit=false
             - sysMgmtdHost=localhost
-            - connAuthFile=/etc/beegfs/connAuthFile            
+            - connAuthFile=/etc/beegfs/connAuthFile
           env:
             - name: beegfs_setup_1
               value: beegfs-setup-meta -C -p /mnt/meta_01_tgt_0101 -s 1 -S meta_01
           volumeMounts:
-          - name: conn-auth-secret-volume
-            mountPath: "/etc/beegfs"                   
+            - name: conn-auth-secret-volume
+              mountPath: "/etc/beegfs"
         - name: beegfs-storage
           image: ghcr.io/thinkparq/beegfs-storage:${BEEGFS_VERSION}
           args:
             - storeStorageDirectory=/mnt/stor_01_tgt_101,/mnt/stor_01_tgt_102
             - storeAllowFirstRunInit=false
             - sysMgmtdHost=localhost
-            - connAuthFile=/etc/beegfs/connAuthFile            
+            - connAuthFile=/etc/beegfs/connAuthFile
           env:
             - name: beegfs_setup_1
               value: beegfs-setup-storage -C -p /mnt/stor_01_tgt_101 -s 1 -S stor_01_tgt_101 -i 101
             - name: beegfs_setup_2
               value: beegfs-setup-storage -C -p /mnt/stor_01_tgt_102 -s 1 -S stor_01_tgt_101 -i 102
           volumeMounts:
-          - name: conn-auth-secret-volume
-            mountPath: "/etc/beegfs"              
+            - name: conn-auth-secret-volume
+              mountPath: "/etc/beegfs"
       volumes:
         - name: conn-auth-secret-volume
           secret:
-            secretName: conn-auth-secret              
+            secretName: conn-auth-secret
 ---
 apiVersion: v1
 kind: Service

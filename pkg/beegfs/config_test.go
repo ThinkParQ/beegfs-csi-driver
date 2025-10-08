@@ -33,6 +33,7 @@ func TestParseConfigFromFile(t *testing.T) {
 			nodeID:     "testnode",
 			want: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
+					GrpcPort:          "8011",
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -42,6 +43,7 @@ func TestParseConfigFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
+							GrpcPort:          "8011",
 							ConnInterfaces:    []string{"ib0"},
 							ConnNetFilter:     []string{"127.0.0.0/24"},
 							ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -69,6 +71,7 @@ func TestParseConfigFromFile(t *testing.T) {
 			nodeID:     "testnode",
 			want: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
+					GrpcPort:          "8011",
 					ConnInterfaces:    []string{"ib1"},
 					ConnNetFilter:     []string{"127.0.0.1/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.1"},
@@ -82,6 +85,7 @@ func TestParseConfigFromFile(t *testing.T) {
 			nodeID:     "testnode",
 			want: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
+					GrpcPort:          "8012",
 					ConnInterfaces:    []string{"ib2"},
 					ConnNetFilter:     []string{"127.0.0.2/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.2"},
@@ -95,6 +99,7 @@ func TestParseConfigFromFile(t *testing.T) {
 			nodeID:     "nottestnode",
 			want: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
+					GrpcPort:          "8010",
 					ConnInterfaces:    []string{"ib0"},
 					ConnNetFilter:     []string{"127.0.0.0/24"},
 					ConnTcpOnlyFilter: []string{"127.0.0.0"},
@@ -117,6 +122,7 @@ func TestParseConfigFromFile(t *testing.T) {
 					{
 						SysMgmtdHost: "127.0.0.1",
 						Config: beegfsv1.BeegfsConfig{
+							GrpcPort:          "8011",
 							ConnInterfaces:    []string{"ib1"},
 							ConnNetFilter:     []string{"127.0.0.1/24"},
 							ConnTcpOnlyFilter: []string{"127.0.0.1"},
@@ -149,14 +155,7 @@ func TestParseConfigFromFile(t *testing.T) {
 	}
 }
 
-func TestConnAuthNotParsedFromConfig(t *testing.T) {
-	_, err := parseConfigFromFile("testdata/basic-with-connauth.yaml", "testnode")
-	if err == nil {
-		t.Fatal("should fail to parse configuration file with connAuth information")
-	}
-}
-
-func TestParseConnAuthFromFile(t *testing.T) {
+func TestParseConnAuthAndTLSCertsFromFiles(t *testing.T) {
 	fs = afero.NewOsFs()
 	fsutil = afero.Afero{Fs: fs}
 
@@ -167,12 +166,14 @@ func TestParseConnAuthFromFile(t *testing.T) {
 	}
 
 	tests := map[string]struct {
-		path        string
+		authPath    string
+		tlsPath     string
 		startConfig beegfsv1.PluginConfig
 		want        beegfsv1.PluginConfig
 	}{
 		"non-matching file system specific config": {
-			path: "testdata/connauthfile.yaml",
+			authPath: "testdata/connauthfile.yaml",
+			tlsPath:  "testdata/tlscerts.yaml",
 			startConfig: beegfsv1.PluginConfig{
 				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
@@ -195,13 +196,15 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
 							ConnAuth: "secret1\n",
+							TLSCert:  "cert1\n",
 						},
 					},
 				},
 			},
 		},
 		"matching file system specific config and no default config": {
-			path: "testdata/connauthfile.yaml",
+			authPath: "testdata/connauthfile.yaml",
+			tlsPath:  "testdata/tlscerts.yaml",
 			startConfig: beegfsv1.PluginConfig{
 				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
@@ -219,13 +222,15 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 							ConnAuth:         "secret1\n",
+							TLSCert:          "cert1\n",
 						},
 					},
 				},
 			},
 		},
 		"matching filesystem specific config and default config": {
-			path: "testdata/connauthfile.yaml",
+			authPath: "testdata/connauthfile.yaml",
+			tlsPath:  "testdata/tlscerts.yaml",
 			startConfig: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
 					BeegfsClientConf: map[string]string{"testkey": "testvalue"},
@@ -247,26 +252,29 @@ func TestParseConnAuthFromFile(t *testing.T) {
 						Config: beegfsv1.BeegfsConfig{
 							BeegfsClientConf: map[string]string{"testkey": "testvalue"},
 							ConnAuth:         "secret1\n",
+							TLSCert:          "cert1\n",
 						},
 					},
 				},
 			},
 		},
 		"nil pluginConfig": {
-			path: "testdata/connauthfile.yaml",
+			authPath: "testdata/connauthfile.yaml",
+			tlsPath:  "testdata/tlscerts.yaml",
 			want: beegfsv1.PluginConfig{
 				FileSystemSpecificConfigs: []beegfsv1.FileSystemSpecificConfig{
 					{
 						SysMgmtdHost: "127.0.0.0",
 						Config: beegfsv1.BeegfsConfig{
 							ConnAuth: "secret1\n",
+							TLSCert:  "cert1\n",
 						},
 					},
 				},
 			},
 		},
 		"base64 encoded connauthfile": {
-			path: "testdata/connauthfile-base64.yaml",
+			authPath: "testdata/connauthfile-base64.yaml",
 			startConfig: beegfsv1.PluginConfig{
 				DefaultConfig: beegfsv1.BeegfsConfig{
 					BeegfsClientConf: map[string]string{"testkey": "testvalue"},
@@ -310,9 +318,15 @@ func TestParseConnAuthFromFile(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			err := parseConnAuthFromFile(tc.path, &tc.startConfig)
+			err := parseConnAuthFromFile(tc.authPath, &tc.startConfig)
 			if err != nil {
 				t.Error(err)
+			}
+			if tc.tlsPath != "" {
+				err = parseTLSCertsFromFile(tc.tlsPath, &tc.startConfig)
+				if err != nil {
+					t.Error(err)
+				}
 			}
 			if !reflect.DeepEqual(tc.want, tc.startConfig) {
 				t.Fatalf("expected: %v, got: %v", tc.want, tc.startConfig)

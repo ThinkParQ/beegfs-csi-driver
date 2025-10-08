@@ -893,6 +893,11 @@ spec:
                         items:
                           type: string
                         type: array
+                      grpcPort:
+                        default: "8010"
+                        description: The gRPC port for the management service (BeeGFS
+                          8+ only).
+                        type: string
                     type: object
                   fileSystemSpecificConfigs:
                     description: A list of file system specific configurations that
@@ -946,6 +951,11 @@ spec:
                               items:
                                 type: string
                               type: array
+                            grpcPort:
+                              default: "8010"
+                              description: The gRPC port for the management service
+                                (BeeGFS 8+ only).
+                              type: string
                           type: object
                         sysMgmtdHost:
                           description: The sysMgmtdHost used by the BeeGFS client
@@ -1010,6 +1020,11 @@ spec:
                               items:
                                 type: string
                               type: array
+                            grpcPort:
+                              default: "8010"
+                              description: The gRPC port for the management service
+                                (BeeGFS 8+ only).
+                              type: string
                           type: object
                         fileSystemSpecificConfigs:
                           description: |-
@@ -1065,6 +1080,11 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  grpcPort:
+                                    default: "8010"
+                                    description: The gRPC port for the management
+                                      service (BeeGFS 8+ only).
+                                    type: string
                                 type: object
                               sysMgmtdHost:
                                 description: The sysMgmtdHost used by the BeeGFS client

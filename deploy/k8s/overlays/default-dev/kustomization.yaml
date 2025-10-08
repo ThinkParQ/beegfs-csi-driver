@@ -28,7 +28,9 @@ secretGenerator:
   - name: csi-beegfs-connauth
     files:
       - csi-beegfs-connauth.yaml
-
+  - name: csi-beegfs-tlscerts
+    files:
+      - csi-beegfs-tlscerts.yaml
 # The images section is used to transform the image name to specify the specific image to use in the deployment
 # manifests. This section can be used to adjust the registry and image names and tags for air-gapped environments
 # or other scenarios where custom containers names are used. You can adjust the registry and/or location within

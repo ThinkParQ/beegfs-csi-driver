@@ -11,6 +11,7 @@
   - [Notable Features](#notable-features)
 - [Compatibility](#compatibility)
   - [Known Incompatibilities](#known-incompatibilities)
+    - [BeeGFS CSI Driver compatibility with BeeGFS 8+](#beegfs-csi-driver-compatibility-with-beegfs-8)
     - [BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+](#beegfs-csi-driver-compatibility-with-beegfs-727-and-731)
 - [Support](#support)
 - [Getting Started](#getting-started)
@@ -80,7 +81,7 @@ supported.
 
 | BeeGFS CSI Driver | K8s Versions                              | BeeGFS Client Versions | CSI Version |
 | ----------------- | ----------------------------------------- | ---------------------- | ----------- |
-| master            | 1.29.15, 1.30.11, 1.31.7, 1.32.3          | 7.4.6                  | v1.10.0     |
+| master            | 1.29.15, 1.30.11, 1.31.7, 1.32.3          | 7.4.6, 8.1 [^2]        | v1.10.0     |
 | v1.7.0            | 1.27.11, 1.28.7, 1.29.10, 1.30.6, 1.31.2  | 7.3.4, 7.4.5           | v1.10.0     |
 | v1.6.0            | 1.25.16, 1.26.14, 1.27.11, 1.28.7         | 7.3.4, 7.4.2           | v1.8.0      |
 | v1.5.0            | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | 7.3.4, 7.4.0           | v1.7.0      |
@@ -101,6 +102,14 @@ See the [compatibility guide](docs/compatibility.md) for more details on
 expectations of compatibility for the BeeGFS CSI driver.
 
 ### Known Incompatibilities
+
+#### BeeGFS CSI Driver compatibility with BeeGFS 8+
+
+Support for BeeGFS 8 was introduced in v1.8.0 of the driver. Refer to the [v1.8.0 upgrade
+notes](deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8) before upgrading to BeeGFS 8.
+
+[^2]: Refer to the [v1.8.0 upgrade notes](deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8)
+    before upgrading v1.8.0 of the driver and BeeGFS 8.
 
 #### BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+
 Versions of the BeeGFS CSI driver prior to v1.3.0 are known to have issues
@@ -150,18 +159,16 @@ please submit them at https://github.com/ThinkParQ/beegfs-csi-driver/issues.
 ### Prerequisite(s)
 
 * Deploying the driver requires access to a terminal with kubectl. 
-* The [BeeGFS DKMS
-  client](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html) must be
+* The [BeeGFS DKMS client](https://doc.beegfs.io/latest/advanced_topics/client_dkms.html) must be
   preinstalled to each Kubernetes node that needs BeeGFS access.
-  * As part of this setup the beegfs-helperd and beegfs-utils packages must be
-    installed, and the `beegfs-helperd` service must be started and enabled.
-  * For BeeGFS versions 7.3.1+ or 7.2.7+, the `beegfs-helperd` service must be
-    configured with `connDisableAuthentication = true` or `connAuthFile = <path
-    to a connAuthFile shared by all file systems>`. See [BeeGFS Helperd
-    Configuration](docs/deployment.md#beegfs-helperd-configuration) for other
-    options or more details.
-  * [Experimental support](deploy/openshift-beegfs-client/README.md) for
-    OpenShift environments with RedHat CoreOS nodes negates this requirement.
+  * For BeeGFS 7: The `beegfs-helperd` and `beegfs-utils` packages must also be installed. The
+    `beegfs-helperd` service must be started and enabled.
+    * For BeeGFS versions 7.3.1+ or 7.2.7+, the `beegfs-helperd` service must be configured with
+      `connDisableAuthentication = true` or `connAuthFile = <path to a connAuthFile shared by all file
+      systems>`. See [BeeGFS Helperd Configuration](docs/deployment.md#beegfs-helperd-configuration)
+      for other options or more details.
+  * For BeeGFS 8: The new `beegfs-tools` package must also be installed. Note `beegfs-utils` is no
+    longer required for driver operation, and `beegfs-helperd` was removed in BeeGFS 8.
 * Each BeeGFS mount point uses an ephemeral UDP port. On Linux the selected
   ephemeral port is constrained by the values of [IP
   variables](https://www.kernel.org/doc/html/latest/networking/ip-sysctl.html#ip-variables).
@@ -189,7 +196,7 @@ deployment guide](operator/README.md).
 2. Change to the BeeGFS CSI driver directory (`cd beegfs-csi-driver`).
 3. In BeeGFS versions 7.3.1+ or 7.2.7+, explicit connAuth configuration is
    required. Do one of the following or see [ConnAuth
-   Configuration](#docs/deployment.md#connauth-configuration) for more details.
+   Configuration](docs/deployment.md#connauth-configuration) for more details.
    * Set connDisableAuthentication to true in `csi-beegfs-config.yaml` if your
      existing file system does not use connection authentication.
      ```yaml
@@ -204,11 +211,22 @@ deployment guide](operator/README.md).
        connAuth: <connAuthSecret>
        encoding: <encodingType> # raw or base64
      ```
-4. Run `kubectl apply -k deploy/k8s/overlays/default`. Note by default the
-   beegfs-csi-driver image will be pulled from
-   [GitHub Container Registry](https://github.com/ThinkParQ/beegfs-csi-driver/pkgs/container/beegfs-csi-driver).
-5. Verify all components are installed and operational: `kubectl get pods -n
-   beegfs-csi`.
+4. Starting with 1.8 of the driver, TLS can be configured by providing a TLS certificate in
+   `csi-beegfs-tlscerts.yaml`. If a TLS certificate is not provided for a particular `sysMgmtdHost`
+   the driver automatically disables TLS for that file system. TLS certificates are only used when
+   communicating with a BeeGFS 8+ management server and ignored otherwise. See the section on [TLS
+   Certificate Configuration](docs/deployment.md#tls-certificate-configuration) for full details.
+     ```yaml
+      - sysMgmtdHost: some.specific.file.system
+        tlsCert: |-
+          -----BEGIN CERTIFICATE-----
+          ...
+          -----END CERTIFICATE-----
+     ```  
+5. Run `kubectl apply -k deploy/k8s/overlays/default`. Note by default the beegfs-csi-driver image
+   will be pulled from [GitHub Container
+   Registry](https://github.com/ThinkParQ/beegfs-csi-driver/pkgs/container/beegfs-csi-driver).
+6. Verify all components are installed and operational: `kubectl get pods -n beegfs-csi`.
 
 Provided all Pods are running the driver is now ready for use. See the following
 sections for how to get started using the driver.
@@ -266,10 +284,10 @@ to get started.
 
 <a name="releases"></a>
 ## Releases
-The goal is to release a new driver version three to four times per year 
-(roughly quarterly). Releases may be major, minor, or patch at the discretion 
-of the maintainers in accordance with needs of the community (i.e. large 
-features, small features, or miscellaneous bug fixes).
+New driver versions will be released on an as needed basis as new versions of BeeGFS and Kubernetes
+require updates to the driver for compatibility or to support new functionality. Releases may be
+major, minor, or patch at the discretion of the maintainers in accordance with needs of the
+community (i.e. large features, small features, or miscellaneous bug fixes).
 
 ***
 

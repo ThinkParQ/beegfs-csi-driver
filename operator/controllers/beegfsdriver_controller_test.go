@@ -60,6 +60,7 @@ var _ = Describe("Integration tests using envtest", func() {
 			Expect(sts.OwnerReferences[0].Name).To(Equal("csi-beegfs-cr"))
 			Expect(sts.Spec.Template.Annotations).To(HaveKey(annotationConfigMapVersion))
 			Expect(sts.Spec.Template.Annotations).To(HaveKey(annotationConnauthSecretVersion))
+			Expect(sts.Spec.Template.Annotations).To(HaveKey(annotationTLSCertsSecretVersion))
 		})
 
 		It("should create a correct Daemon Set", func() {
@@ -72,6 +73,7 @@ var _ = Describe("Integration tests using envtest", func() {
 			Expect(ds.OwnerReferences[0].Name).To(Equal("csi-beegfs-cr"))
 			Expect(ds.Spec.Template.Annotations).To(HaveKey(annotationConfigMapVersion))
 			Expect(ds.Spec.Template.Annotations).To(HaveKey(annotationConnauthSecretVersion))
+			Expect(ds.Spec.Template.Annotations).To(HaveKey(annotationTLSCertsSecretVersion))
 		})
 
 		It("should create a correct Config Map", func() {
@@ -83,9 +85,18 @@ var _ = Describe("Integration tests using envtest", func() {
 			Expect(cm.ObjectMeta.OwnerReferences[0].Name).To(Equal("csi-beegfs-cr"))
 		})
 
-		It("should create a correct Secret", func() {
+		It("should create a correct ConnAuth Secret", func() {
 			s := new(corev1.Secret)
 			namespacedName := types.NamespacedName{Name: deploy.ResourceNameSecret, Namespace: cr.Namespace}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName, s)
+			}, timeout).Should(Succeed())
+			Expect(s.ObjectMeta.OwnerReferences[0].Name).To(Equal("csi-beegfs-cr"))
+		})
+
+		It("should create a correct TLSCerts Secret", func() {
+			s := new(corev1.Secret)
+			namespacedName := types.NamespacedName{Name: deploy.ResourceNameTLS, Namespace: cr.Namespace}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, namespacedName, s)
 			}, timeout).Should(Succeed())
@@ -222,6 +233,7 @@ var _ = Describe("Integration tests using envtest", func() {
 		var (
 			cm  *corev1.ConfigMap
 			s   *corev1.Secret
+			t   *corev1.Secret
 			sts *appsv1.StatefulSet
 			ds  *appsv1.DaemonSet
 		)
@@ -240,6 +252,12 @@ var _ = Describe("Integration tests using envtest", func() {
 			namespacedName = types.NamespacedName{Name: deploy.ResourceNameSecret, Namespace: cr.Namespace}
 			Eventually(func() error {
 				return k8sClient.Get(ctx, namespacedName, s)
+			}, timeout).Should(Succeed())
+
+			t = new(corev1.Secret)
+			namespacedName = types.NamespacedName{Name: deploy.ResourceNameTLS, Namespace: cr.Namespace}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName, t)
 			}, timeout).Should(Succeed())
 
 			sts, err = deploy.GetControllerServiceStatefulSet()
@@ -300,9 +318,9 @@ var _ = Describe("Integration tests using envtest", func() {
 			})
 		})
 
-		Context("When the Secret is modified", func() {
+		Context("When the ConnAuth Secret is modified", func() {
 			BeforeEach(func() {
-				By("Submitting a modified Secret")
+				By("Submitting a modified ConnAuth Secret")
 				namespacedName := types.NamespacedName{Name: s.Name, Namespace: cr.Namespace}
 				var err error
 				Eventually(func() error {
@@ -328,6 +346,37 @@ var _ = Describe("Integration tests using envtest", func() {
 					err := k8sClient.Get(ctx, namespacedName, ds)
 					return ds.Spec.Template.Annotations[annotationConnauthSecretVersion], err
 				}, timeout).Should(ContainSubstring(s.ResourceVersion))
+			})
+		})
+
+		Context("When the TLSCerts Secret is modified", func() {
+			BeforeEach(func() {
+				By("Submitting a modified TLSCerts Secret")
+				namespacedName := types.NamespacedName{Name: t.Name, Namespace: cr.Namespace}
+				var err error
+				Eventually(func() error {
+					if err = k8sClient.Get(ctx, namespacedName, t); err == nil {
+						t.StringData = map[string]string{deploy.KeyNameTLS: "secret"}
+						return k8sClient.Update(ctx, t)
+					}
+					return err
+				}, timeout).Should(Succeed())
+			})
+
+			It("should update the Stateful Set", func() {
+				namespacedName := types.NamespacedName{Name: sts.Name, Namespace: cr.Namespace}
+				Eventually(func() (string, error) {
+					err := k8sClient.Get(ctx, namespacedName, sts)
+					return sts.Spec.Template.Annotations[annotationTLSCertsSecretVersion], err
+				}, timeout).Should(ContainSubstring(t.ResourceVersion))
+			})
+
+			It("should update the Daemon Set", func() {
+				namespacedName := types.NamespacedName{Name: ds.Name, Namespace: cr.Namespace}
+				Eventually(func() (string, error) {
+					err := k8sClient.Get(ctx, namespacedName, ds)
+					return ds.Spec.Template.Annotations[annotationTLSCertsSecretVersion], err
+				}, timeout).Should(ContainSubstring(t.ResourceVersion))
 			})
 		})
 	})
