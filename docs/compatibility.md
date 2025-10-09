@@ -64,19 +64,17 @@ the [BeeGFS documentation](https://doc.beegfs.io/latest/index.html)
 
 ### BeeGFS Version Support
 
-Our primary commitment is to support the latest two minor versions of 
-BeeGFS. 
+Starting with version 8, BeeGFS more strictly adheres to semantic versioning guarantees. As a result
+each version of the driver is now only tested with a single version of BeeGFS 8 (usually the latest
+at the time of each driver release), but all 8.x versions prior to that version should also be
+compatible. This decision was made to reduce the size of the test matrix and CI runtime.
 
-When a new version of BeeGFS is released we will include support for the new
-BeeGFS version once the following criteria is met.
-* We have integrated the BeeGFS version in our testing environment
-* All testing is passing on the new BeeGFS version
-* Any required development work has been completed
+When a new version of BeeGFS is released we will add that new version to the test matrix and drop
+the last version. A new version of the driver may not be released unless changes are required to
+support the new version, which is generally not anticipated.
 
-When a new BeeGFS version is included for support we will drop testing and
-support for the older BeeGFS version that was supported by the last release of
-the BeeGFS driver.
-
+Support for at least one BeeGFS 7 release will continue at least until BeeGFS 7 reached
+[EOL](https://github.com/ThinkParQ/beegfs/blob/master/SUPPORT.md).
 
 ***
 

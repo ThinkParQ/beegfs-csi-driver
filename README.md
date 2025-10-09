@@ -72,34 +72,32 @@ arm64 Kubernetes nodes are provided for the BeeGFS CSI driver and operator.
 <a name="compatibility"></a>
 ## Compatibility
 
-The BeeGFS CSI driver must interact with both Kubernetes and a BeeGFS
-filesystem. To ensure compatibility with relevant versions of these key software
-components regular testing is done throughout each release cycle. The following
-table describes the versions of each component used in testing each release of
-the BeeGFS CSI driver. These configurations should be considered compatible and
-supported.
+The BeeGFS CSI driver must interact with both Kubernetes and BeeGFS filesystems. Automated tests
+verify the driver can be deployed on specific Kubernetes versions, and used to provision volumes
+with specific versions of BeeGFS. The below table reflects the official compatible and supported
+versions of Kubernetes and BeeGFS for each version of the driver.
 
-| BeeGFS CSI Driver | K8s Versions                              | BeeGFS Client Versions | CSI Version |
-| ----------------- | ----------------------------------------- | ---------------------- | ----------- |
-| master            | 1.29.15, 1.30.11, 1.31.7, 1.32.3          | 7.4.6, 8.1 [^2]        | v1.10.0     |
-| v1.7.0            | 1.27.11, 1.28.7, 1.29.10, 1.30.6, 1.31.2  | 7.3.4, 7.4.5           | v1.10.0     |
-| v1.6.0            | 1.25.16, 1.26.14, 1.27.11, 1.28.7         | 7.3.4, 7.4.2           | v1.8.0      |
-| v1.5.0            | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3 | 7.3.4, 7.4.0           | v1.7.0      |
-| v1.4.0            | 1.22.6, 1.23.5, 1.24.1, 1.25.2            | 7.3.2, 7.2.8           | v1.7.0      |
-| v1.3.0            | 1.21.4, 1.22.3, 1.23.1, 1.24.1            | 7.3.1, 7.2.7           | v1.6.0      |
-| v1.2.2            | 1.20.11, 1.21.4, 1.22.3, 1.23.1           | 7.3.0, 7.2.6 [^1]      | v1.5.0      |
-| v1.2.1            | 1.19.15, 1.20.11, 1.21.4, 1.22.3          | 7.2.5 [^1]             | v1.5.0      |
-| v1.2.0            | 1.18, 1.19, 1.20, 1.21                    | 7.2.4 [^1]             | v1.5.0      |
-| v1.1.0            | 1.18, 1.19, 1.20                          | 7.2.1 [^1]             | v1.3.0      |
-| v1.0.0            | 1.19                                      | 7.2 [^1]               | v1.3.0      |
+| BeeGFS CSI Driver | K8s Versions                                     | BeeGFS Client Versions | CSI Version |
+| ----------------- | ------------------------------------------------ | ---------------------- | ----------- |
+| v1.8.0 [^1]       | 1.29.15, 1.30.11, 1.31.7, 1.32.3, 1.33.5, 1.34.1 | 7.4.6, 8.1             | v1.10.0     |
+| v1.7.0            | 1.27.11, 1.28.7, 1.29.10, 1.30.6, 1.31.2         | 7.3.4, 7.4.5           | v1.10.0     |
+| v1.6.0            | 1.25.16, 1.26.14, 1.27.11, 1.28.7                | 7.3.4, 7.4.2           | v1.8.0      |
+| v1.5.0            | 1.23.17, 1.24.15, 1.25.11, 1.26.3, 1.27.3        | 7.3.4, 7.4.0           | v1.7.0      |
+| v1.4.0            | 1.22.6, 1.23.5, 1.24.1, 1.25.2                   | 7.3.2, 7.2.8           | v1.7.0      |
+| v1.3.0            | 1.21.4, 1.22.3, 1.23.1, 1.24.1                   | 7.3.1, 7.2.7           | v1.6.0      |
+| v1.2.2            | 1.20.11, 1.21.4, 1.22.3, 1.23.1                  | 7.3.0, 7.2.6 [^2]      | v1.5.0      |
+| v1.2.1            | 1.19.15, 1.20.11, 1.21.4, 1.22.3                 | 7.2.5 [^2]             | v1.5.0      |
+| v1.2.0            | 1.18, 1.19, 1.20, 1.21                           | 7.2.4 [^2]             | v1.5.0      |
+| v1.1.0            | 1.18, 1.19, 1.20                                 | 7.2.1 [^2]             | v1.3.0      |
+| v1.0.0            | 1.19                                             | 7.2 [^2]               | v1.3.0      |
 
 Additional notes:
 * Starting with v1.6.0 official multi-arch container images are provided for both amd64 and arm64.
 * The BeeGFS CSI driver offers experimental support for [Hashicorp Nomad](docs/nomad.md).
 * As of v1.5.0 the BeeGFS CSI driver is [no longer tested](docs/compatibility.md#openshift) with Red Hat OpenShift.
 
-See the [compatibility guide](docs/compatibility.md) for more details on
-expectations of compatibility for the BeeGFS CSI driver.
+See the [compatibility guide](docs/compatibility.md) for more details on expectations of
+compatibility for the BeeGFS CSI driver.
 
 ### Known Incompatibilities
 
@@ -108,8 +106,9 @@ expectations of compatibility for the BeeGFS CSI driver.
 Support for BeeGFS 8 was introduced in v1.8.0 of the driver. Refer to the [v1.8.0 upgrade
 notes](deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8) before upgrading to BeeGFS 8.
 
-[^2]: Refer to the [v1.8.0 upgrade notes](deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8)
-    before upgrading v1.8.0 of the driver and BeeGFS 8.
+[^1]: Refer to the [v1.8.0 upgrade
+    notes](https://github.com/ThinkParQ/beegfs-csi-driver/blob/master/deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8)
+    before upgrading to v1.8.0 of the driver and BeeGFS 8.
 
 #### BeeGFS CSI Driver compatibility with BeeGFS 7.2.7+ and 7.3.1+
 Versions of the BeeGFS CSI driver prior to v1.3.0 are known to have issues
@@ -123,7 +122,7 @@ installation is upgrading from BeeGFS 7.2.6 or 7.3.0 to 7.2.7 or 7.3.1 the
 recommendation would be to upgrade the BeeGFS CSI driver to v1.3.0 or later
 before upgrading the BeeGFS clients.
 
-[^1]: Support for the BeeGFS 7.1.5 filesystem is provided when the BeeGFS 7.2.x
+[^2]: Support for the BeeGFS 7.1.5 filesystem is provided when the BeeGFS 7.2.x
     client is used. These configurations were tested in that manner.
 
 ***

@@ -1,6 +1,28 @@
 # Changelog
 Notable changes to the BeeGFS CSI driver will be documented in this file.
 
+[1.8.0] - 2025-12-03
+--------------------
+
+### Added
+- Support for BeeGFS 8.
+  - See the [v1.8.0 upgrade notes](deploy/k8s/README.md#upgrading-to-v180-and-beegfs-8) before
+    upgrading to BeeGFS 8 for details on new configuration specific to BeeGFS 8.
+- Support for Kubernetes v1.32, v1.33, and v1.34.
+
+### Changed
+- Migrated from the `kube-rbac-proxy` sidecar to the built-in controller-runtime protection.
+  - This change only affects the operator deployment path, and does not require user action.
+
+### Deprecated
+- Kubernetes v1.29 and v1.30 support will be dropped in the next driver release according to our
+  [support
+  policy](docs/compatibility.md#dropping-compatibility-support-for-old-kubernetes-releases).
+
+### Removed 
+- Support/testing for Kubernetes v1.27 and v1.28.
+- Support/testing for BeeGFS 7.3.
+
 [1.7.0] - 2024-11-04
 --------------------
 
