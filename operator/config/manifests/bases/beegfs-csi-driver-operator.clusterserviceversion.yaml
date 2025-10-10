@@ -5,7 +5,7 @@ metadata:
     alm-examples: '[]'
     capabilities: Seamless Upgrades
     categories: Storage
-    containerImage: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.7.0
+    containerImage: ghcr.io/thinkparq/beegfs-csi-driver-operator:v1.8.0
     createdAt: 2021-06-30:03:11:00
     description: Install and manage the BeeGFS CSI driver
     operatorframework.io/suggested-namespace: beegfs-csi
