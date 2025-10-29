@@ -274,7 +274,7 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3, 1.33.5, 1.34.1]
-        beegfs-version: [7.4.6, 8.1]
+        beegfs-version: [7.4.6, 8.2]
     permissions:
       packages: read
       contents: read
@@ -423,7 +423,7 @@ jobs:
       fail-fast: true
       matrix:
         k8s-version: [1.29.15, 1.30.11, 1.31.7, 1.32.3, 1.33.5, 1.34.1]
-        beegfs-version: [7.4.6, 8.1]
+        beegfs-version: [7.4.6, 8.2]
     permissions:
       packages: read
       contents: read
@@ -439,6 +439,24 @@ jobs:
           else
             echo "GE_BEEGFS8=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
+      # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 7)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
+          sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
+          sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
+
+      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 8+)
+        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
+        run: |
+          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
+          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
+          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-tools -y
 
       - name: Deploy Kubernetes ${{ matrix.k8s-version }} using Minikube
         uses: medyagh/setup-minikube@latest
@@ -530,24 +548,6 @@ jobs:
           # This is required to mount BeeGFS since the kernel module is outside the container.
           # For some reason we don't need to override the ephemeral port and can use the actual 800* ports.
           minikube service beegfs-fs-2-svc
-
-      # TODO: Cache BeeGFS packages https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows
-      # https://stackoverflow.com/questions/59269850/caching-apt-packages-in-github-actions-workflow
-      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 7)
-        if: steps.version_check.outputs.GE_BEEGFS8 == 'false'
-        run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
-          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
-          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-helperd beegfs-utils -y
-          sudo sed -i 's/connDisableAuthentication = false/connDisableAuthentication = true/' /etc/beegfs/beegfs-helperd.conf
-          sudo systemctl start beegfs-helperd && sudo systemctl enable beegfs-helperd
-
-      - name: Install the BeeGFS ${{ matrix.beegfs-version }} DKMS client (BeeGFS 8+)
-        if: steps.version_check.outputs.GE_BEEGFS8 == 'true'
-        run: |
-          sudo wget -P /etc/apt/sources.list.d/. https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/dists/beegfs-jammy.list
-          sudo wget https://www.beegfs.io/release/beegfs_${{ matrix.beegfs-version }}/gpg/GPG-KEY-beegfs -O /etc/apt/trusted.gpg.d/beegfs.asc
-          sudo apt-get update && sudo apt-get install beegfs-client-dkms beegfs-tools -y
 
       # Remove all third-party APT sources then only add back the BeeGFS sources. This prevents
       # broken or expired keys from blocking `apt-get update` and optimizes the update.
