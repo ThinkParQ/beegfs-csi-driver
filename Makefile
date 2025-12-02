@@ -94,9 +94,19 @@ push: container  # not explicitly executed in release-tools/build.make
 # IMPORTANT: Any exceptions (using --ignore) such as the one for HCL must be
 # manually added AFTER the NOTICE file has been updated and/or other appropriate
 # steps have been taken based on the license requirements.
+#
+# Exceptions:
+# * github.com/cyphar/filepath-securejoin (MPL 2.0).
+#   Justification: Unmodified transitive dependency. We do not copy code from this module into
+#   Apache-2.0 sources and we do not patch it. For each release, the exact module version used is
+#   recorded by the Go module graph (see go.mod/go.sum and the build’s resolved module list, e.g.
+#   `go list -m all` / SBOM for the released image). MPL obligations are handled by including the
+#   MPL-2.0 license text in NOTICE.md and preserving upstream notices.
 test-licenses: generate-notices
 	@echo "Checking license compliance..."
-	@go-licenses check ./cmd/beegfs-csi-driver/ ./cmd/chwrap --ignore github.com/thinkparq --disallowed_types=forbidden,permissive,reciprocal,restricted,unknown
+	@go tool go-licenses check ./cmd/beegfs-csi-driver/ ./cmd/chwrap \
+		--ignore github.com/thinkparq --ignore github.com/cyphar/filepath-securejoin \
+		--disallowed_types=forbidden,permissive,reciprocal,restricted,unknown
 	@if [ -n "$$(git status --porcelain NOTICE.md)" ]; then \
         echo "NOTICE file is not up to date. Please run 'make generate-notices' and commit the changes."; \
         exit 1; \
