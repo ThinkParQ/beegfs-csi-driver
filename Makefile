@@ -42,7 +42,7 @@ check-go-version:
 
 .PHONY: generate-notices
 generate-notices:
-	@go-licenses report ./cmd/beegfs-csi-driver ./cmd/chwrap --template hack/notice.tpl > NOTICE.md --ignore github.com/thinkparq
+	@go tool go-licenses report ./cmd/beegfs-csi-driver ./cmd/chwrap --template hack/notice.tpl > NOTICE.md --ignore github.com/thinkparq
 
 # The kubernetes-csi/csi-release-tools project does not include an easy way to build a binary that doesn't need its
 # own container image and include it in a different image. This build-% recipe mirrors an analogous recipe in
@@ -118,8 +118,3 @@ override TESTARGS += -ginkgo.skip='Controller Service \[Controller Server\] Crea
 
 include release-tools/build.make
 
-# Targets for installation of various prerequisites:
-.PHONY: install-tools
-install-tools: 
-	go install github.com/onsi/ginkgo/v2/ginkgo@v2.4.0
-	go install github.com/google/go-licenses@v1.6.0

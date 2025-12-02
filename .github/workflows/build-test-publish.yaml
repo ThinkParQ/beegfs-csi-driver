@@ -69,11 +69,6 @@ jobs:
           echo -n "built artifacts:"
           ls -alh bin/
 
-      - name: Install test dependencies
-        run: |
-          make install-tools
-        timeout-minutes: 5
-
       - name: Verify license compliance and the NOTICE file is updated
         run: |
           make test-licenses
