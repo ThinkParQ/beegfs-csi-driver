@@ -419,43 +419,6 @@ spec:
       clusterPermissions:
       - rules:
         - apiGroups:
-          - apps
-          resources:
-          - daemonsets
-          - statefulsets
-          verbs:
-          - create
-          - get
-          - list
-          - update
-          - watch
-        - apiGroups:
-          - beegfs.csi.netapp.com
-          resources:
-          - beegfsdrivers
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - beegfs.csi.netapp.com
-          resources:
-          - beegfsdrivers/finalizers
-          verbs:
-          - update
-        - apiGroups:
-          - beegfs.csi.netapp.com
-          resources:
-          - beegfsdrivers/status
-          verbs:
-          - get
-          - patch
-          - update
-        - apiGroups:
           - ""
           resources:
           - configmaps
@@ -512,6 +475,43 @@ spec:
           - list
           - patch
           - watch
+        - apiGroups:
+          - apps
+          resources:
+          - daemonsets
+          - statefulsets
+          verbs:
+          - create
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - beegfs.csi.netapp.com
+          resources:
+          - beegfsdrivers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - beegfs.csi.netapp.com
+          resources:
+          - beegfsdrivers/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - beegfs.csi.netapp.com
+          resources:
+          - beegfsdrivers/status
+          verbs:
+          - get
+          - patch
+          - update
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:
