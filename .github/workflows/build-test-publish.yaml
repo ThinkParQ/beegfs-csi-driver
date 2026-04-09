@@ -640,6 +640,8 @@ jobs:
   # We'll keep around a few old test packages to (a) avoid deleting image for workflows running in parallel,
   # and (b) it may be useful to pull a package to troubleshoot workflow failures.
   cleanup-test-images:
+    permissions:
+      packages: write
     runs-on: ubuntu-22.04
     timeout-minutes: 3
     needs: [build-test-and-push-images, e2e-tests, operator-e2e-tests]

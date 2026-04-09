@@ -1,4 +1,6 @@
 name: Contributor Verification
+permissions:
+  contents: read
 
 # This workflow serves two purposes:
 # * Verifies all commit authors/committers have signed the ThinkParQ CLA.
